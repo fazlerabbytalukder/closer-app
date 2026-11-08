@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://closer.app/schema/pair.schema.json",
+  "title": "pairs/{pairId}",
+  "description": "Created by acceptInvite. Members may only change widgetTheme[self], questionPack and timezone; everything else is function-only.",
+  "type": "object",
+  "properties": {
+    "memberIds": {"type": "array", "items": {"$ref": "common.schema.json#/$defs/uid"}, "minItems": 2, "maxItems": 2},
+    "mode": {"$ref": "common.schema.json#/$defs/pairMode"},
+    "status": {"enum": ["active", "unpaired"]},
+    "pairedAt": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "timezone": {"type": "string"},
+    "anniversary": {"oneOf": [{"$ref": "common.schema.json#/$defs/timestamp"}, {"type": "null"}], "description": "Together / friends since."},
+    "relationLabels": {
+      "type": "object",
+      "description": "uid -> what that member calls their partner.",
+      "additionalProperties": {"enum": ["girlfriend", "boyfriend", "partner", "wife", "husband", "fiance", "best_friend", "bff", "bestie", "sibling"]}
+    },
+    "nicknames": {"type": "object", "additionalProperties": {"type": "string", "maxLength": 24}},
+    "latestItemByUser": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "itemId": {"type": "string"},
+          "type": {"$ref": "common.schema.json#/$defs/itemType"},
+          "thumbPath": {"type": ["string", "null"]},
+          "caption": {"type": "string", "maxLength": 40},
+          "sentAt": {"$ref": "common.schema.json#/$defs/timestamp"}
+        },
+        "required": ["itemId", "type", "sentAt"]
+      }
+    },
+    "streak": {
+      "type": "object",
+      "properties": {
+        "count": {"type": "integer", "minimum": 0},
+        "best": {"type": "integer", "minimum": 0},
+        "lastBothActiveDate": {"oneOf": [{"$ref": "common.schema.json#/$defs/dateKey"}, {"type": "null"}]},
+        "freezesLeft": {"type": "integer", "minimum": 0},
+        "freezesMonth": {"type": ["string", "null"]},
+        "activeToday": {"type": "array", "items": {"type": "string"}},
+        "activeDate": {"type": ["string", "null"]},
+        "checkedThrough": {"type": ["string", "null"]}
+      }
+    },
+    "plant": {
+      "type": "object",
+      "properties": {
+        "stage": {"type": "integer", "minimum": 0, "maximum": 8},
+        "health": {"enum": ["healthy", "wilted"]},
+        "species": {"type": "string"}
+      }
+    },
+    "premium": {
+      "type": "object",
+      "properties": {
+        "active": {"type": "boolean"},
+        "source": {"const": "subscription"},
+        "ownerUid": {"type": ["string", "null"]},
+        "expiresAt": {"oneOf": [{"$ref": "common.schema.json#/$defs/timestamp"}, {"type": "null"}]}
+      }
+    },
+    "ownedPacks": {"type": "array", "items": {"type": "string"}},
+    "widgetTheme": {"type": "object", "additionalProperties": {"type": "string"}},
+    "stats": {
+      "type": "object",
+      "properties": {
+        "itemsSent": {"type": "integer"},
+        "questionsAnswered": {"type": "integer"},
+        "tapsSent": {"type": "integer"}
+      }
+    },
+    "questionPack": {"enum": ["everyday", "deep", "longDistance", "bestFriends", "spicy"]},
+    "questionCursor": {"type": "object", "additionalProperties": {"type": "integer"}},
+    "lastTapByUser": {"type": "object", "additionalProperties": {"$ref": "common.schema.json#/$defs/timestamp"}},
+    "unpairedAt": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "unpairedBy": {"type": "string"},
+    "deleteAfter": {"$ref": "common.schema.json#/$defs/timestamp"}
+  },
+  "required": ["memberIds", "mode", "status", "pairedAt"]
+}

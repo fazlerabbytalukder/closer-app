@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Fallback widget corner radius before Android 12. -->
+    <dimen name="widget_corner_radius">20dp</dimen>
+    <dimen name="widget_inner_radius">14dp</dimen>
+</resources>

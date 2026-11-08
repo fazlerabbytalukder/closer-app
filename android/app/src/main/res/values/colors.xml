@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand tokens (plan §9.2), shared with the Glance widgets. -->
+    <color name="closer_primary">#2F7BE6</color>
+    <color name="closer_primary_tint">#E6F0FC</color>
+    <color name="closer_accent">#FF6B8A</color>
+    <color name="closer_plant_green">#5DBB63</color>
+    <color name="closer_pot_terracotta">#D9774B</color>
+    <color name="closer_text">#1C2433</color>
+    <color name="closer_text_muted">#6B7385</color>
+
+    <!-- Widget themes: classic -->
+    <color name="widget_classic_bg">#FFFFFF</color>
+    <color name="widget_classic_surface">#E6F0FC</color>
+    <color name="widget_classic_primary">#2F7BE6</color>
+    <color name="widget_classic_text">#1C2433</color>
+    <color name="widget_classic_accent">#FF6B8A</color>
+    <!-- blush -->
+    <color name="widget_blush_bg">#FFF1F4</color>
+    <color name="widget_blush_surface">#FFDDE5</color>
+    <color name="widget_blush_primary">#FF6B8A</color>
+    <color name="widget_blush_text">#3A1F27</color>
+    <color name="widget_blush_accent">#FF6B8A</color>
+    <!-- midnight -->
+    <color name="widget_midnight_bg">#141A2E</color>
+    <color name="widget_midnight_surface">#222B45</color>
+    <color name="widget_midnight_primary">#8FB4FF</color>
+    <color name="widget_midnight_text">#F2F4FA</color>
+    <color name="widget_midnight_accent">#FF8FA6</color>
+    <!-- mint -->
+    <color name="widget_mint_bg">#ECF8EE</color>
+    <color name="widget_mint_surface">#D3F0D8</color>
+    <color name="widget_mint_primary">#2E9E52</color>
+    <color name="widget_mint_text">#1D3323</color>
+    <color name="widget_mint_accent">#FF6B8A</color>
+    <!-- sunset -->
+    <color name="widget_sunset_bg">#FFF3E6</color>
+    <color name="widget_sunset_surface">#FFE0C2</color>
+    <color name="widget_sunset_primary">#F07B3F</color>
+    <color name="widget_sunset_text">#3B2416</color>
+    <color name="widget_sunset_accent">#FF6B8A</color>
+</resources>

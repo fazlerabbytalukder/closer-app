@@ -1,0 +1,215 @@
+rules_version = '2';
+
+// Closer — Firestore security rules (plan section 12).
+//
+// * A pair and everything under it is visible only to its members.
+// * Function-only data: invites, usage, entitlements, devices (FCM tokens),
+//   items, taps, games, daily questions (answers / revealed / private
+//   answers), and the pair fields streak, plant, premium, stats, etc.
+// * Clients may write: their own profile (not pairId), countdowns, and a
+//   few pair settings (widgetTheme for themselves, questionPack, timezone).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function pairData(pairId) {
+      return get(/databases/$(database)/documents/pairs/$(pairId)).data;
+    }
+
+    function isMember(pairId) {
+      return signedIn() && request.auth.uid in pairData(pairId).memberIds;
+    }
+
+    function isActiveMember(pairId) {
+      let p = pairData(pairId);
+      return signedIn() && request.auth.uid in p.memberIds && p.status == 'active';
+    }
+
+    function changedOnly(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+
+    // ------------------------------------------------------------- users
+    // Profile fields the app may write. pairId and anything else are
+    // function-only.
+    function validProfile(d) {
+      return d.keys().hasOnly([
+          'displayName', 'photoUrl', 'mood', 'status', 'ageConfirmed18',
+          'notificationPrefs', 'locale', 'timezone', 'pendingMode', 'pendingLabel',
+          'createdAt', 'updatedAt', 'pairId'])
+        && (!('displayName' in d) || (d.displayName is string && d.displayName.size() <= 40))
+        && (!('photoUrl' in d) || d.photoUrl == null || (d.photoUrl is string && d.photoUrl.size() <= 2048))
+        && (!('ageConfirmed18' in d) || d.ageConfirmed18 is bool)
+        && (!('pendingMode' in d) || d.pendingMode == null || d.pendingMode in ['couple', 'friends'])
+        && (!('pendingLabel' in d) || d.pendingLabel == null || (d.pendingLabel is string && d.pendingLabel.size() <= 20))
+        && (!('timezone' in d) || (d.timezone is string && d.timezone.size() <= 64))
+        && (!('locale' in d) || (d.locale is string && d.locale.size() <= 16))
+        && (!('status' in d) || d.status == null || (d.status.text is string && d.status.text.size() <= 80))
+        && (!('mood' in d) || d.mood == null || (d.mood.emoji is string && d.mood.emoji.size() <= 16
+              && d.mood.label is string && d.mood.label.size() <= 40));
+    }
+
+    match /users/{uid} {
+      // Owner, or the partner in the owner's current pair.
+      allow read: if isSelf(uid)
+        || (signedIn() && resource.data.get('pairId', null) != null
+            && request.auth.uid in pairData(resource.data.pairId).memberIds);
+      allow create: if isSelf(uid)
+        && validProfile(request.resource.data)
+        && request.resource.data.get('pairId', null) == null;
+      allow update: if isSelf(uid)
+        && validProfile(request.resource.data)
+        && request.resource.data.get('pairId', null) == resource.data.get('pairId', null);
+      allow delete: if false; // deleteAccount function only
+    }
+
+    // Function-only collections.
+    match /invites/{code} {
+      allow read, write: if false;
+    }
+    match /devices/{uid} {
+      allow read, write: if false;
+    }
+    match /entitlements/{uid} {
+      allow read: if isSelf(uid);
+      allow write: if false; // RevenueCat webhook only
+    }
+    match /usage/{docId} {
+      // Doc id is {uid}_{yyyy-mm-dd}; also carries a `uid` field so the app
+      // can query its latest usage doc.
+      allow read: if signedIn() && resource.data.uid == request.auth.uid;
+      allow write: if false;
+    }
+    match /content/{document=**} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // ------------------------------------------------------------- pairs
+    match /pairs/{pairId} {
+      allow read: if signedIn() && request.auth.uid in resource.data.memberIds;
+      allow create, delete: if false;
+
+      // Closer Plus is switched off for now; keep in sync with
+      // MONETIZATION_ENABLED in functions/src/common.ts. While off, every
+      // widget theme is free.
+      function monetizationEnabled() { return false; }
+
+      // Only the caller's own entry in a uid-keyed map changed.
+      function ownEntryOnly(field) {
+        return request.resource.data.get(field, {}).diff(resource.data.get(field, {}))
+          .affectedKeys().hasOnly([request.auth.uid]);
+      }
+
+      function validTheme() {
+        let t = request.resource.data.get('widgetTheme', {});
+        return !(request.auth.uid in t)
+          || t[request.auth.uid] in ['classic', 'blush', 'dynamic']
+          || (t[request.auth.uid] in ['midnight', 'mint', 'sunset']
+              && (!monetizationEnabled() || resource.data.premium.active == true));
+      }
+
+      // relationLabels: you may set your own label; when the mode changes,
+      // labels that no longer fit may be removed for either member.
+      function validLabels() {
+        let d = request.resource.data.get('relationLabels', {}).diff(resource.data.get('relationLabels', {}));
+        let mine = request.resource.data.get('relationLabels', {});
+        let modeChanged = request.resource.data.get('mode', 'couple') != resource.data.get('mode', 'couple');
+        return d.addedKeys().union(d.changedKeys()).hasOnly([request.auth.uid])
+          && (d.removedKeys().hasOnly([request.auth.uid]) || modeChanged)
+          && (!(request.auth.uid in mine) || mine[request.auth.uid] in
+              ['girlfriend', 'boyfriend', 'partner', 'wife', 'husband', 'fiance',
+               'best_friend', 'bff', 'bestie', 'sibling']);
+      }
+
+      function validNickname() {
+        let n = request.resource.data.get('nicknames', {});
+        return ownEntryOnly('nicknames')
+          && (!(request.auth.uid in n) || (n[request.auth.uid] is string && n[request.auth.uid].size() <= 24));
+      }
+
+      function validAnniversary() {
+        let a = request.resource.data.get('anniversary', null);
+        return a == null || (a is timestamp && a <= request.time);
+      }
+
+      // Members may change only these settings.
+      allow update: if signedIn()
+        && request.auth.uid in resource.data.memberIds
+        && resource.data.status == 'active'
+        && changedOnly(['widgetTheme', 'questionPack', 'timezone',
+                        'mode', 'anniversary', 'relationLabels', 'nicknames'])
+        && ownEntryOnly('widgetTheme')
+        && validTheme()
+        && validLabels()
+        && validNickname()
+        && validAnniversary()
+        && request.resource.data.get('mode', 'couple') in ['couple', 'friends']
+        && request.resource.data.get('questionPack', 'everyday')
+             in ['everyday', 'deep', 'longDistance', 'bestFriends', 'spicy']
+        && request.resource.data.get('timezone', 'UTC') is string;
+
+      match /items/{itemId} {
+        allow read: if isMember(pairId);
+        // Written by sendItem; the sender may delete their own item.
+        allow create, update: if false;
+        allow delete: if isMember(pairId) && resource.data.senderId == request.auth.uid;
+      }
+
+      match /taps/{tapId} {
+        allow read: if isMember(pairId);
+        allow write: if false;
+      }
+
+      match /dailyQuestions/{date} {
+        allow read: if isMember(pairId);
+        allow write: if false; // answers / revealed are function-only
+
+        match /private/{uid} {
+          allow read: if isSelf(uid) && isMember(pairId);
+          allow write: if false; // submitAnswer function
+        }
+      }
+
+      match /countdowns/{countdownId} {
+        function validCountdown(d) {
+          return d.keys().hasOnly(['title', 'date', 'dateKey', 'emoji', 'repeatsYearly',
+                                   'remindDaysBefore', 'createdBy', 'createdAt', 'updatedAt',
+                                   'lastRemindedFor', 'lastRemindedAt'])
+            && d.title is string && d.title.size() > 0 && d.title.size() <= 60
+            && d.date is timestamp
+            && (!('dateKey' in d) || (d.dateKey is string && d.dateKey.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')))
+            && (!('emoji' in d) || (d.emoji is string && d.emoji.size() <= 16))
+            && (!('repeatsYearly' in d) || d.repeatsYearly is bool)
+            && (!('remindDaysBefore' in d) || (d.remindDaysBefore is int
+                  && d.remindDaysBefore >= 0 && d.remindDaysBefore <= 60));
+        }
+        allow read: if isMember(pairId);
+        // The free limit (3) is checked in the app; Plus is unlimited.
+        allow create: if isActiveMember(pairId)
+          && validCountdown(request.resource.data)
+          && request.resource.data.createdBy == request.auth.uid;
+        allow update: if isActiveMember(pairId)
+          && validCountdown(request.resource.data)
+          && request.resource.data.createdBy == resource.data.createdBy;
+        allow delete: if isActiveMember(pairId);
+      }
+
+      match /games/{gameId} {
+        allow read: if isMember(pairId);
+        allow write: if false; // startGame / submitGameAnswers
+
+        match /private/{doc} {
+          allow read, write: if false; // subject's hidden answers
+        }
+      }
+    }
+  }
+}

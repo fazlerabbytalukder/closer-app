@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://closer.app/schema/countdown.schema.json",
+  "title": "pairs/{pairId}/countdowns/{id}",
+  "description": "Written by the app. dateKey (local yyyy-mm-dd) is what the reminder job uses; lastReminded* are function-written.",
+  "type": "object",
+  "properties": {
+    "title": {"type": "string", "minLength": 1, "maxLength": 60},
+    "date": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "dateKey": {"$ref": "common.schema.json#/$defs/dateKey"},
+    "emoji": {"type": "string"},
+    "repeatsYearly": {"type": "boolean"},
+    "remindDaysBefore": {"type": "integer", "minimum": 0, "maximum": 60},
+    "createdBy": {"$ref": "common.schema.json#/$defs/uid"},
+    "createdAt": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "updatedAt": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "lastRemindedFor": {"type": "string"},
+    "lastRemindedAt": {"$ref": "common.schema.json#/$defs/timestamp"}
+  },
+  "required": ["title", "date", "createdBy"],
+  "additionalProperties": false
+}

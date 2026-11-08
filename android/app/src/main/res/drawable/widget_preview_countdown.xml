@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Static preview for the countdown widget (widget picker before Android 12). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="160dp" android:height="160dp"
+    android:viewportWidth="160" android:viewportHeight="160">
+    <path android:fillColor="#E6F0FC" android:pathData="M20,0 L140,0 Q160,0 160,20 L160,140 Q160,160 140,160 L20,160 Q0,160 0,140 L0,20 Q0,0 20,0 Z"/>
+    <path android:fillColor="#2F7BE6" android:pathData="M48,40 L72,40 L72,104 L60,104 L60,52 L48,52 Z"/>
+    <path android:fillColor="#2F7BE6" android:pathData="M82,40 L112,40 L112,52 L94,52 L94,66 L112,66 L112,104 L82,104 L82,92 L100,92 L100,78 L82,78 Z"/>
+    <path android:fillColor="#1C2433" android:pathData="M36,124 L124,124 Q128,124 128,128 Q128,132 124,132 L36,132 Q32,132 32,128 Q32,124 36,124 Z"/>
+    <path android:fillColor="#FF6B8A" android:pathData="M74,12 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0 Z"/>
+</vector>

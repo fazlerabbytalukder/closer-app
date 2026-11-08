@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://closer.app/schema/common.schema.json",
+  "title": "Shared definitions",
+  "description": "Dates are Firestore Timestamps in the database and millis since epoch (integer) in JSON, callable responses and sample files.",
+  "$defs": {
+    "timestamp": {
+      "description": "Millis since epoch in JSON; a Firestore Timestamp in the database.",
+      "oneOf": [
+        {"type": "integer", "minimum": 0},
+        {
+          "type": "object",
+          "properties": {"seconds": {"type": "integer"}, "nanoseconds": {"type": "integer"}},
+          "required": ["seconds", "nanoseconds"]
+        }
+      ]
+    },
+    "dateKey": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+    "uid": {"type": "string", "minLength": 1, "maxLength": 128},
+    "pairMode": {"enum": ["couple", "friends"]},
+    "itemType": {"enum": ["photo", "note", "doodle"]}
+  }
+}

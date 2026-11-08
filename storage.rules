@@ -1,0 +1,60 @@
+rules_version = '2';
+
+// Closer — Cloud Storage rules (plan section 12).
+//   pairs/{pairId}/raw/{itemId}.jpg     members upload (images < 10 MB)
+//   pairs/{pairId}/thumbs/{itemId}.jpg  written by functions only
+//   users/{uid}/avatar.jpg              owner writes, signed-in users read
+//   exports/{uid}/...                   written by functions, owner reads
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function pair(pairId) {
+      return firestore.get(/databases/(default)/documents/pairs/$(pairId)).data;
+    }
+
+    function isMember(pairId) {
+      return signedIn() && request.auth.uid in pair(pairId).memberIds;
+    }
+
+    function isActiveMember(pairId) {
+      return isMember(pairId) && pair(pairId).status == 'active';
+    }
+
+    function isImageUnder10MB() {
+      return request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    match /pairs/{pairId}/raw/{fileName} {
+      allow read: if isMember(pairId);
+      allow create: if isActiveMember(pairId)
+        && isImageUnder10MB()
+        && fileName.matches('[A-Za-z0-9_-]{6,40}[.]jpg');
+      allow update, delete: if false;
+    }
+
+    match /pairs/{pairId}/thumbs/{fileName} {
+      allow read: if isMember(pairId);
+      allow write: if false;
+    }
+
+    match /users/{uid}/{fileName} {
+      allow read: if signedIn();
+      allow write: if signedIn() && request.auth.uid == uid
+        && (request.resource == null || isImageUnder10MB());
+    }
+
+    match /exports/{uid}/{fileName} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

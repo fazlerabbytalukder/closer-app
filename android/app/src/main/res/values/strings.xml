@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_photo_label">Partner photo</string>
+    <string name="widget_photo_description">Your person\'s latest photo, note or doodle, right on your home screen.</string>
+    <string name="widget_countdown_label">Countdown</string>
+    <string name="widget_countdown_description">Days left until your next date together.</string>
+    <string name="widget_plant_label">Streak plant</string>
+    <string name="widget_plant_description">Your shared plant and daily streak. Keep it growing!</string>
+
+    <string name="widget_not_paired">Open Closer to connect</string>
+    <string name="widget_waiting_first">Waiting for %1$s\'s first photo 💌</string>
+    <string name="widget_partner_fallback">your person</string>
+    <string name="widget_countdown_empty">Add a date in Closer</string>
+    <string name="widget_countdown_today">Today! 🎉</string>
+    <string name="widget_streak">🔥 %1$s day streak</string>
+    <string name="widget_streak_start">Start your streak today 🌱</string>
+    <string name="widget_plant_wilted">Needs some love 💧</string>
+    <string name="widget_photo_cd">Latest photo from %1$s</string>
+    <string name="widget_plant_cd">Your shared plant</string>
+
+    <plurals name="widget_days_to">
+        <item quantity="one">day to %1$s</item>
+        <item quantity="other">days to %1$s</item>
+    </plurals>
+    <plurals name="widget_days_left">
+        <item quantity="one">day left</item>
+        <item quantity="other">days left</item>
+    </plurals>
+</resources>

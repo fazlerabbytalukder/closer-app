@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://closer.app/schema/game.schema.json",
+  "title": "pairs/{pairId}/games/{gameId}",
+  "description": "Function-only. While status is guesserTurn the subject's answers are kept in games/{id}/private/subject and answers.subject stays empty until done.",
+  "type": "object",
+  "properties": {
+    "type": {"const": "know-me"},
+    "packId": {"type": "string"},
+    "subjectUid": {"$ref": "common.schema.json#/$defs/uid"},
+    "guesserUid": {"$ref": "common.schema.json#/$defs/uid"},
+    "questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "text": {"type": "string"},
+          "options": {"type": "array", "items": {"type": "string"}, "minItems": 4, "maxItems": 4}
+        },
+        "required": ["text", "options"]
+      }
+    },
+    "answers": {
+      "type": "object",
+      "properties": {
+        "subject": {"type": "array", "items": {"type": "integer", "minimum": 0, "maximum": 3}},
+        "guesser": {"type": "array", "items": {"type": "integer", "minimum": 0, "maximum": 3}}
+      },
+      "required": ["subject", "guesser"]
+    },
+    "score": {"type": "integer", "minimum": 0},
+    "status": {"enum": ["subjectTurn", "guesserTurn", "done"]},
+    "createdAt": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "updatedAt": {"$ref": "common.schema.json#/$defs/timestamp"}
+  },
+  "required": ["type", "packId", "subjectUid", "guesserUid", "questions", "answers", "status", "createdAt"]
+}

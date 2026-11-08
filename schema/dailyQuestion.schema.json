@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://closer.app/schema/dailyQuestion.schema.json",
+  "title": "pairs/{pairId}/dailyQuestions/{yyyy-mm-dd}",
+  "description": "Function-only. Private answers live in dailyQuestions/{date}/private/{uid} = {answer, answeredAt}, readable only by that uid.",
+  "type": "object",
+  "properties": {
+    "date": {"$ref": "common.schema.json#/$defs/dateKey"},
+    "questionId": {"type": "string"},
+    "text": {"type": "string"},
+    "packId": {"type": "string"},
+    "answeredBy": {"type": "array", "items": {"type": "string"}, "maxItems": 2},
+    "revealed": {"type": "boolean"},
+    "answers": {
+      "type": "object",
+      "additionalProperties": {"type": "string", "maxLength": 500},
+      "description": "Filled only when both answered."
+    },
+    "assignedAt": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "revealedAt": {"$ref": "common.schema.json#/$defs/timestamp"}
+  },
+  "required": ["questionId", "text", "packId", "answeredBy", "revealed", "answers"]
+}

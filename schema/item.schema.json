@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://closer.app/schema/item.schema.json",
+  "title": "pairs/{pairId}/items/{itemId}",
+  "description": "Written by sendItem only. Paths are Cloud Storage paths.",
+  "type": "object",
+  "properties": {
+    "type": {"$ref": "common.schema.json#/$defs/itemType"},
+    "senderId": {"$ref": "common.schema.json#/$defs/uid"},
+    "storagePath": {"type": ["string", "null"], "pattern": "^pairs/[^/]+/raw/[^/]+\\.jpg$"},
+    "thumbPath": {"type": ["string", "null"], "pattern": "^pairs/[^/]+/thumbs/[^/]+\\.jpg$"},
+    "caption": {"type": "string", "maxLength": 40},
+    "text": {"type": ["string", "null"], "maxLength": 500},
+    "noteStyle": {
+      "type": ["object", "null"],
+      "properties": {"bg": {"type": "string"}, "font": {"type": "string"}},
+      "required": ["bg", "font"]
+    },
+    "saveToMemories": {"type": "boolean"},
+    "createdAt": {"$ref": "common.schema.json#/$defs/timestamp"}
+  },
+  "required": ["type", "senderId", "caption", "saveToMemories", "createdAt"],
+  "additionalProperties": false
+}

@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://closer.app/schema/user.schema.json",
+  "title": "users/{uid}",
+  "description": "Written by the owner (except pairId, which is function-only). FCM tokens are stored separately in devices/{uid} (function-only).",
+  "type": "object",
+  "properties": {
+    "displayName": {"type": "string", "maxLength": 40},
+    "photoUrl": {"type": ["string", "null"]},
+    "pairId": {"type": ["string", "null"]},
+    "mood": {
+      "type": ["object", "null"],
+      "properties": {
+        "emoji": {"type": "string"},
+        "label": {"type": "string", "maxLength": 40},
+        "updatedAt": {"$ref": "common.schema.json#/$defs/timestamp"}
+      },
+      "required": ["emoji", "label"]
+    },
+    "status": {
+      "type": ["object", "null"],
+      "properties": {
+        "text": {"type": "string", "maxLength": 80},
+        "updatedAt": {"$ref": "common.schema.json#/$defs/timestamp"}
+      },
+      "required": ["text"]
+    },
+    "ageConfirmed18": {"type": "boolean"},
+    "notificationPrefs": {
+      "type": "object",
+      "properties": {
+        "taps": {"type": "boolean"},
+        "questions": {"type": "boolean"},
+        "reminders": {"type": "boolean"},
+        "quietHours": {
+          "type": "object",
+          "properties": {
+            "start": {"type": ["integer", "null"], "minimum": 0, "maximum": 23},
+            "end": {"type": ["integer", "null"], "minimum": 0, "maximum": 23}
+          }
+        }
+      }
+    },
+    "locale": {"type": "string"},
+    "timezone": {"type": "string", "description": "IANA zone, e.g. Europe/Berlin."},
+    "pendingMode": {"oneOf": [{"$ref": "common.schema.json#/$defs/pairMode"}, {"type": "null"}]},
+    "pendingLabel": {"type": ["string", "null"], "maxLength": 20},
+    "createdAt": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "updatedAt": {"$ref": "common.schema.json#/$defs/timestamp"}
+  },
+  "required": ["displayName", "createdAt"],
+  "additionalProperties": false
+}

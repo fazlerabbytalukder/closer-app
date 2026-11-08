@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Static preview for the partner photo widget (widget picker before Android 12). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="160dp" android:height="160dp"
+    android:viewportWidth="160" android:viewportHeight="160">
+    <path android:fillColor="#FFFFFF" android:pathData="M20,0 L140,0 Q160,0 160,20 L160,140 Q160,160 140,160 L20,160 Q0,160 0,140 L0,20 Q0,0 20,0 Z"/>
+    <path android:fillColor="#9CC2F5" android:pathData="M22,8 L138,8 Q152,8 152,22 L152,118 Q152,132 138,132 L22,132 Q8,132 8,118 L8,22 Q8,8 22,8 Z"/>
+    <path android:fillColor="#FFB8C8" android:pathData="M8,100 L50,64 L84,96 L108,76 L152,112 L152,118 Q152,132 138,132 L22,132 Q8,132 8,118 Z"/>
+    <path android:fillColor="#FFF1A8" android:pathData="M112,40 a12,12 0 1,0 24,0 a12,12 0 1,0 -24,0 Z"/>
+    <path android:fillColor="#FF6B8A" android:pathData="M30,18 C26,14 18,16 18,22 C18,28 30,34 30,34 C30,34 42,28 42,22 C42,16 34,14 30,18 Z"/>
+    <path android:fillColor="#1C2433" android:pathData="M12,142 L80,142 Q84,142 84,146 Q84,150 80,150 L12,150 Q8,150 8,146 Q8,142 12,142 Z"/>
+    <path android:fillColor="#9AA3B5" android:pathData="M120,142 L148,142 Q152,142 152,146 Q152,150 148,150 L120,150 Q116,150 116,146 Q116,142 120,142 Z"/>
+</vector>
