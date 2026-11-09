@@ -144,7 +144,7 @@ extension CloserThemeX on BuildContext {
 }
 
 abstract final class AppTheme {
-  static const fontFamily = 'Nunito';
+  static const fontFamily = 'PlusJakartaSans';
 
   static ThemeData build(Brightness brightness, PairMode mode) {
     final dark = brightness == Brightness.dark;

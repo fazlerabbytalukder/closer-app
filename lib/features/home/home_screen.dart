@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:closer_app/app/providers.dart';
 import 'package:closer_app/core/models/models.dart';
@@ -52,7 +53,7 @@ class HomeScreen extends ConsumerWidget {
                     const SizedBox(height: Space.m),
                     _WidgetNudge(onTap: () => context.push('/widgets')),
                   ],
-                  SectionHeader('From $name'),
+                  SectionHeader('Latest from $name'),
                   _LatestCard(latest: latest, name: name),
                   const SizedBox(height: Space.m),
                   _HeartTap(name: name),
@@ -445,62 +446,136 @@ class _LatestCard extends ConsumerWidget {
         ),
       );
     }
+    final cs = context.cs;
     return Semantics(
       button: true,
       label: 'Latest from $name. ${l.caption}. Open to reply',
       child: GestureDetector(
         onTap: () => context.push('/reply'),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(Radii.card),
-          child: AspectRatio(
-            aspectRatio: 1,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                AppImage(image),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    padding: const EdgeInsets.fromLTRB(Space.m, Space.xl, Space.m, Space.m),
-                    decoration: const BoxDecoration(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(Radii.card),
+            boxShadow: const [BoxShadow(color: Color(0x2A2A1B66), blurRadius: 28, offset: Offset(0, 12))],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(Radii.card),
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  AppImage(image),
+                  // Readability scrim: light at the top for the chip, deep at the bottom.
+                  const DecoratedBox(
+                    decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Color(0x00000000), Color(0xAA000000)],
+                        stops: [0, 0.25, 0.55, 1],
+                        colors: [Color(0x33000000), Color(0x00000000), Color(0x00000000), Color(0xB3000000)],
                       ),
                     ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                  ),
+                  Positioned(
+                    top: Space.m - 4,
+                    left: Space.m - 4,
+                    child: _GlassChip(
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (l.caption.isNotEmpty)
-                                Text(l.caption, style: context.tt.titleMedium?.copyWith(color: Colors.white)),
-                              Text(
-                                'From $name · ${timeAgo(l.sentAt)}',
-                                style: context.tt.bodySmall?.copyWith(color: Colors.white70),
-                              ),
-                            ],
+                        Container(
+                          width: 24,
+                          height: 24,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(colors: context.cc.gradient),
+                            border: Border.all(color: Colors.white, width: 1.5),
+                          ),
+                          child: Text(
+                            name.isEmpty ? '?' : name.characters.first.toUpperCase(),
+                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
                           ),
                         ),
-                        FilledButton.tonalIcon(
-                          onPressed: () => context.push('/reply'),
-                          icon: const Icon(Icons.reply_rounded, size: 18),
-                          label: const Text('Reply'),
-                          style: FilledButton.styleFrom(minimumSize: const Size(48, 40)),
+                        const SizedBox(width: 6),
+                        Text(name, style: context.tt.labelMedium?.copyWith(color: Colors.white, fontSize: 13)),
+                        Text(
+                          '  ·  ${timeAgo(l.sentAt)}',
+                          style: context.tt.bodySmall?.copyWith(color: Colors.white.withValues(alpha: 0.8)),
                         ),
                       ],
                     ),
                   ),
-                ),
-              ],
+                  Positioned(
+                    left: Space.m,
+                    right: Space.m - 4,
+                    bottom: Space.m - 4,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: l.caption.isEmpty
+                              ? const SizedBox.shrink()
+                              : Padding(
+                                  padding: const EdgeInsets.only(bottom: 6, right: Space.s),
+                                  child: Text(
+                                    l.caption,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: context.tt.titleMedium?.copyWith(color: Colors.white, height: 1.25),
+                                  ),
+                                ),
+                        ),
+                        Material(
+                          color: Colors.white,
+                          shape: const StadiumBorder(),
+                          child: InkWell(
+                            customBorder: const StadiumBorder(),
+                            onTap: () => context.push('/reply'),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.reply_rounded, size: 18, color: cs.primary),
+                                  const SizedBox(width: 6),
+                                  Text('Reply', style: context.tt.labelLarge?.copyWith(color: cs.primary, fontSize: 14)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Frosted pill used for overlays on top of photos.
+class _GlassChip extends StatelessWidget {
+  const _GlassChip({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(999),
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.18),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: children),
         ),
       ),
     );
