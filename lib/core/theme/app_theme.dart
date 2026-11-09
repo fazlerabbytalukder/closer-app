@@ -1,4 +1,5 @@
 import 'package:closer_app/core/models/models.dart';
+import 'package:closer_app/core/theme/gloss.dart';
 import 'package:flutter/material.dart';
 
 /// Brand tokens (plan section 9.2).
@@ -68,18 +69,14 @@ class CloserColors extends ThemeExtension<CloserColors> {
     final secondary = couple ? Brand.blue : Brand.blue;
     return CloserColors(
       accent: accent,
-      accentTint: dark
-          ? accent.withValues(alpha: 0.18)
-          : (couple ? Brand.pinkTint : Brand.purpleTint),
+      accentTint: dark ? accent.withValues(alpha: 0.18) : (couple ? Brand.pinkTint : Brand.purpleTint),
       secondary: secondary,
       secondaryTint: dark ? secondary.withValues(alpha: 0.18) : Brand.blueTint,
       plant: Brand.green,
       plantTint: dark ? Brand.green.withValues(alpha: 0.18) : Brand.greenTint,
       card: dark ? Brand.darkSurface : Colors.white,
       muted: dark ? const Color(0xFF9AA0B2) : Brand.grey500,
-      gradient: couple
-          ? const [Color(0xFFA796FF), Color(0xFFFF9DB4)]
-          : const [Color(0xFF9A8CFF), Color(0xFF6F86FF)],
+      gradient: couple ? const [Color(0xFFA796FF), Color(0xFFFF9DB4)] : const [Color(0xFF9A8CFF), Color(0xFF6F86FF)],
     );
   }
 
@@ -104,18 +101,17 @@ class CloserColors extends ThemeExtension<CloserColors> {
     Color? card,
     Color? muted,
     List<Color>? gradient,
-  }) =>
-      CloserColors(
-        accent: accent ?? this.accent,
-        accentTint: accentTint ?? this.accentTint,
-        secondary: secondary ?? this.secondary,
-        secondaryTint: secondaryTint ?? this.secondaryTint,
-        plant: plant ?? this.plant,
-        plantTint: plantTint ?? this.plantTint,
-        card: card ?? this.card,
-        muted: muted ?? this.muted,
-        gradient: gradient ?? this.gradient,
-      );
+  }) => CloserColors(
+    accent: accent ?? this.accent,
+    accentTint: accentTint ?? this.accentTint,
+    secondary: secondary ?? this.secondary,
+    secondaryTint: secondaryTint ?? this.secondaryTint,
+    plant: plant ?? this.plant,
+    plantTint: plantTint ?? this.plantTint,
+    card: card ?? this.card,
+    muted: muted ?? this.muted,
+    gradient: gradient ?? this.gradient,
+  );
 
   @override
   CloserColors lerp(CloserColors? other, double t) {
@@ -129,10 +125,7 @@ class CloserColors extends ThemeExtension<CloserColors> {
       plantTint: Color.lerp(plantTint, other.plantTint, t)!,
       card: Color.lerp(card, other.card, t)!,
       muted: Color.lerp(muted, other.muted, t)!,
-      gradient: [
-        for (var i = 0; i < gradient.length; i++)
-          Color.lerp(gradient[i], other.gradient[i], t)!,
-      ],
+      gradient: [for (var i = 0; i < gradient.length; i++) Color.lerp(gradient[i], other.gradient[i], t)!],
     );
   }
 }
@@ -146,13 +139,17 @@ extension CloserThemeX on BuildContext {
 abstract final class AppTheme {
   static const fontFamily = 'PlusJakartaSans';
 
+  /// Raised at rest, pressed down on tap, flat when disabled.
+  static final _buttonElevation = WidgetStateProperty.resolveWith<double>((states) {
+    if (states.contains(WidgetState.disabled)) return 0;
+    if (states.contains(WidgetState.pressed)) return 1;
+    return 5;
+  });
+
   static ThemeData build(Brightness brightness, PairMode mode) {
     final dark = brightness == Brightness.dark;
     final cc = CloserColors.forMode(mode, brightness);
-    final scheme = ColorScheme.fromSeed(
-      seedColor: Brand.purple,
-      brightness: brightness,
-    ).copyWith(
+    final scheme = ColorScheme.fromSeed(seedColor: Brand.purple, brightness: brightness).copyWith(
       primary: dark ? const Color(0xFF9C90FF) : Brand.purple,
       onPrimary: Colors.white,
       secondary: cc.accent,
@@ -181,11 +178,7 @@ abstract final class AppTheme {
       labelMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
       labelSmall: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
     );
-    final text = base.apply(
-      fontFamily: fontFamily,
-      bodyColor: scheme.onSurface,
-      displayColor: scheme.onSurface,
-    );
+    final text = base.apply(fontFamily: fontFamily, bodyColor: scheme.onSurface, displayColor: scheme.onSurface);
 
     return ThemeData(
       useMaterial3: true,
@@ -206,24 +199,31 @@ abstract final class AppTheme {
         color: cc.card,
         elevation: 0,
         margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(Radii.card),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.card)),
       ),
+      // Glossy 3D pills: translucent gloss over each button's own colour,
+      // plus a soft drop shadow tinted with the brand colour.
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size(64, 56),
           shape: const StadiumBorder(),
-          textStyle: text.labelLarge,
-        ),
+          textStyle: text.labelLarge?.copyWith(
+            shadows: const [Shadow(color: Color(0x40000000), blurRadius: 2, offset: Offset(0, 1))],
+          ),
+          shadowColor: scheme.primary,
+          backgroundBuilder: Gloss.builder(),
+        ).copyWith(elevation: _buttonElevation),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(64, 56),
           shape: const StadiumBorder(),
           textStyle: text.labelLarge,
+          backgroundColor: dark ? Brand.darkSurfaceHigh : Colors.white,
           side: BorderSide(color: scheme.outlineVariant, width: 1.5),
-        ),
+          shadowColor: scheme.primary.withValues(alpha: 0.5),
+          backgroundBuilder: Gloss.builder(strength: 0.45),
+        ).copyWith(elevation: _buttonElevation),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
@@ -235,8 +235,7 @@ abstract final class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: dark ? Brand.darkSurface : Colors.white,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: Space.m, vertical: Space.m),
+        contentPadding: const EdgeInsets.symmetric(horizontal: Space.m, vertical: Space.m),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(Radii.small + 4),
           borderSide: BorderSide(color: scheme.outlineVariant),
@@ -258,21 +257,15 @@ abstract final class AppTheme {
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: scheme.surface,
         showDragHandle: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.card)),
-        ),
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.card))),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: scheme.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(Radii.card),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.card)),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(Radii.small + 4),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.small + 4)),
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: cc.card,
@@ -282,12 +275,8 @@ abstract final class AppTheme {
         height: 68,
       ),
       switchTheme: SwitchThemeData(
-        thumbColor: WidgetStateProperty.resolveWith(
-          (s) => s.contains(WidgetState.selected) ? Colors.white : null,
-        ),
-        trackColor: WidgetStateProperty.resolveWith(
-          (s) => s.contains(WidgetState.selected) ? cc.accent : null,
-        ),
+        thumbColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? Colors.white : null),
+        trackColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? cc.accent : null),
       ),
     );
   }

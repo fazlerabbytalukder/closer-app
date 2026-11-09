@@ -3,6 +3,7 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:closer_app/core/theme/app_theme.dart';
+import 'package:closer_app/core/theme/gloss.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -30,11 +31,7 @@ class CloserButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final child = loading
-        ? const SizedBox(
-            width: 22,
-            height: 22,
-            child: CircularProgressIndicator(strokeWidth: 2.5),
-          )
+        ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5))
         : Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -46,15 +43,15 @@ class CloserButton extends StatelessWidget {
     final Widget button = switch (kind) {
       CloserButtonKind.primary => FilledButton(onPressed: onTap, child: child),
       CloserButtonKind.accent => FilledButton(
-          style: FilledButton.styleFrom(
-            backgroundColor: context.cc.accent,
-            foregroundColor: Colors.white,
-          ),
-          onPressed: onTap,
-          child: child,
+        style: FilledButton.styleFrom(
+          backgroundColor: context.cc.accent,
+          foregroundColor: Colors.white,
+          shadowColor: context.cc.accent,
         ),
-      CloserButtonKind.secondary =>
-        OutlinedButton(onPressed: onTap, child: child),
+        onPressed: onTap,
+        child: child,
+      ),
+      CloserButtonKind.secondary => OutlinedButton(onPressed: onTap, child: child),
       CloserButtonKind.ghost => TextButton(onPressed: onTap, child: child),
     };
     return expand ? SizedBox(width: double.infinity, child: button) : button;
@@ -86,15 +83,7 @@ class CloserCard extends StatelessWidget {
         color: gradient == null ? (color ?? context.cc.card) : null,
         gradient: gradient,
         borderRadius: BorderRadius.circular(Radii.card),
-        boxShadow: dark
-            ? null
-            : const [
-                BoxShadow(
-                  color: Color(0x165B50E0),
-                  blurRadius: 30,
-                  offset: Offset(0, 10),
-                ),
-              ],
+        boxShadow: dark ? null : const [BoxShadow(color: Color(0x165B50E0), blurRadius: 30, offset: Offset(0, 10))],
       ),
       child: Material(
         type: MaterialType.transparency,
@@ -128,12 +117,7 @@ class AppImage extends StatelessWidget {
         errorWidget: (_, _, _) => placeholder,
       );
     }
-    return Image.file(
-      File(s),
-      fit: fit,
-      gaplessPlayback: true,
-      errorBuilder: (_, _, _) => placeholder,
-    );
+    return Image.file(File(s), fit: fit, gaplessPlayback: true, errorBuilder: (_, _, _) => placeholder);
   }
 }
 
@@ -157,17 +141,11 @@ class Avatar extends StatelessWidget {
         child: photo != null && photo!.isNotEmpty
             ? AppImage(photo)
             : DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: context.cc.gradient),
-                ),
+                decoration: BoxDecoration(gradient: LinearGradient(colors: context.cc.gradient)),
                 child: Center(
                   child: Text(
                     initial,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: size * 0.42,
-                    ),
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: size * 0.42),
                   ),
                 ),
               ),
@@ -293,10 +271,7 @@ class CounterChip extends StatelessWidget {
     final c = color ?? context.cc.accent;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: c.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(100),
-      ),
+      decoration: BoxDecoration(color: c.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(100)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -322,8 +297,7 @@ class SectionHeader extends StatelessWidget {
       child: Row(
         children: [
           Expanded(child: Text(title, style: context.tt.titleMedium)),
-          if (action != null)
-            TextButton(onPressed: onAction, child: Text(action!)),
+          if (action != null) TextButton(onPressed: onAction, child: Text(action!)),
         ],
       ),
     );
@@ -331,14 +305,7 @@ class SectionHeader extends StatelessWidget {
 }
 
 class EmptyState extends StatelessWidget {
-  const EmptyState({
-    required this.emoji,
-    required this.title,
-    super.key,
-    this.body,
-    this.action,
-    this.onAction,
-  });
+  const EmptyState({required this.emoji, required this.title, super.key, this.body, this.action, this.onAction});
 
   final String emoji;
   final String title;
@@ -403,13 +370,20 @@ class RoundIconButton extends StatelessWidget {
       child: Material(
         color: background ?? context.cs.surfaceContainer,
         shape: const CircleBorder(),
+        elevation: onPressed == null ? 0 : 3,
+        shadowColor: context.cs.primary.withValues(alpha: 0.6),
         child: InkWell(
           customBorder: const CircleBorder(),
           onTap: onPressed,
-          child: SizedBox(
-            width: size,
-            height: size,
-            child: Icon(icon, color: color, size: size * 0.48),
+          child: Gloss(
+            circle: true,
+            enabled: onPressed != null,
+            strength: 0.6,
+            child: SizedBox(
+              width: size,
+              height: size,
+              child: Icon(icon, color: color, size: size * 0.48),
+            ),
           ),
         ),
       ),
