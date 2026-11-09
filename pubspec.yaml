@@ -61,6 +61,8 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   http: ^1.6.0
+  geolocator: ^14.0.1
+  geocoding: ^5.0.1
 
 dev_dependencies:
   flutter_test:

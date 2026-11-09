@@ -6,6 +6,7 @@ import 'package:closer_app/app/providers.dart';
 import 'package:closer_app/core/data/closer_backend.dart';
 import 'package:closer_app/core/models/models.dart';
 import 'package:closer_app/core/services/ads.dart';
+import 'package:closer_app/core/services/location.dart';
 import 'package:closer_app/core/services/note_renderer.dart';
 import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:closer_app/core/ui/actions.dart';
@@ -13,9 +14,11 @@ import 'package:closer_app/core/ui/components.dart';
 import 'package:closer_app/features/send/doodle_canvas.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 
 /// Captures a RepaintBoundary to a PNG file.
@@ -55,13 +58,14 @@ class SendScreen extends ConsumerStatefulWidget {
 
 class _SendScreenState extends ConsumerState<SendScreen> with SingleTickerProviderStateMixin {
   late final TabController _tabs = TabController(
-    length: 3,
+    length: 4,
     vsync: this,
-    initialIndex: switch (widget.initialTab) { 'note' => 1, 'doodle' => 2, _ => 0 },
+    initialIndex: switch (widget.initialTab) { 'note' => 1, 'doodle' => 2, 'location' => 3, _ => 0 },
   );
   final _photoKey = GlobalKey();
   final _noteKey = GlobalKey();
   final _doodleKey = GlobalKey();
+  final _locationKey = GlobalKey();
   final _caption = TextEditingController();
   final _note = TextEditingController();
   final _doodle = DoodleController();
@@ -73,10 +77,28 @@ class _SendScreenState extends ConsumerState<SendScreen> with SingleTickerProvid
   bool _saveToMemories = true;
   bool _sending = false;
 
+  // Location tab: camera shot + where/when it was taken.
+  String? _locPhoto;
+  GeoTag? _geo;
+  DateTime? _locTime;
+  bool _locating = false;
+  bool _autoOpened = false;
+
   @override
   void initState() {
     super.initState();
-    _tabs.addListener(() => setState(() {}));
+    _tabs.addListener(() {
+      setState(() {});
+      // Jump straight into the camera the first time Location is opened.
+      if (_type == ItemType.location && !_tabs.indexIsChanging && !_autoOpened && _locPhoto == null) {
+        _autoOpened = true;
+        unawaited(_captureLocation());
+      }
+    });
+    if (widget.initialTab == 'location') {
+      _autoOpened = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _captureLocation());
+    }
     _doodle.addListener(() => setState(() {}));
   }
 
@@ -95,11 +117,69 @@ class _SendScreenState extends ConsumerState<SendScreen> with SingleTickerProvid
         ItemType.photo => _photo != null,
         ItemType.note => _note.text.trim().isNotEmpty,
         ItemType.doodle => !_doodle.isEmpty,
+        ItemType.location => _locPhoto != null && _geo != null && !_locating,
       };
 
   Future<void> _pick(ImageSource source) async {
     final x = await ImagePicker().pickImage(source: source, maxWidth: 2000, maxHeight: 2000, imageQuality: 92);
     if (x != null) setState(() => _photo = x.path);
+  }
+
+  /// Checks location permission, starts finding the position, opens the
+  /// camera, then waits for the fix so the photo can be stamped.
+  Future<void> _captureLocation({bool retakeOnly = false}) async {
+    if (_locating) return;
+    final XFile? x;
+    final Future<GeoTag> geoFuture;
+    try {
+      await LocationService.ensureReady();
+      // Start the GPS fix while the user frames the shot.
+      final known = _geo;
+      geoFuture = retakeOnly && known != null ? Future.value(known) : LocationService.current();
+      x = await ImagePicker().pickImage(source: ImageSource.camera, maxWidth: 2000, maxHeight: 2000, imageQuality: 92);
+    } on CloserException catch (e) {
+      if (mounted) showToast(context, e.message, icon: Icons.location_off_rounded);
+      return;
+    } on MissingPluginException {
+      // New native plugin (geolocator) not in this build: needs a full rebuild.
+      if (mounted) showToast(context, 'Location isn’t ready in this build — stop the app and run it again.', icon: Icons.location_off_rounded);
+      return;
+    } on Object catch (e, st) {
+      debugPrint('Location capture failed: $e\n$st');
+      if (mounted) showToast(context, 'Couldn’t open the camera or location ($e).', icon: Icons.location_off_rounded);
+      return;
+    }
+    if (!mounted) return;
+    if (x == null) {
+      unawaited(geoFuture.then((_) {}, onError: (Object _) {}));
+      return;
+    }
+    final path = x.path;
+    setState(() {
+      _locPhoto = path;
+      _locTime = DateTime.now();
+      _locating = true;
+    });
+    await _resolve(() => geoFuture);
+  }
+
+  Future<void> _refreshLocation() async {
+    if (_locating) return;
+    setState(() => _locating = true);
+    await _resolve(() => LocationService.ensureReady().then((_) => LocationService.current()));
+  }
+
+  Future<void> _resolve(Future<GeoTag> Function() find) async {
+    try {
+      final geo = await find();
+      if (mounted) setState(() => _geo = geo);
+    } on CloserException catch (e) {
+      if (mounted) showToast(context, e.message, icon: Icons.location_off_rounded);
+    } on Object {
+      if (mounted) showToast(context, 'Couldn’t find your location. Try again.', icon: Icons.location_off_rounded);
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
   }
 
   Future<void> _pickStickers() async {
@@ -164,7 +244,12 @@ class _SendScreenState extends ConsumerState<SendScreen> with SingleTickerProvid
       return;
     }
     setState(() => _sending = true);
-    final key = switch (_type) { ItemType.photo => _photoKey, ItemType.note => _noteKey, ItemType.doodle => _doodleKey };
+    final key = switch (_type) {
+      ItemType.photo => _photoKey,
+      ItemType.note => _noteKey,
+      ItemType.doodle => _doodleKey,
+      ItemType.location => _locationKey,
+    };
     final name = ref.read(partnerNameProvider);
     final ok = await runAction(context, () async {
       final path = await captureToFile(key);
@@ -175,6 +260,7 @@ class _SendScreenState extends ConsumerState<SendScreen> with SingleTickerProvid
               caption: _type == ItemType.note ? '' : _caption.text.trim(),
               text: _type == ItemType.note ? _note.text.trim() : null,
               noteStyle: _type == ItemType.note ? NoteStyle(bg: _noteBg, font: _noteFont) : null,
+              geo: _type == ItemType.location ? _geo : null,
               saveToMemories: _saveToMemories,
             ),
           );
@@ -256,6 +342,7 @@ class _SendScreenState extends ConsumerState<SendScreen> with SingleTickerProvid
             Tab(icon: Icon(Icons.photo_camera_rounded), text: 'Photo'),
             Tab(icon: Icon(Icons.sticky_note_2_rounded), text: 'Note'),
             Tab(icon: Icon(Icons.brush_rounded), text: 'Doodle'),
+            Tab(icon: Icon(Icons.location_on_rounded), text: 'Location'),
           ],
         ),
       ),
@@ -266,7 +353,7 @@ class _SendScreenState extends ConsumerState<SendScreen> with SingleTickerProvid
               child: TabBarView(
                 controller: _tabs,
                 physics: const NeverScrollableScrollPhysics(),
-                children: [_photoTab(), _noteTab(), _doodleTab()],
+                children: [_photoTab(), _noteTab(), _doodleTab(), _locationTab()],
               ),
             ),
             Padding(
@@ -537,6 +624,159 @@ class _SendScreenState extends ConsumerState<SendScreen> with SingleTickerProvid
           ),
         ),
       ],
+    );
+  }
+
+  Widget _locationTab() {
+    final photo = _locPhoto;
+    if (photo == null) {
+      return ListView(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(Space.m),
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: CloserCard(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('📍', style: TextStyle(fontSize: 56)),
+                    const SizedBox(height: Space.m),
+                    Text('Show where you are', style: context.tt.titleLarge),
+                    const SizedBox(height: Space.xs),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: Space.l),
+                      child: Text(
+                        'Snap a photo — we’ll stamp it with your place and time.',
+                        textAlign: TextAlign.center,
+                        style: context.tt.bodyMedium?.copyWith(color: context.cc.muted),
+                      ),
+                    ),
+                    const SizedBox(height: Space.l),
+                    CloserButton(
+                      label: 'Open camera',
+                      icon: Icons.photo_camera_rounded,
+                      expand: false,
+                      loading: _locating,
+                      onPressed: _captureLocation,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+    return ListView(
+      children: [
+        _square(
+          Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.file(File(photo), fit: BoxFit.cover),
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: _LocationStamp(geo: _geo, time: _locTime ?? DateTime.now(), locating: _locating),
+              ),
+            ],
+          ),
+          _locationKey,
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Space.m),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _caption,
+                  maxLength: Item.maxCaption,
+                  decoration: const InputDecoration(hintText: 'Add a caption', counterText: ''),
+                ),
+              ),
+              const SizedBox(width: Space.s),
+              RoundIconButton(
+                icon: Icons.my_location_rounded,
+                label: 'Update location',
+                onPressed: _locating ? null : _refreshLocation,
+              ),
+              const SizedBox(width: Space.s),
+              RoundIconButton(
+                icon: Icons.photo_camera_rounded,
+                label: 'Retake photo',
+                onPressed: _locating ? null : () => _captureLocation(retakeOnly: true),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Bottom overlay baked into a location photo: pin, place, coordinates, time.
+class _LocationStamp extends StatelessWidget {
+  const _LocationStamp({required this.geo, required this.time, required this.locating});
+
+  final GeoTag? geo;
+  final DateTime time;
+  final bool locating;
+
+  @override
+  Widget build(BuildContext context) {
+    final g = geo;
+    const white = Colors.white;
+    const shadow = [Shadow(color: Color(0x80000000), blurRadius: 4)];
+    const small = TextStyle(color: Color(0xE6FFFFFF), fontWeight: FontWeight.w600, fontSize: 11, shadows: shadow);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(Space.m, Space.xl, Space.m, Space.m),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0x00000000), Color(0xB3000000)],
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(colors: context.cc.gradient),
+              border: Border.all(color: white, width: 2),
+            ),
+            child: locating
+                ? const Padding(
+                    padding: EdgeInsets.all(10),
+                    child: CircularProgressIndicator(strokeWidth: 2, color: white),
+                  )
+                : const Icon(Icons.location_on_rounded, color: white, size: 22),
+          ),
+          const SizedBox(width: Space.s),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  g == null
+                      ? (locating ? 'Finding your location…' : 'Location unavailable')
+                      : (g.place.isEmpty ? 'Here right now' : g.place),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: white, fontWeight: FontWeight.w800, fontSize: 15, shadows: shadow),
+                ),
+                if (g != null) Text(g.coords, style: small),
+                Text(DateFormat('EEE d MMM yyyy · HH:mm').format(time), style: small),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

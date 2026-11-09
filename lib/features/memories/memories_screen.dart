@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Memories scrapbook (F9): timeline grid grouped by month. Free plans see
 /// the last 30 days; older memories are blurred behind Plus.
@@ -147,6 +148,13 @@ class ItemViewerScreen extends ConsumerWidget {
                     children: [
                       if (item.caption.isNotEmpty)
                         Text(item.caption, style: context.tt.titleMedium?.copyWith(color: Colors.white)),
+                      if (item.geo case final geo?)
+                        TextButton.icon(
+                          style: TextButton.styleFrom(foregroundColor: Colors.white),
+                          icon: const Icon(Icons.location_on_rounded),
+                          label: Text(geo.place.isEmpty ? geo.coords : geo.place, overflow: TextOverflow.ellipsis),
+                          onPressed: () => launchUrl(geo.mapsUri, mode: LaunchMode.externalApplication),
+                        ),
                       Text(
                         DateFormat('EEEE d MMMM yyyy, HH:mm').format(item.createdAt),
                         style: context.tt.bodySmall?.copyWith(color: Colors.white70),

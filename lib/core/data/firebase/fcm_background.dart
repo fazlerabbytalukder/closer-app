@@ -174,6 +174,7 @@ Future<void> _handleItem(
     final what = switch (itemType) {
       'note' => 'a note',
       'doodle' => 'a doodle',
+      'location' => 'where they are',
       _ => 'a photo',
     };
     final name = senderName.isEmpty ? 'Your person' : senderName;

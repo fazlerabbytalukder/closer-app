@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Take photos to send to your person.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Pick photos to send to your person.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Tag your photo with where you are so your person can see it.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

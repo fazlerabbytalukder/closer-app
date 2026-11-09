@@ -27,7 +27,7 @@ import {
 import {ensureThumbnail, rawPath, thumbPath} from "./thumbnails";
 import {markActivity} from "./streaks";
 
-const ITEM_TYPES = ["photo", "note", "doodle"] as const;
+const ITEM_TYPES = ["photo", "note", "doodle", "location"] as const;
 type ItemType = (typeof ITEM_TYPES)[number];
 const ID_RE = /^[A-Za-z0-9_-]{6,40}$/;
 const NOTE_BGS = /^[a-z0-9_-]{1,24}$/;
@@ -43,6 +43,7 @@ interface SendItemInput {
   caption?: string;
   text?: string;
   noteStyle?: {bg?: string; font?: string};
+  geo?: {lat?: unknown; lng?: unknown; place?: unknown};
   saveToMemories?: boolean;
 }
 
@@ -70,6 +71,8 @@ export const sendItem = onCall<SendItemInput>(
           font: NOTE_BGS.test(String(input.noteStyle.font)) ? String(input.noteStyle.font) : "rounded",
         } :
         null;
+    const geo = type === "location" ? parseGeo(input.geo) : null;
+    if (type === "location" && !geo) throw userError("invalid-argument", "bad-geo", "Missing location.");
     const saveToMemories = input.saveToMemories !== false;
 
     const raw = bucket().file(rawPath(pairId, itemId));
@@ -111,6 +114,7 @@ export const sendItem = onCall<SendItemInput>(
       caption,
       text,
       noteStyle,
+      geo,
       saveToMemories,
       createdAt,
     };
@@ -178,6 +182,15 @@ export const sendItem = onCall<SendItemInput>(
   },
 );
 
+/** Validates {lat, lng, place} from the app; null when unusable. */
+function parseGeo(g: SendItemInput["geo"]): {lat: number; lng: number; place: string} | null {
+  if (!g || typeof g !== "object") return null;
+  const lat = Number(g.lat);
+  const lng = Number(g.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  return {lat, lng, place: str(g.place, 80)};
+}
+
 function serializeItem(id: string, d: Record<string, unknown>) {
   const created = d.createdAt instanceof Timestamp ? d.createdAt.toMillis() : Date.now();
   return {
@@ -189,6 +202,7 @@ function serializeItem(id: string, d: Record<string, unknown>) {
     caption: d.caption ?? "",
     text: d.text ?? null,
     noteStyle: d.noteStyle ?? null,
+    geo: d.geo ?? null,
     saveToMemories: d.saveToMemories !== false,
     createdAt: created,
   };

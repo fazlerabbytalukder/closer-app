@@ -135,6 +135,7 @@ class LiveSync {
           ItemType.photo => 'a photo',
           ItemType.note => 'a note',
           ItemType.doodle => 'a doodle',
+          ItemType.location => 'where they are',
         };
         await notif.show(
           channel: Channels.partnerItems,

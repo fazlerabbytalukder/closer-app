@@ -78,7 +78,10 @@ class RelationLabel {
 enum ItemType {
   photo,
   note,
-  doodle;
+  doodle,
+
+  /// Camera photo stamped with where it was taken (see [GeoTag]).
+  location;
 
   static ItemType parse(Object? v) =>
       ItemType.values.firstWhere((t) => t.name == v, orElse: () => photo);
@@ -527,6 +530,34 @@ class Pair {
       };
 }
 
+/// Where a location item was taken. [place] is a human-readable name from
+/// reverse geocoding (may be empty when offline).
+@immutable
+class GeoTag {
+  const GeoTag({required this.lat, required this.lng, this.place = ''});
+
+  factory GeoTag.fromJson(Map<String, dynamic> j) => GeoTag(
+        lat: (j['lat'] as num?)?.toDouble() ?? 0,
+        lng: (j['lng'] as num?)?.toDouble() ?? 0,
+        place: j['place'] as String? ?? '',
+      );
+
+  static const maxPlace = 80;
+
+  final double lat;
+  final double lng;
+  final String place;
+
+  /// e.g. "23.81032° N, 90.41254° E".
+  String get coords =>
+      '${lat.abs().toStringAsFixed(5)}° ${lat >= 0 ? 'N' : 'S'}, '
+      '${lng.abs().toStringAsFixed(5)}° ${lng >= 0 ? 'E' : 'W'}';
+
+  Uri get mapsUri => Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+
+  Map<String, dynamic> toJson() => {'lat': lat, 'lng': lng, 'place': place};
+}
+
 @immutable
 class NoteStyle {
   const NoteStyle({required this.bg, required this.font});
@@ -554,6 +585,7 @@ class Item {
     this.caption = '',
     this.text,
     this.noteStyle,
+    this.geo,
     this.saveToMemories = true,
   });
 
@@ -568,6 +600,7 @@ class Item {
         noteStyle: j['noteStyle'] == null
             ? null
             : NoteStyle.fromJson(_map(j['noteStyle'])),
+        geo: j['geo'] == null ? null : GeoTag.fromJson(_map(j['geo'])),
         saveToMemories: j['saveToMemories'] as bool? ?? true,
         createdAt: _date(j['createdAt']) ?? DateTime.now(),
       );
@@ -588,6 +621,9 @@ class Item {
   /// Note text (notes are also rendered to an image for the widget).
   final String? text;
   final NoteStyle? noteStyle;
+
+  /// Set for [ItemType.location] items.
+  final GeoTag? geo;
   final bool saveToMemories;
   final DateTime createdAt;
 
@@ -599,6 +635,7 @@ class Item {
         'caption': caption,
         'text': text,
         'noteStyle': noteStyle?.toJson(),
+        'geo': geo?.toJson(),
         'saveToMemories': saveToMemories,
         'createdAt': _ms(createdAt),
       };
@@ -852,6 +889,7 @@ class SendRequest {
     this.caption = '',
     this.text,
     this.noteStyle,
+    this.geo,
     this.saveToMemories = true,
   });
 
@@ -860,6 +898,7 @@ class SendRequest {
   final String caption;
   final String? text;
   final NoteStyle? noteStyle;
+  final GeoTag? geo;
   final bool saveToMemories;
 }
 

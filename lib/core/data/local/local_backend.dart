@@ -487,6 +487,7 @@ class LocalBackend implements CloserBackend {
       caption: request.caption,
       text: request.text,
       noteStyle: request.noteStyle,
+      geo: request.geo,
       saveToMemories: request.saveToMemories,
     );
     usage['sends'] = (usage['sends'] as int) + 1;
@@ -505,6 +506,7 @@ class LocalBackend implements CloserBackend {
     String caption = '',
     String? text,
     NoteStyle? noteStyle,
+    GeoTag? geo,
     bool saveToMemories = true,
   }) async {
     final id = _uuid.v4();
@@ -529,6 +531,7 @@ class LocalBackend implements CloserBackend {
       caption: caption.length > Item.maxCaption ? caption.substring(0, Item.maxCaption) : caption,
       text: text,
       noteStyle: noteStyle,
+      geo: geo,
       saveToMemories: saveToMemories,
       createdAt: DateTime.now(),
     );

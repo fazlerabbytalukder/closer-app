@@ -346,6 +346,7 @@ class FirebaseBackend implements CloserBackend {
       'caption': _clip(request.caption, Item.maxCaption),
       'text': request.text,
       'noteStyle': request.noteStyle?.toJson(),
+      'geo': request.geo?.toJson(),
       'saveToMemories': request.saveToMemories,
     });
     return Item.fromJson(data['id'] as String? ?? itemId, data);
