@@ -90,9 +90,9 @@ class CloserCard extends StatelessWidget {
             ? null
             : const [
                 BoxShadow(
-                  color: Color(0x0F1C2433),
-                  blurRadius: 24,
-                  offset: Offset(0, 8),
+                  color: Color(0x165B50E0),
+                  blurRadius: 30,
+                  offset: Offset(0, 10),
                 ),
               ],
       ),

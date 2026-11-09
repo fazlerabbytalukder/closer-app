@@ -4,6 +4,7 @@ import 'package:closer_app/core/services/ads.dart';
 import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:closer_app/core/ui/components.dart';
 import 'package:closer_app/core/ui/plant_art.dart';
+import 'package:closer_app/core/ui/soft_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -24,10 +25,15 @@ class TogetherScreen extends ConsumerWidget {
         (g.status == GameStatus.guesserTurn && g.guesserUid == me)).length;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Together')),
+      backgroundColor: Colors.transparent,
+      appBar: softAppBar(context, 'Together'),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(Space.m, 0, Space.m, Space.xl),
+        padding: const EdgeInsets.fromLTRB(Space.m, 0, Space.m, 120),
         children: [
+          if (pair != null) ...[
+            _StreakCard(streak: pair.streak),
+            const SizedBox(height: Space.m),
+          ],
           _Tile(
             emoji: '☀️',
             color: context.cc.secondaryTint,
@@ -170,6 +176,135 @@ class _PastPreview extends ConsumerWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// "N Days Streak" hero with the buddy and this week's dots.
+class _StreakCard extends StatelessWidget {
+  const _StreakCard({required this.streak});
+
+  final Streak streak;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final last = DateTime.tryParse(streak.lastBothActiveDate ?? '');
+    bool done(DateTime d) {
+      if (last == null || streak.count == 0) return false;
+      final diff = last.difference(d).inDays;
+      return diff >= 0 && diff < streak.count;
+    }
+
+    // Week starting Sunday.
+    final start = today.subtract(Duration(days: today.weekday % 7));
+    final week = [for (var i = 0; i < 7; i++) start.add(Duration(days: i))];
+    const labels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    final hot = streak.count > 0;
+    final accent = context.cc.accent;
+
+    return CloserCard(
+      padding: const EdgeInsets.fromLTRB(Space.m, Space.l, Space.m, Space.m),
+      child: Column(
+        children: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              if (hot)
+                Container(
+                  width: 130,
+                  height: 130,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(colors: [accent.withValues(alpha: 0.35), accent.withValues(alpha: 0)]),
+                  ),
+                ),
+              Buddy(
+                color: const Color(0xFF9D8BFF),
+                withBody: true,
+                mood: hot ? BuddyMood.love : BuddyMood.sleepy,
+              ),
+            ],
+          ),
+          const SizedBox(height: Space.s),
+          Text(
+            hot ? '${streak.count} Day${streak.count == 1 ? '' : 's'} Streak' : 'Start a streak',
+            style: context.tt.titleLarge,
+          ),
+          Text(
+            hot ? 'Best ${streak.best} · ${streak.freezesLeft} freeze${streak.freezesLeft == 1 ? '' : 's'} left' : 'Both send something today to begin',
+            style: context.tt.bodySmall?.copyWith(color: context.cc.muted),
+          ),
+          const SizedBox(height: Space.m),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+            decoration: BoxDecoration(
+              color: context.cc.accentTint,
+              borderRadius: BorderRadius.circular(100),
+            ),
+            child: Row(
+              children: [
+                for (var i = 0; i < 7; i++)
+                  Expanded(
+                    child: Column(
+                      children: [
+                        Text(
+                          labels[i],
+                          style: context.tt.labelSmall?.copyWith(
+                            fontSize: 11,
+                            color: week[i] == today ? accent : context.cc.muted,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        _DayDot(
+                          day: week[i].day,
+                          done: done(week[i]),
+                          today: week[i] == today,
+                          future: week[i].isAfter(today),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DayDot extends StatelessWidget {
+  const _DayDot({required this.day, required this.done, required this.today, required this.future});
+
+  final int day;
+  final bool done;
+  final bool today;
+  final bool future;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = context.cc.accent;
+    return Container(
+      width: 26,
+      height: 26,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: done ? accent : Colors.transparent,
+        border: today && !done ? Border.all(color: accent, width: 2) : null,
+        boxShadow: today && done ? [BoxShadow(color: accent.withValues(alpha: 0.5), blurRadius: 10)] : null,
+      ),
+      child: done
+          ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
+          : Text(
+              '$day',
+              style: context.tt.labelSmall?.copyWith(
+                fontSize: 11,
+                color: future ? context.cc.muted.withValues(alpha: 0.6) : context.cc.muted,
+              ),
+            ),
     );
   }
 }

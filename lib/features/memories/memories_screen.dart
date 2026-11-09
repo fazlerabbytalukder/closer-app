@@ -4,6 +4,7 @@ import 'package:closer_app/core/models/models.dart';
 import 'package:closer_app/core/services/ads.dart';
 import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:closer_app/core/ui/components.dart';
+import 'package:closer_app/core/ui/soft_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -28,7 +29,8 @@ class MemoriesScreen extends ConsumerWidget {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Memories')),
+      backgroundColor: Colors.transparent,
+      appBar: softAppBar(context, 'Memories'),
       body: items.isEmpty
           ? EmptyState(
               emoji: '📸',
@@ -67,7 +69,7 @@ class MemoriesScreen extends ConsumerWidget {
                     ),
                   ),
                 ],
-                const SliverToBoxAdapter(child: SizedBox(height: Space.xl)),
+                const SliverToBoxAdapter(child: SizedBox(height: 120)),
               ],
             ),
     );

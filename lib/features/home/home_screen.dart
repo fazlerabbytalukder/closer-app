@@ -6,7 +6,7 @@ import 'package:closer_app/core/services/widget_bridge.dart';
 import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:closer_app/core/ui/actions.dart';
 import 'package:closer_app/core/ui/components.dart';
-import 'package:closer_app/core/ui/plant_art.dart';
+import 'package:closer_app/core/ui/soft_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,95 +25,365 @@ class HomeScreen extends ConsumerWidget {
     final name = ref.watch(partnerNameProvider);
     final installed = ref.watch(_installedWidgetsProvider).value;
     if (me == null || pair == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(backgroundColor: Colors.transparent, body: Center(child: CircularProgressIndicator()));
     }
     final partnerUid = pair.partnerOf(me.uid);
     final latest = pair.latestItemByUser[partnerUid];
 
     return Scaffold(
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async {
-            ref.invalidate(_installedWidgetsProvider);
-            await WidgetBridge.updateAll();
-          },
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(Space.m, Space.m, Space.m, Space.xl),
-            children: [
-              _PartnerHeader(me: me, partner: partner, name: name),
-              const SizedBox(height: Space.m),
-              if (installed == 0) ...[
-                _WidgetNudge(onTap: () => context.push('/widgets')),
-                const SizedBox(height: Space.m),
-              ],
-              _LatestCard(latest: latest, name: name),
-              const SizedBox(height: Space.m),
-              _HeartTap(name: name),
-              const SizedBox(height: Space.m),
-              const _QuestionCard(),
-              const SizedBox(height: Space.m),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: Colors.transparent,
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(_installedWidgetsProvider);
+          await WidgetBridge.updateAll();
+        },
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            _Hero(me: me, partner: partner, pair: pair, name: name),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(Space.m, Space.m, Space.m, 120),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(child: _PlantCard(pair: pair)),
-                  const SizedBox(width: Space.m),
-                  const Expanded(child: _CountdownCard()),
+                  _ProgressCard(me: me, pair: pair, name: name),
+                  _Rituals(me: me, pair: pair, name: name),
+                  if (installed == 0) ...[
+                    const SizedBox(height: Space.m),
+                    _WidgetNudge(onTap: () => context.push('/widgets')),
+                  ],
+                  SectionHeader('From $name'),
+                  _LatestCard(latest: latest, name: name),
+                  const SizedBox(height: Space.m),
+                  _HeartTap(name: name),
+                  const SizedBox(height: Space.m),
+                  const _QuestionCard(),
+                  const _OnThisDay(),
                 ],
               ),
-              const _OnThisDay(),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _PartnerHeader extends StatelessWidget {
-  const _PartnerHeader({required this.me, required this.partner, required this.name});
+bool _isToday(DateTime? t) {
+  if (t == null) return false;
+  final n = DateTime.now();
+  return t.year == n.year && t.month == n.month && t.day == n.day;
+}
+
+/// Purple greeting header with the bear buddy and three stat tiles.
+class _Hero extends ConsumerWidget {
+  const _Hero({required this.me, required this.partner, required this.pair, required this.name});
 
   final AppUser me;
   final AppUser? partner;
+  final Pair pair;
   final String name;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final countdowns = ref.watch(countdownsProvider).value ?? const <Countdown>[];
+    final c = countdowns.firstOrNull;
+    final days = c?.daysLeft(DateTime.now());
     final mood = partner?.mood;
     final status = partner?.status;
-    final now = DateTime.now();
-    return Row(
+    final first = me.displayName.trim().split(' ').first;
+    final hour = DateTime.now().hour;
+    final greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Hey' : 'Good evening';
+    final top = MediaQuery.paddingOf(context).top;
+    final wilted = pair.plant.health == PlantHealth.wilted;
+
+    return Stack(
       children: [
-        AvatarPair(
-          me: me.displayName,
-          partner: partner?.displayName ?? '',
-          mePhoto: me.photoUrl,
-          partnerPhoto: partner?.photoUrl,
-          size: 48,
+        Positioned(
+          left: 0,
+          right: 0,
+          top: 0,
+          height: top + 250,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [const Color(0xFF7D6EF5), const Color(0xFFA699FF), Brand.lavender.withValues(alpha: 0)],
+                stops: const [0, 0.6, 1],
+              ),
+            ),
+          ),
         ),
-        const SizedBox(width: Space.m),
-        Expanded(
+        Padding(
+          padding: EdgeInsets.fromLTRB(Space.m, top + Space.s, Space.m, 0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(name, style: context.tt.titleLarge, overflow: TextOverflow.ellipsis),
-              Text(
-                [
-                  if (mood != null) '${mood.emoji} ${mood.label}',
-                  if (status != null && status.text.isNotEmpty) status.text,
-                  if (mood == null && status == null) 'Their local time ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}',
-                ].join(' · '),
-                style: context.tt.bodyMedium?.copyWith(color: context.cc.muted),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              Row(
+                children: [
+                  GlassPill(
+                    padding: const EdgeInsets.all(4),
+                    child: AvatarPair(
+                      me: me.displayName,
+                      partner: partner?.displayName ?? '',
+                      mePhoto: me.photoUrl,
+                      partnerPhoto: partner?.photoUrl,
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(width: Space.s),
+                  GlassPill(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          tooltip: 'Set your mood',
+                          visualDensity: VisualDensity.compact,
+                          icon: const Icon(Icons.mood_rounded, color: Brand.indigo),
+                          onPressed: () => context.push('/mood'),
+                        ),
+                        IconButton(
+                          tooltip: 'Widgets',
+                          visualDensity: VisualDensity.compact,
+                          icon: const Icon(Icons.widgets_outlined, color: Brand.indigo),
+                          onPressed: () => context.push('/widgets'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+                  const Flexible(child: SpeechBubble('Let’s feel closer!')),
+                ],
+              ),
+              SizedBox(
+                height: 128,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            '$greeting, $first',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.tt.headlineSmall?.copyWith(color: Colors.white),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            [
+                              if (mood != null) '$name feels ${mood.emoji} ${mood.label.toLowerCase()}',
+                              if (status != null && status.text.isNotEmpty) status.text,
+                              if (mood == null && (status == null || status.text.isEmpty)) 'Ready for a good day with $name?',
+                            ].join(' · '),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.tt.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: 0.9)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Buddy(size: 104, mood: wilted ? BuddyMood.sleepy : BuddyMood.happy)
+                        .animate(onPlay: (c) => c.repeat(reverse: true))
+                        .moveY(begin: 0, end: -6, duration: 1600.ms, curve: Curves.easeInOut),
+                  ],
+                ),
+              ),
+              Row(
+                children: [
+                  Expanded(
+                    child: StatTile(
+                      emoji: '🔥',
+                      label: 'Streak',
+                      value: '${pair.streak.count}',
+                      unit: pair.streak.count == 1 ? 'day' : 'days',
+                      onTap: () => context.push('/plant'),
+                    ),
+                  ),
+                  const SizedBox(width: Space.s + 2),
+                  Expanded(
+                    child: StatTile(
+                      emoji: wilted ? '🥀' : '🌱',
+                      label: 'Plant',
+                      value: '${pair.plant.stage}',
+                      unit: wilted ? 'needs love' : 'of 8 grown',
+                      onTap: () => context.push('/plant'),
+                    ),
+                  ),
+                  const SizedBox(width: Space.s + 2),
+                  Expanded(
+                    child: StatTile(
+                      emoji: c?.emoji ?? '📅',
+                      label: c == null ? 'Next date' : 'Countdown',
+                      value: c == null ? '+' : (days == 0 ? 'Today' : '$days'),
+                      unit: c == null ? 'add one' : (days == 0 ? c.title : (days == 1 ? 'day left' : 'days left')),
+                      onTap: () => context.push(c == null ? '/countdowns/edit' : '/countdowns'),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
         ),
-        RoundIconButton(
-          icon: Icons.mood_rounded,
-          label: 'Set your mood',
-          onPressed: () => context.push('/mood'),
+      ],
+    );
+  }
+}
+
+/// Daily rituals that keep the streak alive.
+typedef _Ritual = ({String emoji, String title, String subtitle, bool done, Color tint, VoidCallback onTap});
+
+List<_Ritual> _ritualsFor(BuildContext context, WidgetRef ref, AppUser me, Pair pair, String name) {
+  final q = ref.watch(todayQuestionProvider).value;
+  final tap = ref.watch(latestTapProvider).value;
+  final cc = context.cc;
+  return [
+    (
+      emoji: '📸',
+      title: 'Send a photo',
+      subtitle: 'Land on $name’s home screen',
+      done: _isToday(pair.latestItemByUser[me.uid]?.sentAt),
+      tint: cc.accentTint,
+      onTap: () => context.push('/send'),
+    ),
+    (
+      emoji: '☀️',
+      title: 'Answer today’s question',
+      subtitle: q == null ? 'A new one every morning' : q.text,
+      done: q?.myAnswer != null,
+      tint: cc.secondaryTint,
+      onTap: () => context.push('/question'),
+    ),
+    (
+      emoji: '💗',
+      title: 'Send a heart tap',
+      subtitle: 'A soft buzz that says “thinking of you”',
+      done: tap != null && tap.senderId == me.uid && _isToday(tap.createdAt),
+      tint: cc.plantTint,
+      onTap: () async {
+        hapticMedium();
+        final ok = await runAction(context, () => ref.read(backendProvider).sendTap());
+        if (ok && context.mounted) showToast(context, '$name will feel that 💗');
+      },
+    ),
+  ];
+}
+
+class _ProgressCard extends ConsumerWidget {
+  const _ProgressCard({required this.me, required this.pair, required this.name});
+
+  final AppUser me;
+  final Pair pair;
+  final String name;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final rituals = _ritualsFor(context, ref, me, pair, name);
+    final done = rituals.where((r) => r.done).length;
+    final next = rituals.where((r) => !r.done).firstOrNull;
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(Radii.card),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Brand.indigo, Brand.indigoDeep],
         ),
+        boxShadow: const [BoxShadow(color: Color(0x405B50E0), blurRadius: 24, offset: Offset(0, 12))],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            left: -14,
+            bottom: -30,
+            child: Buddy(
+              size: 112,
+              withBody: true,
+              color: const Color(0xFFB4A5FF),
+              mood: done == rituals.length ? BuddyMood.love : BuddyMood.happy,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(112, Space.m, Space.m, Space.m),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text('Today’s progress', style: context.tt.titleSmall?.copyWith(color: Colors.white)),
+                    ),
+                    Text('$done/${rituals.length}', style: context.tt.titleSmall?.copyWith(color: Colors.white)),
+                  ],
+                ),
+                const SizedBox(height: Space.s + 2),
+                SegmentedProgress(done: done, total: rituals.length),
+                const SizedBox(height: Space.s + 4),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    _DarkChip(done == rituals.length ? 'All done 🎉' : '${rituals.length - done} left'),
+                    if (next != null) _DarkChip('Next: ${next.title}'),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DarkChip extends StatelessWidget {
+  const _DarkChip(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(100),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+      ),
+      child: Text(label, style: context.tt.labelSmall?.copyWith(color: Colors.white, fontSize: 11)),
+    );
+  }
+}
+
+class _Rituals extends ConsumerWidget {
+  const _Rituals({required this.me, required this.pair, required this.name});
+
+  final AppUser me;
+  final Pair pair;
+  final String name;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final rituals = _ritualsFor(context, ref, me, pair, name);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SectionHeader('Today’s rituals'),
+        for (final (i, r) in rituals.indexed) ...[
+          if (i > 0) const SizedBox(height: Space.s + 2),
+          RitualTile(
+            emoji: r.emoji,
+            title: r.title,
+            subtitle: r.subtitle,
+            done: r.done,
+            tint: r.tint,
+            onTap: r.onTap,
+          ),
+        ],
       ],
     );
   }
@@ -368,74 +638,6 @@ class _QuestionCard extends ConsumerWidget {
           const SizedBox(height: Space.s),
           Text(status, style: context.tt.bodyMedium?.copyWith(color: context.cc.muted)),
         ],
-      ),
-    );
-  }
-}
-
-class _PlantCard extends StatelessWidget {
-  const _PlantCard({required this.pair});
-
-  final Pair pair;
-
-  @override
-  Widget build(BuildContext context) {
-    final wilted = pair.plant.health == PlantHealth.wilted;
-    return CloserCard(
-      onTap: () => context.push('/plant'),
-      color: context.cc.plantTint,
-      child: Column(
-        children: [
-          PlantArt(stage: pair.plant.stage, health: pair.plant.health, size: 96),
-          const SizedBox(height: Space.xs),
-          Text('🔥 ${pair.streak.count} day${pair.streak.count == 1 ? '' : 's'}', style: context.tt.titleMedium),
-          Text(
-            wilted ? 'Needs some love' : 'Your streak',
-            style: context.tt.bodySmall?.copyWith(color: context.cc.muted),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CountdownCard extends ConsumerWidget {
-  const _CountdownCard();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final list = ref.watch(countdownsProvider).value ?? const [];
-    final c = list.isEmpty ? null : list.first;
-    final days = c?.daysLeft(DateTime.now());
-    return CloserCard(
-      onTap: () => context.push(c == null ? '/countdowns/edit' : '/countdowns'),
-      color: context.cc.secondaryTint,
-      child: SizedBox(
-        height: 146,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: c == null
-              ? [
-                  const Text('📅', style: TextStyle(fontSize: 36)),
-                  const SizedBox(height: Space.s),
-                  Text('Add a date', style: context.tt.titleMedium),
-                  Text('to look forward to', style: context.tt.bodySmall?.copyWith(color: context.cc.muted)),
-                ]
-              : [
-                  Text(c.emoji, style: const TextStyle(fontSize: 28)),
-                  Text(
-                    days == 0 ? 'Today!' : '$days',
-                    style: context.tt.displaySmall?.copyWith(color: context.cc.secondary),
-                  ),
-                  Text(
-                    days == 0 ? c.title : '${days == 1 ? 'day' : 'days'} to ${c.title}',
-                    maxLines: 2,
-                    textAlign: TextAlign.center,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.tt.bodyMedium,
-                  ),
-                ],
-        ),
       ),
     );
   }

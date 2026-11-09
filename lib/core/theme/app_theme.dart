@@ -7,8 +7,12 @@ abstract final class Brand {
   static const blueTint = Color(0xFFE6F0FC);
   static const pink = Color(0xFFFF6B8A);
   static const pinkTint = Color(0xFFFFE3EA);
-  static const purple = Color(0xFF7C6CF2);
-  static const purpleTint = Color(0xFFEDEBFF);
+  static const purple = Color(0xFF7B6CF6);
+  static const purpleTint = Color(0xFFEFEBFF);
+  static const lavender = Color(0xFFE6E0FF);
+  static const indigo = Color(0xFF5B50E0);
+  static const indigoDeep = Color(0xFF4A3FCB);
+  static const peach = Color(0xFFFFD9C4);
   static const green = Color(0xFF5DBB63);
   static const greenTint = Color(0xFFE3F5E4);
   static const amber = Color(0xFFFFB547);
@@ -18,7 +22,7 @@ abstract final class Brand {
   static const grey500 = Color(0xFF8A90A0);
   static const grey200 = Color(0xFFE7E8EE);
   static const grey100 = Color(0xFFF4F4F7);
-  static const cream = Color(0xFFFFFBF8);
+  static const cream = Color(0xFFF8F6FF);
 
   static const darkBg = Color(0xFF12141C);
   static const darkSurface = Color(0xFF1C1F2A);
@@ -36,7 +40,7 @@ abstract final class Space {
 }
 
 abstract final class Radii {
-  static const card = 24.0;
+  static const card = 28.0;
   static const tile = 20.0;
   static const small = 12.0;
 }
@@ -74,8 +78,8 @@ class CloserColors extends ThemeExtension<CloserColors> {
       card: dark ? Brand.darkSurface : Colors.white,
       muted: dark ? const Color(0xFF9AA0B2) : Brand.grey500,
       gradient: couple
-          ? const [Color(0xFFFF8FA6), Color(0xFFFFB6A3)]
-          : const [Color(0xFF8E80FF), Color(0xFF6FA8FF)],
+          ? const [Color(0xFFA796FF), Color(0xFFFF9DB4)]
+          : const [Color(0xFF9A8CFF), Color(0xFF6F86FF)],
     );
   }
 
@@ -146,10 +150,10 @@ abstract final class AppTheme {
     final dark = brightness == Brightness.dark;
     final cc = CloserColors.forMode(mode, brightness);
     final scheme = ColorScheme.fromSeed(
-      seedColor: Brand.blue,
+      seedColor: Brand.purple,
       brightness: brightness,
     ).copyWith(
-      primary: dark ? const Color(0xFF6FA2F0) : Brand.blue,
+      primary: dark ? const Color(0xFF9C90FF) : Brand.purple,
       onPrimary: Colors.white,
       secondary: cc.accent,
       onSecondary: Colors.white,

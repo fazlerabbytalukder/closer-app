@@ -2,6 +2,7 @@ import 'package:closer_app/app/providers.dart';
 import 'package:closer_app/core/config.dart';
 import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:closer_app/core/ui/components.dart';
+import 'package:closer_app/core/ui/soft_ui.dart';
 import 'package:closer_app/features/onboarding/onboarding_screens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,12 +19,13 @@ class MeScreen extends ConsumerWidget {
     final plus = ref.watch(isPlusProvider);
     final label = ref.watch(myLabelForPartnerProvider);
     final backend = ref.watch(backendProvider);
-    if (me == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (me == null) return const Scaffold(backgroundColor: Colors.transparent, body: Center(child: CircularProgressIndicator()));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Me')),
+      backgroundColor: Colors.transparent,
+      appBar: softAppBar(context, 'Me'),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(Space.m, 0, Space.m, Space.xl),
+        padding: const EdgeInsets.fromLTRB(Space.m, 0, Space.m, 120),
         children: [
           CloserCard(
             onTap: () => Navigator.of(context).push(
