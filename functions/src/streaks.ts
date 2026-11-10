@@ -39,6 +39,11 @@ export interface StreakState {
   activeToday: string[];
   activeDate: string | null;
   checkedThrough: string | null;
+  /** Most recent missed day a freeze covered. */
+  lastFrozeDate: string | null;
+  /** Length of the streak that last broke, and the day it broke. */
+  lostCount: number;
+  brokeDate: string | null;
 }
 
 export interface PlantState {
@@ -58,6 +63,9 @@ export function readStreak(pair: PairDoc): StreakState {
     activeToday: Array.isArray(s.activeToday) ? s.activeToday : [],
     activeDate: s.activeDate ?? null,
     checkedThrough: s.checkedThrough ?? null,
+    lastFrozeDate: s.lastFrozeDate ?? null,
+    lostCount: typeof s.lostCount === "number" ? s.lostCount : 0,
+    brokeDate: s.brokeDate ?? null,
   };
 }
 
@@ -80,6 +88,9 @@ export function initialStreak(today: string, premium: boolean): StreakState {
     activeToday: [],
     activeDate: today,
     checkedThrough: addDays(today, -1),
+    lastFrozeDate: null,
+    lostCount: 0,
+    brokeDate: null,
   };
 }
 
@@ -124,21 +135,29 @@ export function settle(
     let from = streak.lastBothActiveDate;
     if (streak.checkedThrough && streak.checkedThrough > from) from = streak.checkedThrough;
     const missed = Math.max(0, daysBetween(from, yesterday));
+    let brokeOn: string | null = null;
     if (missed > 400) {
-      streak.count = 0;
-      broke = true;
+      brokeOn = yesterday;
     } else {
-      for (let i = 0; i < missed && streak.count > 0; i++) {
+      for (let i = 0; i < missed; i++) {
         if (streak.freezesLeft > 0) {
           streak.freezesLeft -= 1;
           frozeDays += 1;
+          streak.lastFrozeDate = addDays(from, i + 1);
         } else {
-          streak.count = 0;
-          broke = true;
+          brokeOn = addDays(from, i + 1);
+          break;
         }
       }
     }
-    if (broke) plant.health = "wilted";
+    if (brokeOn) {
+      // Streak resets; best, plant size and history are kept.
+      streak.lostCount = streak.count;
+      streak.brokeDate = brokeOn;
+      streak.count = 0;
+      broke = true;
+      plant.health = "wilted";
+    }
   }
   streak.checkedThrough = yesterday;
   changed = true;
@@ -152,6 +171,7 @@ export function settle(
 export async function markActivity(pairId: string, uid: string): Promise<void> {
   const pairRef = db.doc(`pairs/${pairId}`);
   let grewTo = null as number | null;
+  let newYear = false;
   let members: string[] = [];
   let count = 0;
   try {
@@ -172,6 +192,7 @@ export async function markActivity(pairId: string, uid: string): Promise<void> {
         streak.lastBothActiveDate = today;
         const stage = Math.max(plant.stage, stageForStreak(streak.count));
         if (stage > plant.stage) grewTo = stage;
+        newYear = streak.count >= 730 && streak.count % 365 === 0;
         plant.stage = stage;
         plant.health = "healthy";
         count = streak.count;
@@ -184,12 +205,25 @@ export async function markActivity(pairId: string, uid: string): Promise<void> {
     return;
   }
   if (grewTo !== null) {
+    const bloom = grewTo >= 8;
     await notifyMany(members, {
       channel: "streak",
       type: "plant_grew",
-      title: "Your plant grew 🌱",
-      body: `${count} day${count === 1 ? "" : "s"} together in a row. Keep it going!`,
+      title: bloom ? "Full bloom! 🌸 One whole year" : "Your plant grew 🌱",
+      body: bloom ?
+        "365 days in a row together. Your plant is fully grown. Keep going for bloom year 2!" :
+        `${count} day${count === 1 ? "" : "s"} together in a row. Keep it going!`,
       data: {route: "/plant", stage: String(grewTo), streak: String(count)},
+      prefKey: "reminders",
+    });
+  } else if (newYear) {
+    const years = Math.floor(count / 365);
+    await notifyMany(members, {
+      channel: "streak",
+      type: "plant_year",
+      title: `${years} years in bloom 🌸`,
+      body: `${count} days in a row together. That's incredible.`,
+      data: {route: "/plant", streak: String(count)},
       prefKey: "reminders",
     });
   }
@@ -210,17 +244,42 @@ export const updateStreaks = onSchedule(
       const today = localDateKey(now, pair.timezone);
       const current = readStreak(pair);
       if (!(current.checkedThrough && current.checkedThrough >= addDays(today, -1) && current.activeDate === today)) {
+        let outcome: {broke: boolean; frozeDays: number; streak: StreakState} | null = null;
         try {
           await db.runTransaction(async (tx) => {
+            outcome = null;
             const fresh = (await tx.get(doc.ref)).data() as PairDoc | undefined;
             if (!fresh || fresh.status !== "active") return;
             const t = localDateKey(new Date(), fresh.timezone);
             const s = settle(readStreak(fresh), readPlant(fresh), t, isPremium(fresh));
             if (s.changed) tx.update(doc.ref, {streak: s.streak, plant: s.plant});
+            outcome = {broke: s.broke, frozeDays: s.frozeDays, streak: s.streak};
           });
           settled++;
         } catch (e) {
           logger.error("settle failed", {pairId: doc.id, e});
+        }
+        const o = outcome as {broke: boolean; frozeDays: number; streak: StreakState} | null;
+        if (o?.broke) {
+          await notifyMany(pair.memberIds, {
+            channel: "streak",
+            type: "streak_broken",
+            title: "Your plant is thirsty 💧",
+            body: `Your ${o.streak.lostCount}-day streak ended. Both show up today to revive it.`,
+            data: {route: "/plant"},
+            prefKey: "reminders",
+          });
+        } else if (o && o.frozeDays > 0) {
+          const n = o.frozeDays;
+          await notifyMany(pair.memberIds, {
+            channel: "streak",
+            type: "streak_frozen",
+            title: "A freeze saved your streak 🧊",
+            body: `${n === 1 ? "A missed day was" : `${n} missed days were`} covered. ` +
+              `Your ${o.streak.count}-day streak is safe · ${o.streak.freezesLeft} freeze${o.streak.freezesLeft === 1 ? "" : "s"} left this month.`,
+            data: {route: "/plant"},
+            prefKey: "reminders",
+          });
         }
       }
 
@@ -232,7 +291,9 @@ export const updateStreaks = onSchedule(
             channel: "streak",
             type: "streak_reminder",
             title: "Your plant needs water 🌱",
-            body: `Send something today to keep your ${current.count}-day streak.`,
+            body: current.freezesLeft > 0 ?
+              `Send something today to keep your ${current.count}-day streak.` :
+              `No freezes left: send something before midnight or your ${current.count}-day streak ends.`,
             data: {route: "/plant"},
             prefKey: "reminders",
           });

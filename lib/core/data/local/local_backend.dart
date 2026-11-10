@@ -10,6 +10,7 @@ import 'package:closer_app/core/data/local/partner_simulator.dart';
 import 'package:closer_app/core/data/local/text_repair.dart';
 import 'package:closer_app/core/services/note_renderer.dart';
 import 'package:closer_app/core/models/models.dart';
+import 'package:closer_app/core/models/streak_rules.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
@@ -828,86 +829,43 @@ class LocalBackend implements CloserBackend {
 
   // ----------------------------------------------------- streak + plant
   /// Marks [uid] active today; when both members are active the streak
-  /// grows and the plant may grow a stage (updateStreaks function).
+  /// grows and the plant may grow a stage (markActivity function).
   void markActive(String pairId, String uid) {
     final p = pairDoc(pairId);
     if (p == null) return;
-    final s = Streak.fromJson(Map<String, dynamic>.from(p['streak'] as Map? ?? {}));
-    final active = {...s.activeToday, uid};
-    var streak = Streak(
-      count: s.count,
-      best: s.best,
-      lastBothActiveDate: s.lastBothActiveDate,
-      freezesLeft: s.freezesLeft,
-      activeToday: active.toList(),
+    final r = StreakRules.markActive(
+      Streak.fromJson(Map<String, dynamic>.from(p['streak'] as Map? ?? {})),
+      Plant.fromJson(Map<String, dynamic>.from(p['plant'] as Map? ?? {})),
+      uid,
+      (p['memberIds'] as List).cast<String>(),
+      _today,
+      plus: _isPlus(pairId),
     );
-    final members = (p['memberIds'] as List).cast<String>();
-    if (members.every(active.contains) && s.lastBothActiveDate != _today) {
-      final count = s.count + 1;
-      streak = Streak(
-        count: count,
-        best: max(s.best, count),
-        lastBothActiveDate: _today,
-        freezesLeft: s.freezesLeft,
-        activeToday: active.toList(),
-      );
-      final plant = Plant.fromJson(Map<String, dynamic>.from(p['plant'] as Map? ?? {}));
-      p['plant'] = Plant(
-        stage: max(plant.stage, Plant.stageForStreak(count)),
-        species: plant.species,
-      ).toJson();
-    }
-    p['streak'] = streak.toJson();
+    p
+      ..['streak'] = r.streak.toJson()
+      ..['plant'] = r.plant.toJson();
   }
 
+  /// Settles finished days for every pair (updateStreaks function): spends
+  /// freezes on missed days or breaks the streak, refills monthly freezes.
   void _rollDay() {
     final today = _today;
     if (_db['lastDay'] == today) return;
-    final yesterday = dayKey(DateTime.now().subtract(const Duration(days: 1)));
     for (final e in _col('pairs').entries) {
       final p = e.value as Map<String, dynamic>;
-      final s = Streak.fromJson(Map<String, dynamic>.from(p['streak'] as Map? ?? {}));
-      final plant = Plant.fromJson(Map<String, dynamic>.from(p['plant'] as Map? ?? {}));
-      var next = Streak(count: s.count, best: s.best, lastBothActiveDate: s.lastBothActiveDate, freezesLeft: s.freezesLeft);
-      var health = plant.health;
-      final last = s.lastBothActiveDate;
-      if (s.count > 0 && last != null && last.compareTo(yesterday) < 0) {
-        if (s.freezesLeft > 0) {
-          // Freeze applied automatically: streak kept.
-          next = Streak(count: s.count, best: s.best, lastBothActiveDate: yesterday, freezesLeft: s.freezesLeft - 1);
-        } else {
-          next = Streak(best: s.best, lastBothActiveDate: s.lastBothActiveDate, freezesLeft: 0);
-          health = PlantHealth.wilted; // wilts, never dies
-        }
-      }
-      // Monthly freeze reset: 1 free, 3 Plus.
-      final month = today.substring(0, 7);
-      if (_db['freezeMonth_${e.key}'] != month) {
-        _db['freezeMonth_${e.key}'] = month;
-        final plus = (p['premium'] as Map?)?['active'] == true;
-        next = Streak(count: next.count, best: next.best, lastBothActiveDate: next.lastBothActiveDate, freezesLeft: plus ? 3 : 1);
-      }
+      final r = StreakRules.settle(
+        Streak.fromJson(Map<String, dynamic>.from(p['streak'] as Map? ?? {})),
+        Plant.fromJson(Map<String, dynamic>.from(p['plant'] as Map? ?? {})),
+        today,
+        plus: _isPlus(e.key),
+      );
       p
-        ..['streak'] = next.toJson()
-        ..['plant'] = Plant(stage: plant.stage, health: health, species: plant.species).toJson();
+        ..['streak'] = r.streak.toJson()
+        ..['plant'] = r.plant.toJson();
       _ensureTodayQuestion(e.key);
     }
     _db['lastDay'] = today;
     _commit();
-  }
-
-  /// Revives a wilted plant when both interact again.
-  void reviveIfBothActive(String pairId) {
-    final p = pairDoc(pairId);
-    if (p == null) return;
-    final s = Streak.fromJson(Map<String, dynamic>.from(p['streak'] as Map? ?? {}));
-    if (s.lastBothActiveDate == _today) {
-      final plant = Plant.fromJson(Map<String, dynamic>.from(p['plant'] as Map? ?? {}));
-      if (plant.health == PlantHealth.wilted) {
-        p['plant'] = Plant(stage: plant.stage, species: plant.species).toJson();
-        _commit();
-      }
-    }
   }
 
   // ------------------------------------------------- simulator plumbing

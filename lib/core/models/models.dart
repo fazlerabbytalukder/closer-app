@@ -324,7 +324,13 @@ class Streak {
     this.best = 0,
     this.lastBothActiveDate,
     this.freezesLeft = 1,
+    this.freezesMonth,
     this.activeToday = const [],
+    this.activeDate,
+    this.checkedThrough,
+    this.lastFrozeDate,
+    this.lostCount = 0,
+    this.brokeDate,
   });
 
   factory Streak.fromJson(Map<String, dynamic> j) => Streak(
@@ -332,8 +338,17 @@ class Streak {
         best: j['best'] as int? ?? 0,
         lastBothActiveDate: j['lastBothActiveDate'] as String?,
         freezesLeft: j['freezesLeft'] as int? ?? 1,
+        freezesMonth: j['freezesMonth'] as String?,
         activeToday: (j['activeToday'] as List?)?.cast<String>() ?? const [],
+        activeDate: j['activeDate'] as String?,
+        checkedThrough: j['checkedThrough'] as String?,
+        lastFrozeDate: j['lastFrozeDate'] as String?,
+        lostCount: j['lostCount'] as int? ?? 0,
+        brokeDate: j['brokeDate'] as String?,
       );
+
+  /// Freezes granted each month (they don't carry over).
+  static int monthlyFreezes({required bool plus}) => plus ? 3 : 1;
 
   final int count;
   final int best;
@@ -342,15 +357,72 @@ class Streak {
   final String? lastBothActiveDate;
   final int freezesLeft;
 
-  /// Member uids who interacted on the current day.
+  /// yyyy-mm the freezes were last refilled.
+  final String? freezesMonth;
+
+  /// Member uids who interacted on [activeDate].
   final List<String> activeToday;
+
+  /// The day [activeToday] belongs to. Older docs may not have it.
+  final String? activeDate;
+
+  /// Last finished day the rules have settled (yyyy-mm-dd).
+  final String? checkedThrough;
+
+  /// Most recent missed day a freeze covered.
+  final String? lastFrozeDate;
+
+  /// Length of the streak that last broke, and the day it broke.
+  final int lostCount;
+  final String? brokeDate;
+
+  /// Who has shown up on [today]; empty if [activeToday] is from another day.
+  List<String> activeOn(String today) => activeDate == null || activeDate == today ? activeToday : const [];
+
+  bool bothActiveOn(String today) => lastBothActiveDate == today;
+
+  /// Full years of daily streak ("blooms") after the plant is fully grown.
+  int get years => count ~/ 365;
+
+  Streak copyWith({
+    int? count,
+    int? best,
+    String? lastBothActiveDate,
+    int? freezesLeft,
+    String? freezesMonth,
+    List<String>? activeToday,
+    String? activeDate,
+    String? checkedThrough,
+    String? lastFrozeDate,
+    int? lostCount,
+    String? brokeDate,
+  }) =>
+      Streak(
+        count: count ?? this.count,
+        best: best ?? this.best,
+        lastBothActiveDate: lastBothActiveDate ?? this.lastBothActiveDate,
+        freezesLeft: freezesLeft ?? this.freezesLeft,
+        freezesMonth: freezesMonth ?? this.freezesMonth,
+        activeToday: activeToday ?? this.activeToday,
+        activeDate: activeDate ?? this.activeDate,
+        checkedThrough: checkedThrough ?? this.checkedThrough,
+        lastFrozeDate: lastFrozeDate ?? this.lastFrozeDate,
+        lostCount: lostCount ?? this.lostCount,
+        brokeDate: brokeDate ?? this.brokeDate,
+      );
 
   Map<String, dynamic> toJson() => {
         'count': count,
         'best': best,
         'lastBothActiveDate': lastBothActiveDate,
         'freezesLeft': freezesLeft,
+        'freezesMonth': freezesMonth,
         'activeToday': activeToday,
+        'activeDate': activeDate,
+        'checkedThrough': checkedThrough,
+        'lastFrozeDate': lastFrozeDate,
+        'lostCount': lostCount,
+        'brokeDate': brokeDate,
       };
 }
 
@@ -378,13 +450,34 @@ class Plant {
 
   /// Streak milestones at which the plant grows one stage (plan F8).
   static const milestones = [1, 3, 7, 14, 30, 60, 100, 365];
+  static const maxStage = 8;
 
   static int stageForStreak(int streak) =>
       milestones.where((m) => streak >= m).length;
 
+  /// Stage names shown under the plant.
+  static const stageNames = [
+    'Seed',
+    'Sprout',
+    'Seedling',
+    'Young plant',
+    'Growing plant',
+    'Leafy plant',
+    'Budding plant',
+    'Flowering plant',
+    'Full bloom',
+  ];
+
   final int stage;
   final PlantHealth health;
   final String species;
+
+  bool get fullyGrown => stage >= maxStage;
+
+  /// Streak length needed for the next stage. The plant never shrinks, so
+  /// after a break it grows again only once the streak passes the milestone
+  /// of its current stage. Null when fully grown.
+  int? get nextGrowthAt => fullyGrown ? null : milestones[stage];
 
   Map<String, dynamic> toJson() =>
       {'stage': stage, 'health': health.name, 'species': species};

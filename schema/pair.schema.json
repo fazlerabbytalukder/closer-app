@@ -41,7 +41,10 @@
         "freezesMonth": {"type": ["string", "null"]},
         "activeToday": {"type": "array", "items": {"type": "string"}},
         "activeDate": {"type": ["string", "null"]},
-        "checkedThrough": {"type": ["string", "null"]}
+        "checkedThrough": {"type": ["string", "null"]},
+        "lastFrozeDate": {"type": ["string", "null"]},
+        "lostCount": {"type": "integer", "minimum": 0},
+        "brokeDate": {"type": ["string", "null"]}
       }
     },
     "plant": {
