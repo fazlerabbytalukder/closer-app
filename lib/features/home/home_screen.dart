@@ -5,6 +5,7 @@ import 'package:closer_app/app/providers.dart';
 import 'package:closer_app/core/models/models.dart';
 import 'package:closer_app/core/services/widget_bridge.dart';
 import 'package:closer_app/core/theme/app_theme.dart';
+import 'package:closer_app/core/theme/gloss.dart';
 import 'package:closer_app/core/ui/actions.dart';
 import 'package:closer_app/core/ui/components.dart';
 import 'package:closer_app/core/ui/soft_ui.dart';
@@ -616,64 +617,181 @@ class _HeartTapState extends ConsumerState<_HeartTap> with SingleTickerProviderS
     final tap = ref.watch(latestTapProvider).value;
     final fromPartner = tap != null && tap.senderId != me && DateTime.now().difference(tap.createdAt).inHours < 1;
     final cc = context.cc;
-    return CloserCard(
-      color: cc.accentTint,
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Thinking of ${widget.name}?', style: context.tt.titleMedium),
-                const SizedBox(height: 2),
-                Text(
-                  fromPartner ? '${widget.name} tapped you ${timeAgo(tap.createdAt)} 💗' : 'Tap the heart to send a soft buzz',
-                  style: context.tt.bodyMedium?.copyWith(color: context.cc.muted),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(
-            width: 88,
-            height: 88,
-            child: Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.center,
-              children: [
-                for (final b in _bursts)
-                  Text('💗', key: ValueKey(b), style: const TextStyle(fontSize: 22))
-                      .animate(onComplete: (_) => setState(() => _bursts.remove(b)))
-                      .moveY(begin: 0, end: -70, duration: 900.ms, curve: Curves.easeOut)
-                      .fadeOut(delay: 400.ms, duration: 500.ms),
-                Semantics(
-                  button: true,
-                  label: 'Send a thinking-of-you tap to ${widget.name}',
-                  child: GestureDetector(
-                    onTap: _tap,
-                    child: ScaleTransition(
-                      scale: TweenSequence([
-                        TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.8), weight: 1),
-                        TweenSequenceItem(tween: Tween(begin: 0.8, end: 1.15), weight: 1),
-                        TweenSequenceItem(tween: Tween(begin: 1.15, end: 1.0), weight: 1),
-                      ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut)),
-                      child: Container(
-                        width: 76,
-                        height: 76,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(colors: cc.gradient),
-                          shape: BoxShape.circle,
-                          boxShadow: [BoxShadow(color: cc.accent.withValues(alpha: 0.35), blurRadius: 18, offset: const Offset(0, 6))],
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    const pink = Color(0xFFFF8FB1);
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(Radii.card),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: dark
+              ? [cc.accentTint, pink.withValues(alpha: 0.16)]
+              : const [Color(0xFFF1EDFF), Color(0xFFFFE6EF)],
+        ),
+        border: Border.all(color: Colors.white.withValues(alpha: dark ? 0.08 : 0.9), width: 1.5),
+        boxShadow: dark ? null : [BoxShadow(color: pink.withValues(alpha: 0.18), blurRadius: 24, offset: const Offset(0, 10))],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(Radii.card),
+        child: Stack(
+          children: [
+            // Floating confetti: little hearts and sparkles drifting softly.
+            ..._decor(const Offset(0.50, 0.12), '💕', 14, 0),
+            ..._decor(const Offset(0.60, 0.70), '✨', 12, 600),
+            ..._decor(const Offset(0.04, 0.80), '♡', 16, 1200, color: pink),
+            ..._decor(const Offset(0.93, 0.08), '✦', 12, 300, color: cc.accent),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(Space.m, Space.m, Space.s, Space.m),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: (dark ? Colors.white : pink).withValues(alpha: dark ? 0.1 : 0.16),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            '💌 Love tap',
+                            style: context.tt.labelSmall?.copyWith(color: dark ? Colors.white70 : const Color(0xFFE0557F), fontWeight: FontWeight.w700),
+                          ),
                         ),
-                        child: const Icon(Icons.favorite_rounded, color: Colors.white, size: 38),
-                      ),
+                        const SizedBox(height: Space.s),
+                        Text('Thinking of ${widget.name}? 🥰', style: context.tt.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 6),
+                        if (fromPartner)
+                          _Bubble(text: '${widget.name} tapped you ${timeAgo(tap.createdAt)} 💗')
+                              .animate()
+                              .fadeIn(duration: 300.ms)
+                              .slideX(begin: -0.1, end: 0, curve: Curves.easeOutBack)
+                        else
+                          Text(
+                            'Tap the heart to send a soft buzz',
+                            style: context.tt.bodyMedium?.copyWith(color: cc.muted),
+                          ),
+                      ],
                     ),
                   ),
-                ),
-              ],
+                  _heartButton(cc, pink),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// A small symbol at a relative position that bobs gently forever.
+  List<Widget> _decor(Offset at, String glyph, double size, int delayMs, {Color? color}) => [
+        Positioned.fill(
+          child: Align(
+            alignment: Alignment(at.dx * 2 - 1, at.dy * 2 - 1),
+            child: IgnorePointer(
+              child: Text(glyph, style: TextStyle(fontSize: size, color: color?.withValues(alpha: 0.55)))
+                  .animate(onPlay: (c) => c.repeat(reverse: true), delay: delayMs.ms)
+                  .moveY(begin: 0, end: -6, duration: 1800.ms, curve: Curves.easeInOut)
+                  .fade(begin: 0.45, end: 0.9, duration: 1800.ms),
+            ),
+          ),
+        ),
+      ];
+
+  Widget _heartButton(CloserColors cc, Color pink) {
+    return SizedBox(
+      width: 96,
+      height: 96,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          // Soft halo that keeps pulsing outward, inviting a tap.
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: pink.withValues(alpha: 0.25)),
+          )
+              .animate(onPlay: (c) => c.repeat())
+              .scale(begin: const Offset(0.9, 0.9), end: const Offset(1.25, 1.25), duration: 1600.ms, curve: Curves.easeOut)
+              .fadeOut(duration: 1600.ms),
+          for (final b in _bursts)
+            Text('💗', key: ValueKey(b), style: const TextStyle(fontSize: 22))
+                .animate(onComplete: (_) => setState(() => _bursts.remove(b)))
+                .moveY(begin: 0, end: -70, duration: 900.ms, curve: Curves.easeOut)
+                .moveX(begin: 0, end: (b % 3 - 1) * 18.0, duration: 900.ms)
+                .fadeOut(delay: 400.ms, duration: 500.ms),
+          Semantics(
+            button: true,
+            label: 'Send a thinking-of-you tap to ${widget.name}',
+            child: GestureDetector(
+              onTap: _tap,
+              child: ScaleTransition(
+                scale: TweenSequence([
+                  TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.8), weight: 1),
+                  TweenSequenceItem(tween: Tween(begin: 0.8, end: 1.15), weight: 1),
+                  TweenSequenceItem(tween: Tween(begin: 1.15, end: 1.0), weight: 1),
+                ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut)),
+                child: Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [pink, cc.accent],
+                    ),
+                    border: Border.all(color: Colors.white, width: 3),
+                    boxShadow: [BoxShadow(color: pink.withValues(alpha: 0.45), blurRadius: 18, offset: const Offset(0, 8))],
+                  ),
+                  child: const Gloss(
+                    circle: true,
+                    strength: 0.8,
+                    child: Center(child: Icon(Icons.favorite_rounded, color: Colors.white, size: 34)),
+                  ),
+                )
+                    // Gentle heartbeat while idle.
+                    .animate(onPlay: (c) => c.repeat())
+                    .scale(begin: const Offset(1, 1), end: const Offset(1.08, 1.08), duration: 220.ms, curve: Curves.easeOut)
+                    .then()
+                    .scale(begin: const Offset(1, 1), end: const Offset(1 / 1.08, 1 / 1.08), duration: 260.ms, curve: Curves.easeIn)
+                    .then(delay: 1100.ms),
+              ),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Little speech bubble with a tail, for "Sam tapped you just now 💗".
+class _Bubble extends StatelessWidget {
+  const _Bubble({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: dark ? Colors.white.withValues(alpha: 0.1) : Colors.white,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(4),
+          topRight: Radius.circular(16),
+          bottomLeft: Radius.circular(16),
+          bottomRight: Radius.circular(16),
+        ),
+        boxShadow: dark ? null : const [BoxShadow(color: Color(0x14E0557F), blurRadius: 10, offset: Offset(0, 3))],
+      ),
+      child: Text(text, style: context.tt.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
     );
   }
 }
