@@ -30,6 +30,32 @@ void main() {
       final c = Countdown(id: 'a', title: 'Old', date: DateTime(2026, 1, 1), createdBy: 'u');
       expect(c.daysLeft(now), isNegative);
     });
+
+    test('old docs map remindDaysBefore to minutes', () {
+      final c = Countdown.fromJson('a', {'title': 'Old', 'date': 0, 'remindDaysBefore': 3});
+      expect(c.remindMinutesBefore, 3 * 24 * 60);
+      expect(c.hasTime, isFalse);
+    });
+
+    test('next reminder is the lead time, then the moment', () {
+      final c = Countdown(id: 'a', title: 'Dinner', date: DateTime(2026, 11, 9, 19, 30), createdBy: 'u', hasTime: true, remindMinutesBefore: 15);
+      expect(c.nextReminderAt(now), DateTime(2026, 11, 9, 19, 15));
+      expect(c.nextReminderAt(DateTime(2026, 11, 9, 19, 20)), DateTime(2026, 11, 9, 19, 30));
+      expect(c.nextReminderAt(DateTime(2026, 11, 9, 19, 31)), isNull);
+    });
+
+    test('yearly reminders roll to next year once passed', () {
+      final c = Countdown(id: 'a', title: 'Anniv', date: DateTime(2020, 11, 8, 20), createdBy: 'u', hasTime: true, repeatsYearly: true, remindMinutesBefore: 60);
+      expect(c.nextReminderAt(now), DateTime(2027, 11, 8, 19));
+    });
+
+    test('describes reminder lead times', () {
+      expect(Countdown.describeRemind(0), 'At the time');
+      expect(Countdown.describeRemind(15), '15 minutes before');
+      expect(Countdown.describeRemind(60), '1 hour before');
+      expect(Countdown.describeRemind(2880), '2 days before');
+      expect(Countdown.describeRemind(10080), '1 week before');
+    });
   });
 
   group('Game', () {

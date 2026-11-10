@@ -552,15 +552,21 @@ class FirebaseBackend implements CloserBackend {
     final ref = countdown.id.isEmpty ? col.doc() : col.doc(countdown.id);
     final d = countdown.date;
     final day = DateTime(d.year, d.month, d.day);
+    final moment = countdown.hasTime ? DateTime(d.year, d.month, d.day, d.hour, d.minute) : day;
+    final remindAt = countdown.hasTime ? countdown.nextReminderAt(DateTime.now()) : null;
     await ref.set({
       'title': _clip(countdown.title, 60),
-      'date': Timestamp.fromDate(day),
+      'date': Timestamp.fromDate(moment),
       'dateKey': '${day.year.toString().padLeft(4, '0')}-'
           '${day.month.toString().padLeft(2, '0')}-'
           '${day.day.toString().padLeft(2, '0')}',
       'emoji': countdown.emoji,
       'repeatsYearly': countdown.repeatsYearly,
+      'hasTime': countdown.hasTime,
+      'remindMinutesBefore': countdown.remindMinutesBefore.clamp(0, Countdown.maxRemindMinutes),
       'remindDaysBefore': countdown.remindDaysBefore.clamp(0, 60),
+      // The minute-level reminder job picks docs up by this instant.
+      if (remindAt != null) 'nextRemindAt': Timestamp.fromDate(remindAt),
       'createdBy': countdown.createdBy.isEmpty ? _uid : countdown.createdBy,
       'updatedAt': FieldValue.serverTimestamp(),
     });

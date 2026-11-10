@@ -734,8 +734,10 @@ class Countdown {
     required this.createdBy,
     this.emoji = '📅',
     this.repeatsYearly = false,
-    this.remindDaysBefore = 1,
-  });
+    this.hasTime = false,
+    int? remindMinutesBefore,
+    int remindDaysBefore = 1,
+  }) : remindMinutesBefore = remindMinutesBefore ?? remindDaysBefore * minutesPerDay;
 
   factory Countdown.fromJson(String id, Map<String, dynamic> j) => Countdown(
         id: id,
@@ -743,19 +745,34 @@ class Countdown {
         date: _date(j['date']) ?? DateTime.now(),
         emoji: j['emoji'] as String? ?? '📅',
         repeatsYearly: j['repeatsYearly'] as bool? ?? false,
+        hasTime: j['hasTime'] as bool? ?? false,
+        remindMinutesBefore: j['remindMinutesBefore'] as int?,
         remindDaysBefore: j['remindDaysBefore'] as int? ?? 1,
         createdBy: j['createdBy'] as String? ?? '',
       );
 
   static const freeLimit = 3;
+  static const minutesPerDay = 24 * 60;
+
+  /// Longest reminder lead time allowed (60 days), matching the rules.
+  static const maxRemindMinutes = 60 * minutesPerDay;
 
   final String id;
   final String title;
+
+  /// The moment being counted down to. Only the date part matters when
+  /// [hasTime] is false (countdowns made before times were added).
   final DateTime date;
   final String emoji;
   final bool repeatsYearly;
-  final int remindDaysBefore;
+  final bool hasTime;
+
+  /// How long before [date] to send the reminder; 0 = only at the time.
+  final int remindMinutesBefore;
   final String createdBy;
+
+  /// Whole days, kept in sync for older app versions and the daily job.
+  int get remindDaysBefore => remindMinutesBefore ~/ minutesPerDay;
 
   /// Next occurrence (date-only), rolling yearly dates forward.
   DateTime nextOccurrence(DateTime now) {
@@ -769,9 +786,42 @@ class Countdown {
     return d;
   }
 
+  /// Next occurrence including the time of day.
+  DateTime nextMoment(DateTime now) {
+    final d = nextOccurrence(now);
+    return DateTime(d.year, d.month, d.day, date.hour, date.minute);
+  }
+
   int daysLeft(DateTime now) {
     final today = DateTime(now.year, now.month, now.day);
     return nextOccurrence(now).difference(today).inDays;
+  }
+
+  /// When the next notification is due: the reminder before the moment,
+  /// else the moment itself, rolling yearly countdowns forward. Null once a
+  /// one-off countdown has passed.
+  DateTime? nextReminderAt(DateTime now) {
+    final first = nextMoment(now);
+    final moments = [
+      first,
+      if (repeatsYearly) DateTime(first.year + 1, first.month, first.day, first.hour, first.minute),
+    ];
+    for (final m in moments) {
+      final before = m.subtract(Duration(minutes: remindMinutesBefore));
+      if (remindMinutesBefore > 0 && before.isAfter(now)) return before;
+      if (m.isAfter(now)) return m;
+    }
+    return null;
+  }
+
+  /// "On the day", "15 minutes before", "2 hours before", "3 days before"...
+  static String describeRemind(int minutes, {bool hasTime = true}) {
+    if (minutes <= 0) return hasTime ? 'At the time' : 'On the day';
+    String unit(int n, String w) => '$n $w${n == 1 ? '' : 's'} before';
+    if (minutes % (7 * minutesPerDay) == 0) return unit(minutes ~/ (7 * minutesPerDay), 'week');
+    if (minutes % minutesPerDay == 0) return unit(minutes ~/ minutesPerDay, 'day');
+    if (minutes % 60 == 0) return unit(minutes ~/ 60, 'hour');
+    return unit(minutes, 'minute');
   }
 
   Map<String, dynamic> toJson() => {
@@ -779,6 +829,8 @@ class Countdown {
         'date': _ms(date),
         'emoji': emoji,
         'repeatsYearly': repeatsYearly,
+        'hasTime': hasTime,
+        'remindMinutesBefore': remindMinutesBefore,
         'remindDaysBefore': remindDaysBefore,
         'createdBy': createdBy,
       };

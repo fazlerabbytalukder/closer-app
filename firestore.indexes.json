@@ -67,6 +67,20 @@
       ]
     },
     {
+      "collectionGroup": "countdowns",
+      "fieldPath": "nextRemindAt",
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION_GROUP"
+        }
+      ]
+    },
+    {
       "collectionGroup": "taps",
       "fieldPath": "expireAt",
       "ttl": true,

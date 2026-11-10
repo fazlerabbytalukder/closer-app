@@ -182,14 +182,19 @@ service cloud.firestore {
         function validCountdown(d) {
           return d.keys().hasOnly(['title', 'date', 'dateKey', 'emoji', 'repeatsYearly',
                                    'remindDaysBefore', 'createdBy', 'createdAt', 'updatedAt',
-                                   'lastRemindedFor', 'lastRemindedAt'])
+                                   'lastRemindedFor', 'lastRemindedAt',
+                                   'hasTime', 'remindMinutesBefore', 'nextRemindAt'])
             && d.title is string && d.title.size() > 0 && d.title.size() <= 60
             && d.date is timestamp
             && (!('dateKey' in d) || (d.dateKey is string && d.dateKey.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')))
             && (!('emoji' in d) || (d.emoji is string && d.emoji.size() <= 16))
             && (!('repeatsYearly' in d) || d.repeatsYearly is bool)
             && (!('remindDaysBefore' in d) || (d.remindDaysBefore is int
-                  && d.remindDaysBefore >= 0 && d.remindDaysBefore <= 60));
+                  && d.remindDaysBefore >= 0 && d.remindDaysBefore <= 60))
+            && (!('hasTime' in d) || d.hasTime is bool)
+            && (!('remindMinutesBefore' in d) || (d.remindMinutesBefore is int
+                  && d.remindMinutesBefore >= 0 && d.remindMinutesBefore <= 86400))
+            && (!('nextRemindAt' in d) || d.nextRemindAt is timestamp);
         }
         allow read: if isMember(pairId);
         // The free limit (3) is checked in the app; Plus is unlimited.

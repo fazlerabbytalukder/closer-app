@@ -728,7 +728,8 @@ class LocalBackend implements CloserBackend {
       date: countdown.date,
       emoji: countdown.emoji,
       repeatsYearly: countdown.repeatsYearly,
-      remindDaysBefore: countdown.remindDaysBefore,
+      hasTime: countdown.hasTime,
+      remindMinutesBefore: countdown.remindMinutesBefore,
       createdBy: countdown.createdBy.isEmpty ? _me : countdown.createdBy,
     ).toJson();
     _commit();

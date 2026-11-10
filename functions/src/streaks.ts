@@ -272,6 +272,8 @@ export const countdownReminders = onSchedule(
       const countdowns = await pairDoc.ref.collection("countdowns").get();
       for (const c of countdowns.docs) {
         const data = c.data();
+        // Countdowns with a time of day are handled by countdownTimedReminders.
+        if (data.hasTime === true) continue;
         const rawDate = data.date;
         const dateKey: string | null =
           typeof data.dateKey === "string" ?
@@ -304,5 +306,118 @@ export const countdownReminders = onSchedule(
         await c.ref.update({lastRemindedFor: `${next}:${left}`, lastRemindedAt: FieldValue.serverTimestamp()});
       }
     }
+  },
+);
+
+/** "15 minutes", "2 hours", "3 days" (largest whole unit). */
+export function describeLead(ms: number): string {
+  const mins = Math.max(1, Math.round(ms / 60000));
+  const unit = (n: number, w: string) => `${n} ${w}${n === 1 ? "" : "s"}`;
+  if (mins % 1440 === 0) return unit(mins / 1440, "day");
+  if (mins >= 1440) return unit(Math.round(mins / 1440), "day");
+  if (mins % 60 === 0 || mins >= 120) return unit(Math.round(mins / 60), "hour");
+  return unit(mins, "minute");
+}
+
+function addYear(d: Date): Date {
+  const n = new Date(d.getTime());
+  n.setUTCFullYear(n.getUTCFullYear() + 1);
+  return n;
+}
+
+/**
+ * What a due countdown reminder is for, and when the next one is.
+ * [eventAt] is the stored moment (first occurrence); [remindAt] the due
+ * nextRemindAt. Returns null for next when a one-off countdown is done.
+ */
+export function planTimedReminder(
+  eventAt: Date,
+  remindAt: Date,
+  remindMinutes: number,
+  repeatsYearly: boolean,
+  now: Date,
+): {occurrence: Date; isMoment: boolean; next: Date | null} {
+  let occurrence = eventAt;
+  if (repeatsYearly) {
+    while (occurrence.getTime() < remindAt.getTime() - 30000) occurrence = addYear(occurrence);
+  }
+  const isMoment = remindAt.getTime() >= occurrence.getTime() - 30000;
+  let next: Date | null;
+  if (!isMoment) {
+    next = occurrence;
+  } else if (repeatsYearly) {
+    const following = addYear(occurrence);
+    const before = new Date(following.getTime() - remindMinutes * 60000);
+    next = remindMinutes > 0 && before > now ? before : following;
+  } else {
+    next = null;
+  }
+  return {occurrence, isMoment, next};
+}
+
+/**
+ * Every minute: send countdown reminders that have a time of day, e.g.
+ * "15 minutes to go" and "It's time!". The app writes nextRemindAt; this
+ * job claims each due doc in a transaction, then advances it.
+ */
+export const countdownTimedReminders = onSchedule(
+  {schedule: "every 1 minutes", region: REGION, timeoutSeconds: 120},
+  async () => {
+    const now = new Date();
+    const due = await db.collectionGroup("countdowns")
+      .where("nextRemindAt", "<=", Timestamp.fromDate(now))
+      .limit(200)
+      .get();
+    const pairs = new Map<string, PairDoc | null>();
+    for (const c of due.docs) {
+      const pairRef = c.ref.parent.parent;
+      if (!pairRef) continue;
+      if (!pairs.has(pairRef.id)) {
+        const p = await pairRef.get();
+        pairs.set(pairRef.id, p.exists ? (p.data() as PairDoc) : null);
+      }
+      const pair = pairs.get(pairRef.id);
+
+      const claim = await db.runTransaction(async (tx) => {
+        const snap = await tx.get(c.ref);
+        const data = snap.data();
+        const remindTs = data?.nextRemindAt;
+        if (!data || !(remindTs instanceof Timestamp) || remindTs.toMillis() > now.getTime()) return null;
+        if (!pair || pair.status !== "active" || !(data.date instanceof Timestamp)) {
+          tx.update(c.ref, {nextRemindAt: FieldValue.delete()});
+          return null;
+        }
+        const minutes = typeof data.remindMinutesBefore === "number" ? data.remindMinutesBefore : 0;
+        const plan = planTimedReminder(data.date.toDate(), remindTs.toDate(), minutes, data.repeatsYearly === true, now);
+        tx.update(c.ref, {
+          nextRemindAt: plan.next ? Timestamp.fromDate(plan.next) : FieldValue.delete(),
+          lastRemindedFor: `${plan.occurrence.toISOString()}:${plan.isMoment ? 0 : minutes}`,
+          lastRemindedAt: FieldValue.serverTimestamp(),
+        });
+        // Don't send reminders that are hours late (e.g. after an outage).
+        const stale = now.getTime() - remindTs.toMillis() > 6 * 3600 * 1000;
+        return stale ? null : {data, plan};
+      });
+      if (!claim || !pair) continue;
+
+      const {data, plan} = claim;
+      const title = `${data.emoji ?? "📅"} ${data.title ?? "Countdown"}`;
+      const body = plan.isMoment ?
+        "It's time! 🎉" :
+        `${describeLead(plan.occurrence.getTime() - now.getTime())} to go`;
+      for (const uid of pair.memberIds) {
+        const user = await getUser(uid);
+        await notify(uid, {
+          channel: "countdowns",
+          type: "countdown",
+          title,
+          body,
+          data: {route: "/countdowns", countdownId: c.id, pairId: pairRef.id},
+          prefKey: "reminders",
+          user,
+        });
+      }
+    }
+    if (due.size > 0) logger.info("countdownTimedReminders", {due: due.size});
   },
 );

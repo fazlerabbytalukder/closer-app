@@ -9,6 +9,6 @@ export {createInvite, acceptInvite, unpair} from "./pairing";
 export {sendItem, sendTap, grantRewardedSends} from "./items";
 export {makeThumbnail} from "./thumbnails";
 export {submitAnswer, assignDailyQuestions, startGame, submitGameAnswers} from "./questions";
-export {updateStreaks, countdownReminders} from "./streaks";
+export {updateStreaks, countdownReminders, countdownTimedReminders} from "./streaks";
 export {revenuecatWebhook} from "./premium";
 export {registerFcmToken, exportMemories, deleteAccount, dailyCleanup} from "./account";

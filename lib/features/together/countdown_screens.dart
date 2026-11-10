@@ -59,7 +59,7 @@ class CountdownsScreen extends ConsumerWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(c.title, style: context.tt.titleMedium),
-                                Text(DateFormat('EEE d MMM yyyy').format(c.nextOccurrence(now)), style: context.tt.bodySmall?.copyWith(color: context.cc.muted)),
+                                Text(_when(context, c, now, 'EEE d MMM yyyy'), style: context.tt.bodySmall?.copyWith(color: context.cc.muted)),
                               ],
                             ),
                           ),
@@ -82,6 +82,13 @@ class CountdownsScreen extends ConsumerWidget {
             ),
     );
   }
+}
+
+/// Date of the next occurrence, plus " · 6:30 PM" when a time is set.
+String _when(BuildContext context, Countdown c, DateTime now, String pattern) {
+  final date = DateFormat(pattern).format(c.nextOccurrence(now));
+  if (!c.hasTime) return date;
+  return '$date · ${TimeOfDay.fromDateTime(c.date).format(context)}';
 }
 
 class _Hero extends StatelessWidget {
@@ -107,7 +114,7 @@ class _Hero extends StatelessWidget {
             style: context.tt.titleLarge?.copyWith(color: Colors.white),
           ),
           const SizedBox(height: Space.xs),
-          Text(DateFormat('EEEE d MMMM yyyy').format(c.nextOccurrence(now)), style: context.tt.bodyMedium?.copyWith(color: Colors.white70)),
+          Text(_when(context, c, now, 'EEEE d MMMM yyyy'), textAlign: TextAlign.center, style: context.tt.bodyMedium?.copyWith(color: Colors.white70)),
         ],
       ),
     );
@@ -126,13 +133,23 @@ class CountdownEditScreen extends ConsumerStatefulWidget {
 class _CountdownEditScreenState extends ConsumerState<CountdownEditScreen> {
   final _title = TextEditingController();
   DateTime _date = DateTime.now().add(const Duration(days: 7));
+  TimeOfDay _time = const TimeOfDay(hour: 9, minute: 0);
   String _emoji = '✈️';
   bool _yearly = false;
-  int _remind = 1;
+  int _remind = Countdown.minutesPerDay; // minutes before
   Countdown? _existing;
   bool _busy = false;
 
   static const _emojis = ['✈️', '💑', '🎂', '💍', '🎄', '🏖️', '🎉', '🎓', '🏠', '❤️', '🎁', '📅'];
+
+  /// Reminder presets, in minutes before the moment.
+  static const _remindPresets = [0, 5, 15, 30, 60, 120, 1440, 2880, 4320, 10080];
+  static const _customRemind = -1;
+
+  DateTime get _moment => DateTime(_date.year, _date.month, _date.day, _time.hour, _time.minute);
+
+  /// A one-off countdown has to be in the future.
+  bool get _inPast => !_yearly && !_moment.isAfter(DateTime.now());
 
   @override
   void initState() {
@@ -143,9 +160,10 @@ class _CountdownEditScreenState extends ConsumerState<CountdownEditScreen> {
     if (e != null) {
       _title.text = e.title;
       _date = e.date;
+      if (e.hasTime) _time = TimeOfDay.fromDateTime(e.date);
       _emoji = e.emoji;
       _yearly = e.repeatsYearly;
-      _remind = e.remindDaysBefore;
+      _remind = e.remindMinutesBefore;
     }
   }
 
@@ -163,10 +181,11 @@ class _CountdownEditScreenState extends ConsumerState<CountdownEditScreen> {
             Countdown(
               id: _existing?.id ?? '',
               title: _title.text.trim(),
-              date: DateTime(_date.year, _date.month, _date.day),
+              date: _moment,
+              hasTime: true,
               emoji: _emoji,
               repeatsYearly: _yearly,
-              remindDaysBefore: _remind,
+              remindMinutesBefore: _remind,
               createdBy: _existing?.createdBy ?? '',
             ),
           ),
@@ -176,8 +195,14 @@ class _CountdownEditScreenState extends ConsumerState<CountdownEditScreen> {
     if (ok) context.pop();
   }
 
+  Future<void> _pickCustomRemind() async {
+    final picked = await showDialog<int>(context: context, builder: (_) => _CustomRemindDialog(initialMinutes: _remind));
+    if (picked != null) setState(() => _remind = picked);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final remindValues = [..._remindPresets, if (!_remindPresets.contains(_remind)) _remind];
     return Scaffold(
       appBar: AppBar(
         title: Text(_existing == null ? 'New countdown' : 'Edit countdown'),
@@ -238,6 +263,26 @@ class _CountdownEditScreenState extends ConsumerState<CountdownEditScreen> {
               ],
             ),
           ),
+          const SizedBox(height: Space.s),
+          CloserCard(
+            onTap: () async {
+              final t = await showTimePicker(context: context, initialTime: _time);
+              if (t != null) setState(() => _time = t);
+            },
+            child: Row(
+              children: [
+                const Icon(Icons.schedule_rounded),
+                const SizedBox(width: Space.m),
+                Expanded(child: Text(_time.format(context), style: context.tt.titleMedium)),
+                const Icon(Icons.edit_rounded, size: 18),
+              ],
+            ),
+          ),
+          if (_inPast)
+            Padding(
+              padding: const EdgeInsets.only(top: Space.xs, left: Space.s),
+              child: Text('That time has already passed', style: context.tt.bodySmall?.copyWith(color: context.cs.error)),
+            ),
           SwitchListTile(
             title: const Text('Repeats every year'),
             subtitle: const Text('Birthdays, anniversaries'),
@@ -249,19 +294,120 @@ class _CountdownEditScreenState extends ConsumerState<CountdownEditScreen> {
             trailing: DropdownButton<int>(
               value: _remind,
               underline: const SizedBox.shrink(),
-              items: const [
-                DropdownMenuItem(value: 0, child: Text('On the day')),
-                DropdownMenuItem(value: 1, child: Text('1 day before')),
-                DropdownMenuItem(value: 3, child: Text('3 days before')),
-                DropdownMenuItem(value: 7, child: Text('1 week before')),
+              items: [
+                for (final m in remindValues) DropdownMenuItem(value: m, child: Text(Countdown.describeRemind(m))),
+                const DropdownMenuItem(value: _customRemind, child: Text('Custom…')),
               ],
-              onChanged: (v) => setState(() => _remind = v ?? 1),
+              onChanged: (v) async {
+                if (v == _customRemind) {
+                  await _pickCustomRemind();
+                } else if (v != null) {
+                  setState(() => _remind = v);
+                }
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Space.m),
+            child: Text(
+              _remind == 0
+                  ? 'You both get a notification at the time.'
+                  : 'You both get a notification ${Countdown.describeRemind(_remind)}, and again at the time.',
+              style: context.tt.bodySmall?.copyWith(color: context.cc.muted),
             ),
           ),
           const SizedBox(height: Space.l),
-          CloserButton(label: 'Save', loading: _busy, onPressed: _title.text.trim().isEmpty ? null : _save),
+          CloserButton(label: 'Save', loading: _busy, onPressed: _title.text.trim().isEmpty || _inPast ? null : _save),
         ],
       ),
+    );
+  }
+}
+
+/// "Remind us 45 minutes / 6 hours / 10 days before".
+class _CustomRemindDialog extends StatefulWidget {
+  const _CustomRemindDialog({required this.initialMinutes});
+
+  final int initialMinutes;
+
+  @override
+  State<_CustomRemindDialog> createState() => _CustomRemindDialogState();
+}
+
+class _CustomRemindDialogState extends State<_CustomRemindDialog> {
+  static const _units = {'minutes': 1, 'hours': 60, 'days': Countdown.minutesPerDay};
+
+  late final TextEditingController _amount;
+  late String _unit;
+
+  @override
+  void initState() {
+    super.initState();
+    final m = widget.initialMinutes;
+    _unit = m > 0 && m % Countdown.minutesPerDay == 0
+        ? 'days'
+        : m > 0 && m % 60 == 0
+            ? 'hours'
+            : 'minutes';
+    final n = m <= 0 ? 30 : m ~/ _units[_unit]!;
+    _amount = TextEditingController(text: '$n');
+  }
+
+  @override
+  void dispose() {
+    _amount.dispose();
+    super.dispose();
+  }
+
+  int? get _minutes {
+    final n = int.tryParse(_amount.text.trim());
+    if (n == null || n <= 0) return null;
+    final m = n * _units[_unit]!;
+    return m > Countdown.maxRemindMinutes ? null : m;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final minutes = _minutes;
+    return AlertDialog(
+      title: const Text('Remind us before'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _amount,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: 'How long before'),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: Space.m),
+          SegmentedButton<String>(
+            segments: [for (final u in _units.keys) ButtonSegment(value: u, label: Text(u))],
+            selected: {_unit},
+            showSelectedIcon: false,
+            onSelectionChanged: (v) => setState(() => _unit = v.first),
+          ),
+          if (minutes == null && _amount.text.trim().isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: Space.s),
+              child: Text('Pick something up to 60 days', style: context.tt.bodySmall?.copyWith(color: context.cs.error)),
+            ),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        FilledButton(
+          // Compact pill for dialogs; the theme default (56 tall) is for full-width actions.
+          style: FilledButton.styleFrom(
+            minimumSize: const Size(80, 40),
+            padding: const EdgeInsets.symmetric(horizontal: Space.l),
+          ),
+          onPressed: minutes == null ? null : () => Navigator.pop(context, minutes),
+          child: const Text('Set'),
+        ),
+      ],
     );
   }
 }
