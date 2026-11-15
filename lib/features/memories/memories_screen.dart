@@ -3,7 +3,9 @@ import 'package:closer_app/core/data/closer_backend.dart';
 import 'package:closer_app/core/models/models.dart';
 import 'package:closer_app/core/services/ads.dart';
 import 'package:closer_app/core/theme/app_theme.dart';
+import 'package:closer_app/core/ui/actions.dart';
 import 'package:closer_app/core/ui/components.dart';
+import 'package:closer_app/core/ui/reactions.dart';
 import 'package:closer_app/core/ui/soft_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -98,7 +100,16 @@ class _Tile extends ConsumerWidget {
           label: '${item.type.name}${item.caption.isEmpty ? '' : ': ${item.caption}'}',
           child: GestureDetector(
             onTap: () => context.push('/item/${item.id}'),
-            child: SizedBox.expand(child: AppImage(image)),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                AppImage(image),
+                if (item.secret && item.revealedAt == null)
+                  const Positioned(top: 4, left: 4, child: Text('🕵️', style: TextStyle(fontSize: 16))),
+                if (item.reactions.isNotEmpty)
+                  Positioned(right: 4, bottom: 4, child: ReactionBadge(reactions: item.reactions)),
+              ],
+            ),
           ),
         ),
       ),
@@ -123,7 +134,15 @@ class ItemViewerScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
-        title: item == null ? null : Text(item.senderId == me ? 'You' : name),
+        title: item == null
+            ? null
+            : Text(
+                item.senderId == me
+                    ? 'You'
+                    : item.hidesSenderFrom(me)
+                        ? 'A secret admirer 🕵️'
+                        : name,
+              ),
         actions: [
           if (image != null && !image.startsWith('http'))
             IconButton(
@@ -148,6 +167,10 @@ class ItemViewerScreen extends ConsumerWidget {
                     children: [
                       if (item.caption.isNotEmpty)
                         Text(item.caption, style: context.tt.titleMedium?.copyWith(color: Colors.white)),
+                      if (item.secret) _SecretLine(item: item, mine: item.senderId == me, name: name),
+                      const SizedBox(height: Space.s),
+                      ReactionBar(item: item, onDark: true),
+                      const SizedBox(height: Space.s),
                       if (item.geo case final geo?)
                         TextButton.icon(
                           style: TextButton.styleFrom(foregroundColor: Colors.white),
@@ -164,6 +187,52 @@ class ItemViewerScreen extends ConsumerWidget {
                 ),
               ],
             ),
+    );
+  }
+}
+
+/// Secret-admirer status under an item: the sender can reveal it; the
+/// receiver sees a playful hint until then.
+class _SecretLine extends ConsumerWidget {
+  const _SecretLine({required this.item, required this.mine, required this.name});
+
+  final Item item;
+  final bool mine;
+  final String name;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    const style = TextStyle(color: Colors.white70);
+    if (item.revealedAt != null) {
+      return Padding(
+        padding: const EdgeInsets.only(top: Space.xs),
+        child: Text(mine ? 'You revealed yourself 💘' : 'Your secret admirer was $name 💘', style: style),
+      );
+    }
+    if (!mine) {
+      return const Padding(
+        padding: EdgeInsets.only(top: Space.xs),
+        child: Text('From a secret admirer… any guesses? 👀', style: style),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.only(top: Space.xs),
+      child: TextButton.icon(
+        style: TextButton.styleFrom(foregroundColor: Colors.white),
+        icon: const Text('🕵️'),
+        label: const Text('Sent anonymously · Reveal it was you'),
+        onPressed: () async {
+          final ok = await confirm(
+            context,
+            title: 'Reveal yourself?',
+            body: '$name will find out this was from you.',
+            ok: 'Reveal',
+          );
+          if (!ok || !context.mounted) return;
+          final done = await runAction(context, () => ref.read(backendProvider).revealSecret(item.id));
+          if (done && context.mounted) showToast(context, 'Revealed! 💘');
+        },
+      ),
     );
   }
 }

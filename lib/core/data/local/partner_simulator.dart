@@ -63,6 +63,12 @@ class PartnerSimulator {
     final id = _pairId;
     if (id == null || !_partnerInPair) return;
     onNewQuestion(id, dayKey(DateTime.now()));
+    // Pairs made before the love features existed get them too.
+    if (_b.simState['seededLove'] != true) _later(3, () => _seedLove(id));
+    if (_b.simState['seededPlan'] != true) _later(4, () => _seedPlan(id));
+    if (_b.simState['seededMoods'] != true) _later(5, () => _seedMoods(id));
+    // They look after the pet once a day too.
+    _later(30, () => onPetChanged(id));
   }
 
   void onInviteCreated(Invite invite) {
@@ -87,6 +93,19 @@ class PartnerSimulator {
       _b.applyGameAnswers(pairId, g.id, partnerUid, [for (final q in g.questions) _rand.nextInt(q.options.length)]);
     });
     _later(12, () => _b.writeTap(pairId, partnerUid, 'heart'));
+    _later(15, () => _seedLove(pairId));
+    _later(18, () => _seedPlan(pairId));
+    _later(20, () => _seedMoods(pairId));
+    _later(10, () => _b.writeMessage(pairId, partnerUid, const ChatDraft(text: 'Hiii 👋 we have our own chat now!')));
+    // A secret-admirer note that gets revealed a minute later.
+    _later(35, () async {
+      try {
+        final item = await _sendNote(pairId, 'Someone here thinks you’re amazing 👀', secret: true);
+        if (item != null) _later(60, () => _b.revealItem(pairId, item.id, partnerUid));
+      } on Object {
+        // The simulated partner must never crash the app.
+      }
+    });
   }
 
   void onUnpaired() {
@@ -100,6 +119,7 @@ class PartnerSimulator {
     final id = _pairId;
     if (id == null || !_partnerInPair) return;
     _later(4, () => _b.writeTap(id, partnerUid, 'heart'));
+    _later(7, () => _b.setReaction(id, item.id, partnerUid, _pick(reactionEmojis)));
     // Reply with a note now and then, not to every single item.
     final last = _b.simState['lastReply'] as int? ?? 0;
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -109,10 +129,311 @@ class PartnerSimulator {
     }
   }
 
-  void onMyTap() {
+  void onMyTap(TapKind kind) {
     final id = _pairId;
     if (id == null || !_partnerInPair) return;
-    _later(5, () => _b.writeTap(id, partnerUid, 'heart'));
+    // Answer a "miss you" with a "miss you", anything else with a heart.
+    final back = switch (kind.id) {
+      'miss' => 'miss',
+      'thinking' => 'love',
+      'hug' => 'hug',
+      'kiss' => 'kiss',
+      _ => 'heart',
+    };
+    _later(5, () => _b.writeTap(id, partnerUid, back));
+  }
+
+  /// Reasons, a letter that opens in a few minutes, a surprise gift and a
+  /// shrine, so every love feature has something in it.
+  void _seedLove(String pairId) {
+    if (!_partnerInPair || _b.simState['seededLove'] == true) return;
+    _b.simState['seededLove'] = true;
+    final now = DateTime.now();
+    for (final text in _reasons.take(4)) {
+      final mine = _b.pairOf(pairId) == null ? const <Capsule>[] : _partnerCapsules(pairId);
+      _b.writeCapsule(
+        pairId,
+        partnerUid,
+        Capsule(
+          id: '',
+          kind: CapsuleKind.reason,
+          authorId: partnerUid,
+          forUid: '',
+          createdAt: now,
+          unlockAt: Capsule.nextReasonUnlock(mine, now),
+        ),
+        CapsuleContent(text: text),
+      );
+    }
+    _b
+      ..writeCapsule(
+        pairId,
+        partnerUid,
+        Capsule(
+          id: '',
+          kind: CapsuleKind.letter,
+          authorId: partnerUid,
+          forUid: '',
+          title: 'Open when you miss me',
+          createdAt: now,
+          unlockAt: now.add(_s(180)),
+        ),
+        const CapsuleContent(
+          text: 'Hey you,\n\nIf you’re reading this, you probably miss me a little. I miss you too — '
+              'way more than a little.\n\nClose your eyes for a second and imagine the biggest hug. '
+              'That one’s from me. Talk soon? 💗',
+        ),
+      )
+      ..writeCapsule(
+        pairId,
+        partnerUid,
+        Capsule(
+          id: '',
+          kind: CapsuleKind.letter,
+          authorId: partnerUid,
+          forUid: '',
+          title: 'Open on our next anniversary',
+          createdAt: now,
+          unlockAt: now.add(const Duration(days: 60)),
+        ),
+        const CapsuleContent(text: 'No peeking until then! 🙈'),
+      )
+      ..writeCapsule(
+        pairId,
+        partnerUid,
+        Capsule(
+          id: '',
+          kind: CapsuleKind.surprise,
+          authorId: partnerUid,
+          forUid: '',
+          surpriseType: SurpriseType.gift,
+          createdAt: now,
+          unlockAt: now.add(_s(45)),
+        ),
+        const CapsuleContent(text: 'Because you deserve flowers today 🌷', giftId: 'bouquet'),
+      )
+      ..putShrine(
+        pairId,
+        partnerUid,
+        const Shrine(
+          ownerUid: partnerUid,
+          title: 'Everything I love about you',
+          theme: 'lavender',
+          favorites: [
+            ShrineFavorite('Song', 'The one we danced to in the kitchen'),
+            ShrineFavorite('Food', 'Your terrible-but-amazing pancakes'),
+            ShrineFavorite('Thing about you', 'How you laugh at your own jokes'),
+            ShrineFavorite('Place', 'Anywhere next to you'),
+          ],
+          messages: [
+            'You make the hard days easier.',
+            'I’m so lucky I found you ✨',
+          ],
+        ),
+      );
+  }
+
+  List<Capsule> _partnerCapsules(String pairId) => [
+        for (final e in _b.simStateCapsules(pairId).entries)
+          if ((e.value as Map)['authorId'] == partnerUid)
+            Capsule.fromJson(e.key, Map<String, dynamic>.from(e.value as Map)),
+      ];
+
+  void onMyCapsule(Capsule c) {
+    final id = _pairId;
+    if (id == null || !_partnerInPair) return;
+    switch (c.kind) {
+      case CapsuleKind.surprise:
+        // A surprise back, a little later.
+        _later(25, () {
+          final now = DateTime.now();
+          _b.writeCapsule(
+            id,
+            partnerUid,
+            Capsule(
+              id: '',
+              kind: CapsuleKind.surprise,
+              authorId: partnerUid,
+              forUid: '',
+              surpriseType: SurpriseType.compliment,
+              createdAt: now,
+              unlockAt: now,
+            ),
+            CapsuleContent(text: _pick(compliments)),
+          );
+        });
+      case CapsuleKind.reason:
+        // Answer every reason with one of their own (while they last).
+        final used = _b.simState['reasonsUsed'] as int? ?? 4;
+        if (used >= _reasons.length) return;
+        _b.simState['reasonsUsed'] = used + 1;
+        _later(10, () {
+          final now = DateTime.now();
+          _b.writeCapsule(
+            id,
+            partnerUid,
+            Capsule(
+              id: '',
+              kind: CapsuleKind.reason,
+              authorId: partnerUid,
+              forUid: '',
+              createdAt: now,
+              unlockAt: Capsule.nextReasonUnlock(_partnerCapsules(id), now),
+            ),
+            CapsuleContent(text: _reasons[used]),
+          );
+        });
+      case CapsuleKind.letter:
+        break;
+    }
+  }
+
+  void onCapsuleOpened(Capsule c) {
+    final id = _pairId;
+    if (id == null || !_partnerInPair) return;
+    if (c.kind == CapsuleKind.letter) _later(8, () => _b.writeTap(id, partnerUid, 'love'));
+  }
+
+  /// A date in the calendar, a shared to-do list and a few wishes.
+  void _seedPlan(String pairId) {
+    if (!_partnerInPair || _b.simState['seededPlan'] == true) return;
+    _b.simState['seededPlan'] = true;
+    final me = _b.currentUid;
+    final now = DateTime.now();
+    final inFive = DateTime(now.year, now.month, now.day + 5, 19, 30);
+    _b.putEvent(
+      pairId,
+      partnerUid,
+      Countdown(
+        id: '',
+        title: 'Movie night',
+        date: inFive,
+        hasTime: true,
+        emoji: '🎬',
+        category: EventCategory.date,
+        isVirtual: true,
+        showAsCountdown: false,
+        remindMinutesBefore: 60,
+        createdBy: partnerUid,
+      ),
+    );
+    final list = _b.putTodoList(pairId, partnerUid, const TodoList(id: '', title: 'This weekend', emoji: '🧺', createdBy: partnerUid));
+    _b
+      ..putTodo(
+        pairId,
+        partnerUid,
+        Todo(id: '', listId: list, text: 'Book the restaurant for Saturday', assignee: me, due: now.add(const Duration(days: 2)), createdBy: partnerUid),
+      )
+      ..putTodo(pairId, partnerUid, Todo(id: '', listId: list, text: 'Pick a movie for movie night', createdBy: partnerUid))
+      ..putTodo(pairId, partnerUid, Todo(id: '', listId: list, text: 'Buy snacks 🍿', assignee: partnerUid, createdBy: partnerUid))
+      ..putWish(
+        pairId,
+        partnerUid,
+        const Wish(id: '', title: 'Fluffy winter socks', category: WishCategory.gift, note: 'The really soft ones 🧦', price: '€12', createdBy: partnerUid),
+      )
+      ..putWish(pairId, partnerUid, const Wish(id: '', title: 'Sunset picnic by the lake', category: WishCategory.date, createdBy: partnerUid))
+      ..putWish(pairId, partnerUid, const Wish(id: '', title: 'Weekend in Lisbon', category: WishCategory.travel, note: 'Pastéis de nata tour!', createdBy: partnerUid));
+  }
+
+  void onMyEvent(Countdown c) {
+    final id = _pairId;
+    if (id == null || !_partnerInPair) return;
+    if (c.isDate) _later(6, () => _b.writeTap(id, partnerUid, 'love'));
+  }
+
+  void onMyTodo(Todo t) {
+    final id = _pairId;
+    if (id == null || !_partnerInPair || t.assignee != partnerUid) return;
+    // They get to it after a while.
+    _later(20, () => _b.markTodo(id, partnerUid, t.id, done: true));
+  }
+
+  /// Types for a moment, then answers (and sometimes reacts first).
+  void onMyMessage(ChatMessage m) {
+    final id = _pairId;
+    if (id == null || !_partnerInPair) return;
+    _later(2, () => _b.markChatReadFor(id, partnerUid));
+    if (m.type == MessageType.photo || _rand.nextDouble() < 0.3) {
+      _later(3, () => _b.setMessageReaction(id, m.id, partnerUid, _pick(const ['❤️', '😍', '😂', '🥹'])));
+    }
+    // Answer a burst of messages once, not each one.
+    final last = _b.simState['lastChatReply'] as int? ?? 0;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (now - last < const Duration(seconds: 8).inMilliseconds) return;
+    _b.simState['lastChatReply'] = now;
+    _later(4, () => _b.setTypingFor(id, partnerUid, typing: true));
+    _later(8, () {
+      final text = switch (m.type) {
+        MessageType.photo => _pick(const ['Omg this is so cute 😍', 'Where is this?? 👀', 'Saving this one 📌']),
+        MessageType.voice => _pick(const ['I love hearing your voice 🥹', 'Haha, play it again 😂', 'Aww, miss you']),
+        MessageType.text => _pick(_chatReplies),
+      };
+      _b.writeMessage(
+        id,
+        partnerUid,
+        ChatDraft(
+          text: text,
+          replyTo: _rand.nextDouble() < 0.25 ? ReplyRef(id: m.id, senderId: m.senderId, preview: m.preview) : null,
+        ),
+      );
+    });
+  }
+
+  void onMyGoodnight(String pairId) {
+    if (!_partnerInPair) return;
+    _later(10, () {
+      final tonight = _b.readTonight(pairId);
+      if (tonight == null || tonight.doneBy(partnerUid)) return;
+      _b.writeGoodnight(
+        pairId,
+        partnerUid,
+        GoodnightEntry(
+          message: _pick(const ['Goodnight, sleep tight 🌙', 'Sweet dreams! Talk tomorrow 💤', 'Night night, love you ✨']),
+          moment: _pick(const [
+            'Getting your message this morning ☀️',
+            'The sunset on my way home 🌇',
+            'Laughing at our chat at lunch 😂',
+          ]),
+          kiss: true,
+        ),
+      );
+    });
+  }
+
+  /// Two weeks of moods for the partner, so insights have a trend to show.
+  void _seedMoods(String pairId) {
+    if (!_partnerInPair || _b.simState['seededMoods'] == true) return;
+    _b.simState['seededMoods'] = true;
+    const pool = [('😊', 'Happy'), ('🥰', 'Loved'), ('😌', 'Calm'), ('🤯', 'Busy'), ('😴', 'Sleepy'), ('🥳', 'Excited'), ('🫠', 'Tired')];
+    final now = DateTime.now();
+    for (var i = 13; i >= 0; i--) {
+      final (emoji, label) = pool[_rand.nextInt(pool.length)];
+      _b.logMood(pairId, partnerUid, Mood(emoji: emoji, label: label, updatedAt: now), dayKey(now.subtract(Duration(days: i))));
+    }
+  }
+
+  void onPetChanged(String pairId) {
+    if (!_partnerInPair) return;
+    _later(12, () {
+      final pet = _b.pairOf(pairId)?.pet;
+      final now = DateTime.now();
+      if (pet == null) return;
+      if (!pet.fedBy(partnerUid, now)) _b.petCare(pairId, partnerUid, 'feed');
+      if (!pet.playedBy(partnerUid, now)) _later(20, () => _b.petCare(pairId, partnerUid, 'play'));
+    });
+  }
+
+  void onMyReaction(Item item) {
+    // Nothing to do: the partner just enjoys it.
+  }
+
+  void onMyMissMeter(String pairId) {
+    if (!_partnerInPair) return;
+    _later(8, () {
+      final m = _b.readTodayMissMeter(pairId);
+      if (m == null || m.answeredBy.contains(partnerUid) || m.revealed) return;
+      _b.answerMissMeter(pairId, partnerUid, 40 + _rand.nextInt(61));
+    });
   }
 
   void onMyMood(Mood mood) {
@@ -156,21 +477,22 @@ class PartnerSimulator {
     });
   }
 
-  Future<void> _sendNote(String pairId, String text) async {
-    if (!_partnerInPair) return;
+  Future<Item?> _sendNote(String pairId, String text, {bool secret = false}) async {
+    if (!_partnerInPair) return null;
     final style = NoteStyle(
       bg: noteBackgrounds[_rand.nextInt(noteBackgrounds.length)].id,
       font: 'rounded',
     );
     final path = '${_b.mediaDir.path}/sim_${DateTime.now().millisecondsSinceEpoch}.png';
     await NoteRenderer.renderToFile(text: text, style: style, path: path);
-    await _b.storeItem(
+    return await _b.storeItem(
       pairId: pairId,
       senderId: partnerUid,
       type: ItemType.note,
       sourcePath: path,
       text: text,
       noteStyle: style,
+      secret: secret,
     );
   }
 
@@ -192,6 +514,30 @@ class PartnerSimulator {
     'You’re the best ✨',
     'Saving this forever 📌',
     'Ok this is adorable',
+  ];
+
+  static const _chatReplies = [
+    'Haha yes 😂',
+    'Aww 🥹',
+    'Tell me more!',
+    'Same here, honestly',
+    'Miss you 💕',
+    'Wait, really?? 👀',
+    'Love that',
+    'Can’t wait to see you!',
+  ];
+
+  static const _reasons = [
+    'The way you text me good morning, every single day.',
+    'You remember the tiny things I say.',
+    'Your laugh is contagious.',
+    'You make me feel safe.',
+    'You always know how to cheer me up.',
+    'You’re ridiculously good at hugs.',
+    'You believe in me, even when I don’t.',
+    'You make boring errands fun.',
+    'You’re kind to everyone, even strangers.',
+    'Your terrible puns. Yes, really.',
   ];
 
   static const _answers = [

@@ -50,6 +50,7 @@ export interface NotificationPrefs {
   taps?: boolean;
   questions?: boolean;
   reminders?: boolean;
+  chat?: boolean;
   quietHours?: {start?: number | null; end?: number | null};
 }
 
@@ -267,9 +268,10 @@ export type Channel =
   | "streak"
   | "countdowns"
   | "game_turns"
+  | "chat"
   | "account";
 
-type PrefKey = "taps" | "questions" | "reminders";
+type PrefKey = "taps" | "questions" | "reminders" | "chat";
 
 export async function getTokens(uid: string): Promise<string[]> {
   const snap = await db.doc(`devices/${uid}`).get();

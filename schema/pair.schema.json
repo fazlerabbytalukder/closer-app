@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://closer.app/schema/pair.schema.json",
   "title": "pairs/{pairId}",
-  "description": "Created by acceptInvite. Members may only change widgetTheme[self], questionPack and timezone; everything else is function-only.",
+  "description": "Created by acceptInvite. Members may only change widgetTheme[self], questionPack, timezone, mode, anniversary, relationLabels[self], nicknames[self] and lastMetAt; everything else is function-only.",
   "type": "object",
   "properties": {
     "memberIds": {"type": "array", "items": {"$ref": "common.schema.json#/$defs/uid"}, "minItems": 2, "maxItems": 2},
@@ -17,6 +17,46 @@
       "additionalProperties": {"enum": ["girlfriend", "boyfriend", "partner", "wife", "husband", "fiance", "best_friend", "bff", "bestie", "sibling"]}
     },
     "nicknames": {"type": "object", "additionalProperties": {"type": "string", "maxLength": 24}},
+    "dateGoal": {
+      "oneOf": [
+        {"type": "object", "properties": {"count": {"type": "integer", "minimum": 1, "maximum": 14}, "per": {"enum": ["week", "month"]}}, "required": ["count", "per"], "additionalProperties": false},
+        {"type": "null"}
+      ],
+      "description": "Shared date-night goal; member-writable."
+    },
+    "pet": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "species": {"enum": ["bunny", "kitten", "puppy", "fox", "panda", "chick", "koala", "frog"]},
+            "name": {"type": "string", "minLength": 1, "maxLength": 20},
+            "hatchedAt": {"$ref": "common.schema.json#/$defs/timestamp"},
+            "lastFed": {"type": "object", "additionalProperties": {"$ref": "common.schema.json#/$defs/timestamp"}},
+            "lastPlayed": {"type": "object", "additionalProperties": {"$ref": "common.schema.json#/$defs/timestamp"}}
+          },
+          "required": ["species", "name", "hatchedAt"],
+          "additionalProperties": false
+        },
+        {"type": "null"}
+      ],
+      "description": "The pet that hatched from the plant (stage >= 3). Its size follows plant.stage."
+    },
+    "home": {
+      "type": "object",
+      "properties": {
+        "wallpaper": {"type": "string", "maxLength": 24},
+        "owned": {"type": "array", "maxItems": 64, "items": {"type": "string"}},
+        "placed": {
+          "type": "array",
+          "maxItems": 30,
+          "items": {"type": "object", "properties": {"id": {"type": "string"}, "x": {"type": "number", "minimum": 0, "maximum": 1}, "y": {"type": "number", "minimum": 0, "maximum": 1}}, "required": ["id", "x", "y"]}
+        },
+        "spent": {"type": "integer", "minimum": 0, "description": "Love points spent; only grows, never above what was earned (see firestore.rules validHome)."}
+      },
+      "description": "The pet's shared home."
+    },
+    "lastMetAt": {"oneOf": [{"$ref": "common.schema.json#/$defs/timestamp"}, {"type": "null"}], "description": "When the two last met in person; member-writable, not in the future."},
     "latestItemByUser": {
       "type": "object",
       "additionalProperties": {
@@ -26,6 +66,7 @@
           "type": {"$ref": "common.schema.json#/$defs/itemType"},
           "thumbPath": {"type": ["string", "null"]},
           "caption": {"type": "string", "maxLength": 40},
+          "secret": {"type": "boolean"},
           "sentAt": {"$ref": "common.schema.json#/$defs/timestamp"}
         },
         "required": ["itemId", "type", "sentAt"]

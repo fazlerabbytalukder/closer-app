@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://closer.app/schema/timeline.schema.json",
+  "title": "pairs/{pairId}/timeline/{entryId}",
+  "description": "A moment on the shared timeline. Either member may create, edit or delete; createdBy never changes.",
+  "type": "object",
+  "properties": {
+    "date": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 60
+    },
+    "emoji": {
+      "type": "string",
+      "maxLength": 16
+    },
+    "note": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "photoPath": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^pairs/[^/]+/media/[^/]+/[A-Za-z0-9_-]+\\.jpg$"
+    },
+    "createdBy": {
+      "$ref": "common.schema.json#/$defs/uid"
+    },
+    "createdAt": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "updatedAt": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    }
+  },
+  "required": [
+    "date",
+    "title",
+    "emoji",
+    "note",
+    "createdBy"
+  ],
+  "additionalProperties": false
+}

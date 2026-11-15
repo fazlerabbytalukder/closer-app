@@ -63,9 +63,13 @@ dependencies:
   http: ^1.6.0
   geolocator: ^14.0.1
   geocoding: ^5.0.1
+  record: ^7.2.0
+  just_audio: ^0.10.6
 
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+  integration_test:
     sdk: flutter
 
   # The "flutter_lints" package below contains a set of recommended lints to

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://closer.app/schema/capsuleContent.schema.json",
+  "title": "pairs/{pairId}/capsules/{capsuleId}/content/main",
+  "description": "Readable by the author, and by the receiver once the envelope's unlockAt has passed. Immutable.",
+  "type": "object",
+  "properties": {
+    "text": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "photoPath": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^pairs/[^/]+/media/[^/]+/[A-Za-z0-9_-]+\\.jpg$"
+    },
+    "giftId": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 24
+    }
+  },
+  "required": [
+    "text"
+  ],
+  "additionalProperties": false
+}

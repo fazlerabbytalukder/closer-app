@@ -117,6 +117,7 @@ class MeScreen extends ConsumerWidget {
           _Group(
             children: [
               _Row(icon: Icons.favorite_border_rounded, title: 'Relationship', onTap: () => context.push('/relationship')),
+              _Row(icon: Icons.insights_rounded, title: 'Our insights', onTap: () => context.push('/insights')),
               _Row(icon: Icons.tune_rounded, title: 'Notifications & appearance', onTap: () => context.push('/settings')),
               _Row(icon: Icons.shield_outlined, title: 'Privacy & data', onTap: () => context.push('/privacy')),
               _Row(icon: Icons.help_outline_rounded, title: 'Help & feedback', onTap: () => context.push('/help')),

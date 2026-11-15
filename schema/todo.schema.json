@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://closer.app/schema/todo.schema.json",
+  "title": "pairs/{pairId}/todos/{todoId}",
+  "description": "A shared task. assignee null = both members. doneBy is the member who ticked it.",
+  "type": "object",
+  "properties": {
+    "listId": {
+      "type": "string"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "assignee": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "due": {
+      "oneOf": [
+        {
+          "$ref": "common.schema.json#/$defs/timestamp"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "doneBy": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "doneAt": {
+      "oneOf": [
+        {
+          "$ref": "common.schema.json#/$defs/timestamp"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "createdBy": {
+      "$ref": "common.schema.json#/$defs/uid"
+    },
+    "createdAt": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    }
+  },
+  "required": [
+    "listId",
+    "text",
+    "createdBy"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://closer.app/schema/capsule.schema.json",
+  "title": "pairs/{pairId}/capsules/{capsuleId}",
+  "description": "Love capsule envelope (100 reasons, letters from the future, surprises). Written by the author; the receiver may only set openedAt once unlocked; notified is set by functions. Locked content lives in capsules/{id}/content/main (capsuleContent.schema.json).",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "enum": [
+        "reason",
+        "letter",
+        "surprise"
+      ]
+    },
+    "authorId": {
+      "$ref": "common.schema.json#/$defs/uid"
+    },
+    "forUid": {
+      "$ref": "common.schema.json#/$defs/uid"
+    },
+    "title": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "surpriseType": {
+      "enum": [
+        "note",
+        "photo",
+        "compliment",
+        "gift",
+        null
+      ]
+    },
+    "createdAt": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "unlockAt": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    },
+    "openedAt": {
+      "oneOf": [
+        {
+          "$ref": "common.schema.json#/$defs/timestamp"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "notified": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "kind",
+    "authorId",
+    "forUid",
+    "title",
+    "createdAt",
+    "unlockAt",
+    "notified"
+  ],
+  "additionalProperties": false
+}

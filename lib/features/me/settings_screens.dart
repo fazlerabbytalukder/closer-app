@@ -66,7 +66,12 @@ class SettingsScreen extends ConsumerWidget {
             onChanged: (v) => update(prefs.copyWith(questions: v)),
           ),
           SwitchListTile(
-            title: const Text('Plant & countdown reminders'),
+            title: const Text('Chat & goodnights'),
+            value: prefs.chat,
+            onChanged: (v) => update(prefs.copyWith(chat: v)),
+          ),
+          SwitchListTile(
+            title: const Text('Plant & calendar reminders'),
             value: prefs.reminders,
             onChanged: (v) => update(prefs.copyWith(reminders: v)),
           ),

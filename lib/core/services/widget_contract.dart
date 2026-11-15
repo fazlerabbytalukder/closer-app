@@ -27,6 +27,9 @@ abstract final class WidgetKeys {
   /// Show the heart badge until this time (millis). Empty = no badge.
   static const heartUntil = 'heart_until';
 
+  /// Emoji of the partner's latest tap (a TapKind), shown in the badge.
+  static const tapEmoji = 'tap_emoji';
+
   /// e.g. "😊 Happy" — optional line on medium/large widget.
   static const partnerMood = 'partner_mood';
 
@@ -46,6 +49,17 @@ abstract final class WidgetKeys {
 
   /// 'healthy' | 'wilted'
   static const plantHealth = 'plant_health';
+
+  // "Always with me" widget.
+  /// When you last met (millis). Empty = not set; the widget counts the
+  /// time since itself so it stays right without the app.
+  static const lastMetAt = 'last_met_at';
+
+  /// Absolute path of today's memory photo. Empty = none.
+  static const alwaysPhotoPath = 'always_photo_path';
+
+  /// The romantic line of the day (or the partner's latest tap message).
+  static const alwaysMessage = 'always_message';
 }
 
 /// Fully-qualified receiver class names of the Glance widgets.
@@ -54,8 +68,9 @@ abstract final class WidgetReceivers {
       'app.closer.widget.widgets.PartnerPhotoWidgetReceiver';
   static const countdown = 'app.closer.widget.widgets.CountdownWidgetReceiver';
   static const plant = 'app.closer.widget.widgets.PlantWidgetReceiver';
+  static const alwaysWithMe = 'app.closer.widget.widgets.AlwaysWithMeWidgetReceiver';
 
-  static const all = [partnerPhoto, countdown, plant];
+  static const all = [partnerPhoto, countdown, plant, alwaysWithMe];
 }
 
 /// Deep links fired by widget taps (home_widget launch intents).
@@ -63,6 +78,7 @@ abstract final class WidgetLinks {
   static const reply = 'closer://reply';
   static const countdowns = 'closer://countdowns';
   static const plant = 'closer://plant';
+  static const always = 'closer://always';
 }
 
 /// Widget theme ids. Kotlin maps each to colours (WidgetTheme.kt).

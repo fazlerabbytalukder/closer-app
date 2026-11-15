@@ -3,6 +3,8 @@ rules_version = '2';
 // Closer — Cloud Storage rules (plan section 12).
 //   pairs/{pairId}/raw/{itemId}.jpg     members upload (images < 10 MB)
 //   pairs/{pairId}/thumbs/{itemId}.jpg  written by functions only
+//   pairs/{pairId}/media/{uid}/{id}.jpg capsule / timeline / shrine / chat photos
+//   pairs/{pairId}/audio/{uid}/{id}.m4a voice messages and goodnight notes
 //   users/{uid}/avatar.jpg              owner writes, signed-in users read
 //   exports/{uid}/...                   written by functions, owner reads
 service firebase.storage {
@@ -35,6 +37,27 @@ service firebase.storage {
         && isImageUnder10MB()
         && fileName.matches('[A-Za-z0-9_-]{6,40}[.]jpg');
       allow update, delete: if false;
+    }
+
+    match /pairs/{pairId}/media/{uid}/{fileName} {
+      allow read: if isMember(pairId);
+      allow create: if isActiveMember(pairId)
+        && request.auth.uid == uid
+        && isImageUnder10MB()
+        && fileName.matches('[A-Za-z0-9_-]{6,40}[.]jpg');
+      allow delete: if isMember(pairId) && request.auth.uid == uid;
+      allow update: if false;
+    }
+
+    match /pairs/{pairId}/audio/{uid}/{fileName} {
+      allow read: if isMember(pairId);
+      allow create: if isActiveMember(pairId)
+        && request.auth.uid == uid
+        && request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('audio/.*')
+        && fileName.matches('[A-Za-z0-9_-]{6,40}[.]m4a');
+      allow delete: if isMember(pairId) && request.auth.uid == uid;
+      allow update: if false;
     }
 
     match /pairs/{pairId}/thumbs/{fileName} {

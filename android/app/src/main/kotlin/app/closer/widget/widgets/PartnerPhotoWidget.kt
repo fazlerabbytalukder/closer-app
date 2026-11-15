@@ -120,6 +120,7 @@ class PartnerPhotoWidget : GlanceAppWidget() {
             partner = partner,
             time = WidgetUtils.relativeTime(sentAt),
             heart = (prefs.long(WidgetKeys.HEART_UNTIL) ?: 0L) > System.currentTimeMillis(),
+            heartEmoji = prefs.str(WidgetKeys.TAP_EMOJI).ifEmpty { "❤️" },
             mood = prefs.str(WidgetKeys.PARTNER_MOOD),
             imageDescription = context.getString(
                 R.string.widget_photo_cd,
@@ -143,6 +144,7 @@ class PartnerPhotoWidget : GlanceAppWidget() {
         val partner: String,
         val time: String,
         val heart: Boolean,
+        val heartEmoji: String,
         val mood: String,
         val imageDescription: String,
     )
@@ -175,7 +177,7 @@ class PartnerPhotoWidget : GlanceAppWidget() {
             }
             if (item.heart) {
                 Box(modifier = GlanceModifier.padding(6.dp)) {
-                    Pill("❤️", bg = palette.bg, fg = palette.accent)
+                    Pill(item.heartEmoji, bg = palette.bg, fg = palette.accent)
                 }
             }
         }

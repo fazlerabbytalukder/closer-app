@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://closer.app/schema/missMeter.schema.json",
+  "title": "pairs/{pairId}/missMeters/{yyyy-mm-dd}",
+  "description": "Function-only (submitMissMeter). Private values live in missMeters/{date}/private/{uid} = {value, answeredAt}, readable only by that uid.",
+  "type": "object",
+  "properties": {
+    "date": {"$ref": "common.schema.json#/$defs/dateKey"},
+    "answeredBy": {"type": "array", "items": {"type": "string"}, "maxItems": 2},
+    "revealed": {"type": "boolean"},
+    "values": {
+      "type": "object",
+      "additionalProperties": {"type": "integer", "minimum": 0, "maximum": 100},
+      "description": "Filled only when both answered."
+    },
+    "revealedAt": {"$ref": "common.schema.json#/$defs/timestamp"}
+  },
+  "required": ["date", "answeredBy", "revealed", "values"]
+}

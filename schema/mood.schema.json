@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://closer.app/schema/mood.schema.json",
+  "title": "pairs/{pairId}/moods/{uid}_{yyyy-mm-dd}",
+  "description": "Daily mood history for insights; the last mood set that day. Written by the member themself.",
+  "type": "object",
+  "properties": {
+    "uid": {
+      "$ref": "common.schema.json#/$defs/uid"
+    },
+    "date": {
+      "$ref": "common.schema.json#/$defs/dateKey"
+    },
+    "emoji": {
+      "type": "string",
+      "maxLength": 16
+    },
+    "label": {
+      "type": "string",
+      "maxLength": 40
+    },
+    "updatedAt": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    }
+  },
+  "required": [
+    "uid",
+    "date",
+    "emoji",
+    "label"
+  ],
+  "additionalProperties": false
+}

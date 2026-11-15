@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://closer.app/schema/shrine.schema.json",
+  "title": "pairs/{pairId}/shrines/{ownerUid}",
+  "description": "The love shrine ownerUid built for their partner. Only the owner writes it.",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "maxLength": 60
+    },
+    "theme": {
+      "enum": [
+        "rose",
+        "lavender",
+        "sunset",
+        "midnight",
+        "mint"
+      ]
+    },
+    "coverPath": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 200
+    },
+    "photos": {
+      "type": "array",
+      "maxItems": 9,
+      "items": {
+        "type": "string"
+      }
+    },
+    "favorites": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "value": {
+            "type": "string",
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "label",
+          "value"
+        ]
+      }
+    },
+    "messages": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "string",
+        "maxLength": 300
+      }
+    },
+    "pinnedItemIds": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "string"
+      }
+    },
+    "updatedAt": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    }
+  },
+  "required": [
+    "title",
+    "theme",
+    "photos",
+    "favorites",
+    "messages",
+    "pinnedItemIds"
+  ],
+  "additionalProperties": false
+}

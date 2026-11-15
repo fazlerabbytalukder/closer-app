@@ -4,10 +4,16 @@ rules_version = '2';
 //
 // * A pair and everything under it is visible only to its members.
 // * Function-only data: invites, usage, entitlements, devices (FCM tokens),
-//   items, taps, games, daily questions (answers / revealed / private
+//   items (incl. reactions / secret reveal), taps, games, miss meters,
+//   capsule notification flags,
+//   daily questions (answers / revealed / private
 //   answers), and the pair fields streak, plant, premium, stats, etc.
-// * Clients may write: their own profile (not pairId), countdowns, and a
-//   few pair settings (widgetTheme for themselves, questionPack, timezone).
+// * Clients may write: their own profile (not pairId), countdowns, love
+//   capsules (reasons / letters / surprises), the timeline, their own
+//   shrine, to-dos, the wishlist (and their own secret gift claims), chat
+//   messages, their own chat state and goodnight entry, and a few pair
+//   settings (incl. the shared date goal, the pet and its home), and their
+//   own daily mood log.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -135,6 +141,51 @@ service cloud.firestore {
           && (!(request.auth.uid in n) || (n[request.auth.uid] is string && n[request.auth.uid].size() <= 24));
       }
 
+      // The pet hatches from the plant (stage 3+). Each member records only
+      // their own feeding / playing.
+      function validPet() {
+        let p = request.resource.data.get('pet', null);
+        let old = resource.data.get('pet', null);
+        let oldFed = old == null ? {} : old.get('lastFed', {});
+        let oldPlayed = old == null ? {} : old.get('lastPlayed', {});
+        return p == null || (p.keys().hasOnly(['species', 'name', 'hatchedAt', 'lastFed', 'lastPlayed'])
+          && p.species in ['bunny', 'kitten', 'puppy', 'fox', 'panda', 'chick', 'koala', 'frog']
+          && p.name is string && p.name.size() > 0 && p.name.size() <= 20
+          && p.hatchedAt is timestamp
+          && p.lastFed is map && p.lastPlayed is map
+          && p.lastFed.diff(oldFed).affectedKeys().hasOnly([request.auth.uid])
+          && p.lastPlayed.diff(oldPlayed).affectedKeys().hasOnly([request.auth.uid])
+          && (old != null || resource.data.get('plant', {}).get('stage', 0) >= 3));
+      }
+
+      // Love points are earned from function-written stats, so spending is
+      // checked here: spent only grows and never exceeds what was earned
+      // (keep in sync with Pair.lovePointsEarned).
+      function validHome() {
+        let h = request.resource.data.get('home', null);
+        let oldSpent = resource.data.get('home', {}).get('spent', 0);
+        let st = resource.data.get('stats', {});
+        let earned = st.get('itemsSent', 0) * 3 + st.get('tapsSent', 0) + st.get('questionsAnswered', 0) * 5
+          + resource.data.get('streak', {}).get('best', 0) * 10 + resource.data.get('plant', {}).get('stage', 0) * 25;
+        return h == null || (h.keys().hasOnly(['wallpaper', 'owned', 'placed', 'spent'])
+          && h.wallpaper is string && h.wallpaper.size() <= 24
+          && h.owned is list && h.owned.size() <= 64
+          && h.placed is list && h.placed.size() <= 30
+          && h.spent is int && h.spent >= oldSpent && h.spent <= earned);
+      }
+
+      function validDateGoal() {
+        let g = request.resource.data.get('dateGoal', null);
+        return g == null || (g.keys().hasOnly(['count', 'per'])
+          && g.count is int && g.count >= 1 && g.count <= 14
+          && g.per in ['week', 'month']);
+      }
+
+      function validLastMet() {
+        let m = request.resource.data.get('lastMetAt', null);
+        return m == null || (m is timestamp && m <= request.time);
+      }
+
       function validAnniversary() {
         let a = request.resource.data.get('anniversary', null);
         return a == null || (a is timestamp && a <= request.time);
@@ -145,12 +196,17 @@ service cloud.firestore {
         && request.auth.uid in resource.data.memberIds
         && resource.data.status == 'active'
         && changedOnly(['widgetTheme', 'questionPack', 'timezone',
-                        'mode', 'anniversary', 'relationLabels', 'nicknames'])
+                        'mode', 'anniversary', 'relationLabels', 'nicknames',
+                        'lastMetAt', 'dateGoal', 'pet', 'home'])
         && ownEntryOnly('widgetTheme')
         && validTheme()
         && validLabels()
         && validNickname()
         && validAnniversary()
+        && validLastMet()
+        && validDateGoal()
+        && validPet()
+        && validHome()
         && request.resource.data.get('mode', 'couple') in ['couple', 'friends']
         && request.resource.data.get('questionPack', 'everyday')
              in ['everyday', 'deep', 'longDistance', 'bestFriends', 'spicy']
@@ -183,7 +239,9 @@ service cloud.firestore {
           return d.keys().hasOnly(['title', 'date', 'dateKey', 'emoji', 'repeatsYearly',
                                    'remindDaysBefore', 'createdBy', 'createdAt', 'updatedAt',
                                    'lastRemindedFor', 'lastRemindedAt',
-                                   'hasTime', 'remindMinutesBefore', 'nextRemindAt'])
+                                   'hasTime', 'remindMinutesBefore', 'nextRemindAt',
+                                   'category', 'endDate', 'note', 'place', 'isVirtual',
+                                   'showAsCountdown', 'done', 'ratings'])
             && d.title is string && d.title.size() > 0 && d.title.size() <= 60
             && d.date is timestamp
             && (!('dateKey' in d) || (d.dateKey is string && d.dateKey.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')))
@@ -194,17 +252,330 @@ service cloud.firestore {
             && (!('hasTime' in d) || d.hasTime is bool)
             && (!('remindMinutesBefore' in d) || (d.remindMinutesBefore is int
                   && d.remindMinutesBefore >= 0 && d.remindMinutesBefore <= 86400))
-            && (!('nextRemindAt' in d) || d.nextRemindAt is timestamp);
+            && (!('nextRemindAt' in d) || d.nextRemindAt is timestamp)
+            && (!('category' in d) || d.category in ['date', 'meetup', 'trip', 'call', 'birthday', 'anniversary', 'other'])
+            && (!('endDate' in d) || d.endDate == null || (d.endDate is timestamp && d.endDate >= d.date))
+            && (!('note' in d) || (d.note is string && d.note.size() <= 500))
+            && (!('place' in d) || (d.place is string && d.place.size() <= 120))
+            && (!('isVirtual' in d) || d.isVirtual is bool)
+            && (!('showAsCountdown' in d) || d.showAsCountdown is bool)
+            && (!('done' in d) || d.done is bool)
+            && (!('ratings' in d) || (d.ratings is map && d.ratings.size() <= 2));
         }
         allow read: if isMember(pairId);
         // The free limit (3) is checked in the app; Plus is unlimited.
         allow create: if isActiveMember(pairId)
           && validCountdown(request.resource.data)
           && request.resource.data.createdBy == request.auth.uid;
+        // Ratings: each member only sets their own (1..5).
         allow update: if isActiveMember(pairId)
           && validCountdown(request.resource.data)
+          && request.resource.data.createdBy == resource.data.createdBy
+          && request.resource.data.get('ratings', {}).diff(resource.data.get('ratings', {}))
+               .affectedKeys().hasOnly([request.auth.uid])
+          && (!(request.auth.uid in request.resource.data.get('ratings', {}))
+              || (request.resource.data.ratings[request.auth.uid] is int
+                  && request.resource.data.ratings[request.auth.uid] >= 1
+                  && request.resource.data.ratings[request.auth.uid] <= 5));
+        allow delete: if isActiveMember(pairId);
+      }
+
+      // "How much do you miss me?" — submitMissMeter function only.
+      match /missMeters/{date} {
+        allow read: if isMember(pairId);
+        allow write: if false;
+
+        match /private/{uid} {
+          allow read: if isSelf(uid) && isMember(pairId);
+          allow write: if false;
+        }
+      }
+
+      // Love capsules: reasons, letters from the future, surprises. Everyone
+      // in the pair sees the envelope; the content opens for the receiver
+      // only once unlockAt has passed.
+      match /capsules/{capsuleId} {
+        function validEnvelope(d) {
+          return d.keys().hasOnly(['kind', 'authorId', 'forUid', 'title', 'surpriseType',
+                                   'createdAt', 'unlockAt', 'openedAt', 'notified'])
+            && d.kind in ['reason', 'letter', 'surprise']
+            && d.authorId == request.auth.uid
+            && d.forUid is string && d.forUid != request.auth.uid
+            && d.forUid in pairData(pairId).memberIds
+            && d.title is string && d.title.size() <= 80
+            && (d.surpriseType == null || d.surpriseType in ['note', 'photo', 'compliment', 'gift'])
+            && d.createdAt == request.time
+            && d.unlockAt is timestamp
+            && d.openedAt == null
+            && d.notified == false;
+        }
+        allow read: if isMember(pairId);
+        allow create: if isActiveMember(pairId) && validEnvelope(request.resource.data);
+        // The receiver marks it opened, once it has unlocked.
+        allow update: if isActiveMember(pairId)
+          && resource.data.forUid == request.auth.uid
+          && resource.data.unlockAt <= request.time
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['openedAt'])
+          && request.resource.data.openedAt == request.time;
+        allow delete: if isMember(pairId) && resource.data.authorId == request.auth.uid;
+
+        match /content/{docId} {
+          function envelope() {
+            return get(/databases/$(database)/documents/pairs/$(pairId)/capsules/$(capsuleId)).data;
+          }
+          function validContent(d) {
+            return d.keys().hasOnly(['text', 'photoPath', 'giftId'])
+              && d.text is string && d.text.size() <= 2000
+              && (d.photoPath == null || (d.photoPath is string
+                    && d.photoPath.matches('^pairs/' + pairId + '/media/' + request.auth.uid + '/[A-Za-z0-9_-]+[.]jpg$')))
+              && (d.giftId == null || (d.giftId is string && d.giftId.size() <= 24));
+          }
+          allow get: if isMember(pairId)
+            && (envelope().authorId == request.auth.uid
+                || (envelope().forUid == request.auth.uid && envelope().unlockAt <= request.time));
+          allow list: if false;
+          allow create: if isActiveMember(pairId)
+            && docId == 'main'
+            && getAfter(/databases/$(database)/documents/pairs/$(pairId)/capsules/$(capsuleId)).data.authorId == request.auth.uid
+            && validContent(request.resource.data);
+          allow update: if false;
+          allow delete: if isMember(pairId) && envelope().authorId == request.auth.uid;
+        }
+      }
+
+      // "Our love timeline": both members add, edit and remove moments.
+      match /timeline/{entryId} {
+        function validEntry(d) {
+          return d.keys().hasOnly(['date', 'title', 'emoji', 'note', 'photoPath',
+                                   'createdBy', 'createdAt', 'updatedAt'])
+            && d.date is timestamp
+            && d.title is string && d.title.size() > 0 && d.title.size() <= 60
+            && d.emoji is string && d.emoji.size() <= 16
+            && d.note is string && d.note.size() <= 500
+            && (d.photoPath == null || (d.photoPath is string
+                  && d.photoPath.matches('^pairs/' + pairId + '/media/[^/]+/[A-Za-z0-9_-]+[.]jpg$')));
+        }
+        allow read: if isMember(pairId);
+        allow create: if isActiveMember(pairId)
+          && validEntry(request.resource.data)
+          && request.resource.data.createdBy == request.auth.uid;
+        allow update: if isActiveMember(pairId)
+          && validEntry(request.resource.data)
           && request.resource.data.createdBy == resource.data.createdBy;
         allow delete: if isActiveMember(pairId);
+      }
+
+      // "My love shrine": each member builds one for the other; only the
+      // owner writes their own.
+      match /shrines/{ownerUid} {
+        function validShrine(d) {
+          return d.keys().hasOnly(['title', 'theme', 'coverPath', 'photos', 'favorites',
+                                   'messages', 'pinnedItemIds', 'updatedAt'])
+            && d.title is string && d.title.size() <= 60
+            && d.theme in ['rose', 'lavender', 'sunset', 'midnight', 'mint']
+            && (d.coverPath == null || (d.coverPath is string && d.coverPath.size() <= 200))
+            && d.photos is list && d.photos.size() <= 9
+            && d.favorites is list && d.favorites.size() <= 12
+            && d.messages is list && d.messages.size() <= 20
+            && d.pinnedItemIds is list && d.pinnedItemIds.size() <= 12
+            && d.updatedAt == request.time;
+        }
+        allow read: if isMember(pairId);
+        allow create, update: if isActiveMember(pairId)
+          && request.auth.uid == ownerUid
+          && validShrine(request.resource.data);
+        allow delete: if isSelf(ownerUid) && isMember(pairId);
+      }
+
+      // Shared to-do lists and their tasks.
+      match /todoLists/{listId} {
+        function validList(d) {
+          return d.keys().hasOnly(['title', 'emoji', 'createdBy', 'createdAt'])
+            && d.title is string && d.title.size() > 0 && d.title.size() <= 40
+            && d.emoji is string && d.emoji.size() <= 16;
+        }
+        allow read: if isMember(pairId);
+        allow create: if isActiveMember(pairId)
+          && validList(request.resource.data)
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.createdAt == request.time;
+        allow update: if isActiveMember(pairId)
+          && validList(request.resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'emoji']);
+        allow delete: if isActiveMember(pairId);
+      }
+
+      match /todos/{todoId} {
+        function validTodo(d) {
+          return d.keys().hasOnly(['listId', 'text', 'assignee', 'due', 'doneBy', 'doneAt', 'createdBy', 'createdAt'])
+            && d.listId is string && d.listId.size() <= 64
+            && d.text is string && d.text.size() > 0 && d.text.size() <= 200
+            && (d.assignee == null || d.assignee in pairData(pairId).memberIds)
+            && (d.due == null || d.due is timestamp)
+            && (d.doneBy == null || d.doneBy == request.auth.uid || d.doneBy == resource.data.doneBy)
+            && (d.doneAt == null || d.doneAt is timestamp);
+        }
+        allow read: if isMember(pairId);
+        allow create: if isActiveMember(pairId)
+          && validTodo(request.resource.data)
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.doneAt == null;
+        allow update: if isActiveMember(pairId)
+          && validTodo(request.resource.data)
+          && request.resource.data.createdBy == resource.data.createdBy
+          && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if isActiveMember(pairId);
+      }
+
+      // Wishlist. Gifts belong to ownerUid (only they edit or delete them);
+      // shared wishes have no owner and either member edits them.
+      match /wishes/{wishId} {
+        function validWish(d) {
+          return d.keys().hasOnly(['title', 'category', 'note', 'url', 'price', 'photoPath',
+                                   'ownerUid', 'createdBy', 'doneAt', 'createdAt'])
+            && d.title is string && d.title.size() > 0 && d.title.size() <= 80
+            && d.category in ['gift', 'date', 'restaurant', 'travel', 'experience', 'other']
+            && d.note is string && d.note.size() <= 300
+            && d.url is string && d.url.size() <= 500
+            && d.price is string && d.price.size() <= 20
+            && (d.photoPath == null || (d.photoPath is string
+                  && d.photoPath.matches('^pairs/' + pairId + '/media/[^/]+/[A-Za-z0-9_-]+[.]jpg$')))
+            && ((d.category == 'gift' && d.ownerUid == d.createdBy) || (d.category != 'gift' && d.ownerUid == null))
+            && (d.doneAt == null || d.doneAt is timestamp);
+        }
+        function canEdit() {
+          return resource.data.ownerUid == null || resource.data.ownerUid == request.auth.uid;
+        }
+        allow read: if isMember(pairId);
+        allow create: if isActiveMember(pairId)
+          && validWish(request.resource.data)
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.createdAt == request.time;
+        allow update: if isActiveMember(pairId)
+          && canEdit()
+          && validWish(request.resource.data)
+          && request.resource.data.createdBy == resource.data.createdBy
+          && request.resource.data.ownerUid == resource.data.ownerUid
+          && (request.resource.data.category == resource.data.category
+              || (resource.data.category != 'gift' && request.resource.data.category != 'gift'));
+        allow delete: if isActiveMember(pairId) && canEdit();
+      }
+
+      // Secret gift claims: only the claimer can see their claim, so the
+      // person who wished for it never finds out.
+      match /wishClaims/{wishId} {
+        function wish() {
+          return get(/databases/$(database)/documents/pairs/$(pairId)/wishes/$(wishId)).data;
+        }
+        allow read: if isMember(pairId) && resource.data.claimedBy == request.auth.uid;
+        allow create: if isActiveMember(pairId)
+          && request.resource.data.keys().hasOnly(['claimedBy', 'claimedAt'])
+          && request.resource.data.claimedBy == request.auth.uid
+          && request.resource.data.claimedAt == request.time
+          && wish().category == 'gift'
+          && wish().ownerUid != request.auth.uid;
+        allow delete: if isMember(pairId) && resource.data.claimedBy == request.auth.uid;
+        allow update: if false;
+      }
+
+      // Private chat. Written directly so messages show at once (offline
+      // too); a function notifies the partner.
+      match /messages/{messageId} {
+        function validMedia(d) {
+          return d.mediaPath == null
+            || (d.type == 'photo' && d.mediaPath is string
+                && d.mediaPath.matches('^pairs/' + pairId + '/media/' + request.auth.uid + '/[A-Za-z0-9_-]+[.]jpg$'))
+            || (d.type == 'voice' && d.mediaPath is string
+                && d.mediaPath.matches('^pairs/' + pairId + '/audio/' + request.auth.uid + '/[A-Za-z0-9_-]+[.]m4a$'));
+        }
+        function validMessage(d) {
+          return d.keys().hasOnly(['senderId', 'type', 'text', 'mediaPath', 'durationMs', 'replyTo',
+                                   'reactions', 'deletedAt', 'createdAt'])
+            && d.senderId == request.auth.uid
+            && d.type in ['text', 'photo', 'voice']
+            && d.text is string && d.text.size() <= 2000
+            && (d.type != 'text' || d.text.size() > 0)
+            && (d.type == 'text' || d.mediaPath != null)
+            && validMedia(d)
+            && d.durationMs is int && d.durationMs >= 0 && d.durationMs <= 300000
+            && (d.replyTo == null || (d.replyTo is map && d.replyTo.keys().hasOnly(['id', 'senderId', 'preview'])
+                  && d.replyTo.preview is string && d.replyTo.preview.size() <= 200))
+            && d.reactions == {}
+            && d.deletedAt == null
+            && d.createdAt == request.time;
+        }
+        allow read: if isMember(pairId);
+        allow create: if isActiveMember(pairId) && validMessage(request.resource.data);
+        allow update: if isActiveMember(pairId) && (
+          // Either member sets or clears their own reaction.
+          (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions'])
+            && request.resource.data.reactions.diff(resource.data.reactions).affectedKeys().hasOnly([request.auth.uid])
+            && (!(request.auth.uid in request.resource.data.reactions)
+                || (request.resource.data.reactions[request.auth.uid] is string
+                    && request.resource.data.reactions[request.auth.uid].size() <= 16)))
+          // The sender deletes it for both (content cleared, row kept).
+          || (resource.data.senderId == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'mediaPath', 'deletedAt'])
+            && request.resource.data.text == ''
+            && request.resource.data.mediaPath == null
+            && request.resource.data.deletedAt == request.time)
+        );
+        allow delete: if false;
+      }
+
+      // Last read time and "typing…" — each member writes their own.
+      match /chatState/{uid} {
+        allow read: if isMember(pairId);
+        allow write: if isSelf(uid) && isActiveMember(pairId)
+          && request.resource.data.keys().hasOnly(['readAt', 'typingUntil'])
+          && (!('readAt' in request.resource.data) || request.resource.data.readAt == null
+              || request.resource.data.readAt is timestamp)
+          && (!('typingUntil' in request.resource.data) || request.resource.data.typingUntil == null
+              || request.resource.data.typingUntil is timestamp);
+      }
+
+      // Goodnight ritual: one doc per night, each member writes only their
+      // own entry.
+      match /goodnights/{night} {
+        function validEntry(e) {
+          return e.keys().hasOnly(['message', 'moment', 'momentPhotoPath', 'voicePath', 'voiceMs', 'kiss', 'sentAt'])
+            && e.message is string && e.message.size() <= 500
+            && e.moment is string && e.moment.size() <= 500
+            && (e.momentPhotoPath == null || (e.momentPhotoPath is string
+                  && e.momentPhotoPath.matches('^pairs/' + pairId + '/media/' + request.auth.uid + '/[A-Za-z0-9_-]+[.]jpg$')))
+            && (e.voicePath == null || (e.voicePath is string
+                  && e.voicePath.matches('^pairs/' + pairId + '/audio/' + request.auth.uid + '/[A-Za-z0-9_-]+[.]m4a$')))
+            && e.voiceMs is int && e.voiceMs >= 0 && e.voiceMs <= 300000
+            && e.kiss is bool
+            && e.sentAt == request.time;
+        }
+        function ownEntryWrite() {
+          let after = request.resource.data.get('entries', {});
+          let before = resource == null ? {} : resource.data.get('entries', {});
+          return request.resource.data.keys().hasOnly(['entries'])
+            && after.diff(before).affectedKeys().hasOnly([request.auth.uid])
+            && validEntry(after[request.auth.uid]);
+        }
+        allow read: if isMember(pairId);
+        allow create, update: if isActiveMember(pairId)
+          && night.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+          && ownEntryWrite();
+        allow delete: if false;
+      }
+
+      // Daily mood history for insights: {uid}_{yyyy-mm-dd}, own entries only.
+      match /moods/{docId} {
+        allow read: if isMember(pairId);
+        allow create, update: if isActiveMember(pairId)
+          && request.resource.data.keys().hasOnly(['uid', 'date', 'emoji', 'label', 'updatedAt'])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.date is string
+          && request.resource.data.date.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+          && docId == request.auth.uid + '_' + request.resource.data.date
+          && request.resource.data.emoji is string && request.resource.data.emoji.size() <= 16
+          && request.resource.data.label is string && request.resource.data.label.size() <= 40;
+        allow delete: if false;
       }
 
       match /games/{gameId} {

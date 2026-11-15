@@ -46,8 +46,15 @@ abstract final class Channels {
     description: 'Pairing, unpairing and subscription',
   );
 
+  static const chat = AndroidNotificationChannel(
+    'chat',
+    'Chat & goodnights',
+    description: 'Messages from your person and the goodnight ritual',
+    importance: Importance.high,
+  );
+
   static List<AndroidNotificationChannel> get all =>
-      [partnerItems, taps, dailyQuestion, streak, countdowns, gameTurns, account];
+      [partnerItems, taps, chat, dailyQuestion, streak, countdowns, gameTurns, account];
 }
 
 /// Thin wrapper around flutter_local_notifications. Notification taps carry a

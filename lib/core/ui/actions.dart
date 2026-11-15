@@ -25,6 +25,13 @@ Future<bool> runAction(BuildContext context, Future<void> Function() action) asy
   return false;
 }
 
+/// Disposes a controller used by a sheet or dialog once that route has
+/// finished animating away (disposing right after `await showX(...)` breaks
+/// the closing animation, which still builds the text field).
+void disposeAfterRoute(ChangeNotifier controller) {
+  Future<void>.delayed(const Duration(milliseconds: 800), controller.dispose).ignore();
+}
+
 Future<bool> confirm(
   BuildContext context, {
   required String title,

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://closer.app/schema/item.schema.json",
   "title": "pairs/{pairId}/items/{itemId}",
-  "description": "Written by sendItem only. Paths are Cloud Storage paths.",
+  "description": "Written by sendItem (reactions by reactItem, revealedAt by revealAdmirer). Paths are Cloud Storage paths.",
   "type": "object",
   "properties": {
     "type": {"$ref": "common.schema.json#/$defs/itemType"},
@@ -27,6 +27,13 @@
       "required": ["lat", "lng", "place"]
     },
     "saveToMemories": {"type": "boolean"},
+    "reactions": {
+      "description": "uid -> emoji. Written by reactItem.",
+      "type": "object",
+      "additionalProperties": {"enum": ["❤️", "😍", "🥹", "😂", "😘", "🔥", "👏"]}
+    },
+    "secret": {"type": "boolean", "description": "Sent by a secret admirer; the app hides the sender until revealedAt."},
+    "revealedAt": {"oneOf": [{"$ref": "common.schema.json#/$defs/timestamp"}, {"type": "null"}], "description": "Set by revealAdmirer."},
     "createdAt": {"$ref": "common.schema.json#/$defs/timestamp"}
   },
   "required": ["type", "senderId", "caption", "saveToMemories", "createdAt"],

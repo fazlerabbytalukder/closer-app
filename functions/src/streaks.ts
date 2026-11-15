@@ -359,7 +359,7 @@ export const countdownReminders = onSchedule(
             type: "countdown",
             title,
             body,
-            data: {route: "/countdowns", countdownId: c.id, pairId: pairDoc.id},
+            data: {route: "/calendar", countdownId: c.id, pairId: pairDoc.id},
             prefKey: "reminders",
             user,
           });
@@ -473,7 +473,7 @@ export const countdownTimedReminders = onSchedule(
           type: "countdown",
           title,
           body,
-          data: {route: "/countdowns", countdownId: c.id, pairId: pairRef.id},
+          data: {route: "/calendar", countdownId: c.id, pairId: pairRef.id},
           prefKey: "reminders",
           user,
         });

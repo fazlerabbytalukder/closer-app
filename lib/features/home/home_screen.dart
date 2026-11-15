@@ -50,6 +50,8 @@ class HomeScreen extends ConsumerWidget {
                 children: [
                   _ProgressCard(me: me, pair: pair, name: name),
                   _Rituals(me: me, pair: pair, name: name),
+                  const _LoveInbox(),
+                  const _GoodnightCard(),
                   if (installed == 0) ...[
                     const SizedBox(height: Space.m),
                     _WidgetNudge(onTap: () => context.push('/widgets')),
@@ -152,6 +154,7 @@ class _Hero extends ConsumerWidget {
                           icon: const Icon(Icons.widgets_outlined, color: Brand.indigo),
                           onPressed: () => context.push('/widgets'),
                         ),
+                        const _ChatButton(),
                       ],
                     ),
                   ),
@@ -222,7 +225,7 @@ class _Hero extends ConsumerWidget {
                       label: c == null ? 'Next date' : 'Countdown',
                       value: c == null ? '+' : (days == 0 ? 'Today' : '$days'),
                       unit: c == null ? 'add one' : (days == 0 ? c.title : (days == 1 ? 'day left' : 'days left')),
-                      onTap: () => context.push(c == null ? '/countdowns/edit' : '/countdowns'),
+                      onTap: () => context.push(c == null ? '/calendar/edit' : '/calendar'),
                     ),
                   ),
                 ],
@@ -448,9 +451,10 @@ class _LatestCard extends ConsumerWidget {
       );
     }
     final cs = context.cs;
+    final who = l.secret ? 'Secret admirer' : name;
     return Semantics(
       button: true,
-      label: 'Latest from $name. ${l.caption}. Open to reply',
+      label: 'Latest from $who. ${l.caption}. Open to reply',
       child: GestureDetector(
         onTap: () => context.push('/reply'),
         child: DecoratedBox(
@@ -492,12 +496,12 @@ class _LatestCard extends ConsumerWidget {
                             border: Border.all(color: Colors.white, width: 1.5),
                           ),
                           child: Text(
-                            name.isEmpty ? '?' : name.characters.first.toUpperCase(),
+                            l.secret ? '🕵️' : (name.isEmpty ? '?' : name.characters.first.toUpperCase()),
                             style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
                           ),
                         ),
                         const SizedBox(width: 6),
-                        Text(name, style: context.tt.labelMedium?.copyWith(color: Colors.white, fontSize: 13)),
+                        Text(who, style: context.tt.labelMedium?.copyWith(color: Colors.white, fontSize: 13)),
                         Text(
                           '  ·  ${timeAgo(l.sentAt)}',
                           style: context.tt.bodySmall?.copyWith(color: Colors.white.withValues(alpha: 0.8)),
@@ -603,12 +607,21 @@ class _HeartTapState extends ConsumerState<_HeartTap> with SingleTickerProviderS
     super.dispose();
   }
 
-  Future<void> _tap() async {
+  /// Emoji floating up from the heart, per burst id.
+  final _burstEmoji = <int, String>{};
+
+  Future<void> _tap([TapKind kind = TapKind.heart]) async {
     hapticMedium();
     unawaited(_ctrl.forward(from: 0));
-    setState(() => _bursts.add(DateTime.now().microsecondsSinceEpoch));
-    final ok = await runAction(context, () => ref.read(backendProvider).sendTap());
-    if (ok && mounted) showToast(context, '${widget.name} will feel that 💗');
+    final id = DateTime.now().microsecondsSinceEpoch;
+    setState(() {
+      _bursts.add(id);
+      _burstEmoji[id] = kind.emoji;
+    });
+    final ok = await runAction(context, () => ref.read(backendProvider).sendTap(kind: kind.id));
+    if (ok && mounted) {
+      showToast(context, kind == TapKind.heart ? '${widget.name} will feel that 💗' : 'Sent “${kind.label}” ${kind.emoji}');
+    }
   }
 
   @override
@@ -644,45 +657,80 @@ class _HeartTapState extends ConsumerState<_HeartTap> with SingleTickerProviderS
             ..._decor(const Offset(0.93, 0.08), '✦', 12, 300, color: cc.accent),
             Padding(
               padding: const EdgeInsets.fromLTRB(Space.m, Space.m, Space.s, Space.m),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: (dark ? Colors.white : pink).withValues(alpha: dark ? 0.1 : 0.16),
-                            borderRadius: BorderRadius.circular(999),
-                          ),
-                          child: Text(
-                            '💌 Love tap',
-                            style: context.tt.labelSmall?.copyWith(color: dark ? Colors.white70 : const Color(0xFFE0557F), fontWeight: FontWeight.w700),
-                          ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: (dark ? Colors.white : pink).withValues(alpha: dark ? 0.1 : 0.16),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                '💌 Love tap',
+                                style: context.tt.labelSmall?.copyWith(color: dark ? Colors.white70 : const Color(0xFFE0557F), fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                            const SizedBox(height: Space.s),
+                            Text('Thinking of ${widget.name}? 🥰', style: context.tt.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                            const SizedBox(height: 6),
+                            if (fromPartner)
+                              _Bubble(text: '${widget.name} ${tap.info.message} ${tap.info.emoji} · ${timeAgo(tap.createdAt)}')
+                                  .animate()
+                                  .fadeIn(duration: 300.ms)
+                                  .slideX(begin: -0.1, end: 0, curve: Curves.easeOutBack)
+                            else
+                              Text(
+                                'Tap the heart, or send a little message 👇',
+                                style: context.tt.bodyMedium?.copyWith(color: cc.muted),
+                              ),
+                          ],
                         ),
-                        const SizedBox(height: Space.s),
-                        Text('Thinking of ${widget.name}? 🥰', style: context.tt.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
-                        const SizedBox(height: 6),
-                        if (fromPartner)
-                          _Bubble(text: '${widget.name} tapped you ${timeAgo(tap.createdAt)} 💗')
-                              .animate()
-                              .fadeIn(duration: 300.ms)
-                              .slideX(begin: -0.1, end: 0, curve: Curves.easeOutBack)
-                        else
-                          Text(
-                            'Tap the heart to send a soft buzz',
-                            style: context.tt.bodyMedium?.copyWith(color: cc.muted),
-                          ),
-                      ],
-                    ),
+                      ),
+                      _heartButton(cc, pink),
+                    ],
                   ),
-                  _heartButton(cc, pink),
+                  const SizedBox(height: Space.s),
+                  _kindChips(dark, pink),
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// "I can't stop thinking about you" one-tap messages.
+  Widget _kindChips(bool dark, Color pink) {
+    return SizedBox(
+      height: 36,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          for (final k in TapKind.all.where((k) => k != TapKind.heart))
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: Material(
+                color: dark ? Colors.white.withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.85),
+                shape: StadiumBorder(side: BorderSide(color: pink.withValues(alpha: 0.35))),
+                child: InkWell(
+                  customBorder: const StadiumBorder(),
+                  onTap: () => _tap(k),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    child: Text('${k.emoji} ${k.label}', style: context.tt.labelMedium?.copyWith(fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -720,8 +768,11 @@ class _HeartTapState extends ConsumerState<_HeartTap> with SingleTickerProviderS
               .scale(begin: const Offset(0.9, 0.9), end: const Offset(1.25, 1.25), duration: 1600.ms, curve: Curves.easeOut)
               .fadeOut(duration: 1600.ms),
           for (final b in _bursts)
-            Text('💗', key: ValueKey(b), style: const TextStyle(fontSize: 22))
-                .animate(onComplete: (_) => setState(() => _bursts.remove(b)))
+            Text(_burstEmoji[b] ?? '💗', key: ValueKey(b), style: const TextStyle(fontSize: 22))
+                .animate(onComplete: (_) => setState(() {
+                      _bursts.remove(b);
+                      _burstEmoji.remove(b);
+                    }))
                 .moveY(begin: 0, end: -70, duration: 900.ms, curve: Curves.easeOut)
                 .moveX(begin: 0, end: (b % 3 - 1) * 18.0, duration: 900.ms)
                 .fadeOut(delay: 400.ms, duration: 500.ms),
@@ -831,6 +882,123 @@ class _QuestionCard extends ConsumerWidget {
           const SizedBox(height: Space.s),
           Text(status, style: context.tt.bodyMedium?.copyWith(color: context.cc.muted)),
         ],
+      ),
+    );
+  }
+}
+
+/// Chat shortcut with the unread count.
+class _ChatButton extends ConsumerWidget {
+  const _ChatButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final unread = ref.watch(unreadChatProvider);
+    return IconButton(
+      tooltip: unread > 0 ? 'Chat, $unread unread' : 'Chat',
+      visualDensity: VisualDensity.compact,
+      icon: Badge(
+        isLabelVisible: unread > 0,
+        label: Text(unread > 9 ? '9+' : '$unread'),
+        child: const Icon(Icons.chat_bubble_outline_rounded, color: Brand.indigo),
+      ),
+      onPressed: () => context.push('/chat'),
+    );
+  }
+}
+
+/// In the evening: the goodnight ritual, until you've both done it.
+class _GoodnightCard extends ConsumerWidget {
+  const _GoodnightCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = ref.watch(clockProvider).value ?? DateTime.now();
+    if (!Goodnight.isEvening(now)) return const SizedBox.shrink();
+    final me = ref.watch(authUidProvider).value;
+    final partner = ref.watch(partnerUidProvider);
+    final name = ref.watch(partnerNameProvider);
+    final tonight = ref.watch(tonightProvider);
+    final mine = tonight?.doneBy(me) ?? false;
+    final theirs = tonight?.doneBy(partner) ?? false;
+    if (mine && theirs) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: Space.m),
+      child: CloserCard(
+        onTap: () => context.push('/goodnight'),
+        gradient: const LinearGradient(colors: [Color(0xFF2D2760), Color(0xFF5A3F84)]),
+        child: Row(
+          children: [
+            const Text('🌙', style: TextStyle(fontSize: 34))
+                .animate(onPlay: (c) => c.repeat(reverse: true))
+                .rotate(begin: -0.03, end: 0.03, duration: 1500.ms),
+            const SizedBox(width: Space.m),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    theirs ? '$name said goodnight 💤' : 'Goodnight ritual',
+                    style: context.tt.titleMedium?.copyWith(color: Colors.white),
+                  ),
+                  Text(
+                    mine ? 'Waiting for $name…' : 'Share the best moment of your day',
+                    style: context.tt.bodyMedium?.copyWith(color: Colors.white70),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: Colors.white70),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Unlocked reasons, letters and surprises waiting to be opened.
+class _LoveInbox extends ConsumerWidget {
+  const _LoveInbox();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final fresh = ref.watch(newCapsulesProvider);
+    if (fresh.isEmpty) return const SizedBox.shrink();
+    final name = ref.watch(partnerNameProvider);
+    final letters = fresh.where((c) => c.kind == CapsuleKind.letter).toList();
+    final surprises = fresh.where((c) => c.kind == CapsuleKind.surprise).length;
+    final (emoji, title, route) = letters.isNotEmpty
+        ? ('💌', 'A letter from $name just opened', '/letters/${letters.first.id}')
+        : surprises > 0
+            ? ('🎁', '$name sent you a surprise', '/surprises')
+            : ('💗', 'Today’s reason from $name is here', '/reasons');
+    final more = fresh.length - 1;
+    return Padding(
+      padding: const EdgeInsets.only(top: Space.m),
+      child: CloserCard(
+        onTap: () => context.push(route),
+        gradient: const LinearGradient(colors: [Color(0xFFFFE6EF), Color(0xFFFFF3D6)]),
+        child: Row(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 34))
+                .animate(onPlay: (c) => c.repeat(reverse: true))
+                .scaleXY(begin: 1, end: 1.12, duration: 700.ms),
+            const SizedBox(width: Space.m),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: context.tt.titleMedium?.copyWith(color: Brand.ink)),
+                  Text(
+                    more > 0 ? 'Tap to open · $more more waiting' : 'Tap to open',
+                    style: context.tt.bodyMedium?.copyWith(color: Brand.grey700),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: Brand.grey700),
+          ],
+        ),
       ),
     );
   }

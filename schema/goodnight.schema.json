@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://closer.app/schema/goodnight.schema.json",
+  "title": "pairs/{pairId}/goodnights/{yyyy-mm-dd}",
+  "description": "The goodnight ritual for one night (the date the evening started; before 05:00 counts as the night before). Each member writes only their own entry.",
+  "type": "object",
+  "properties": {
+    "entries": {
+      "type": "object",
+      "maxProperties": 2,
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "moment": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "momentPhotoPath": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "voicePath": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "voiceMs": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 300000
+          },
+          "kiss": {
+            "type": "boolean"
+          },
+          "sentAt": {
+            "$ref": "common.schema.json#/$defs/timestamp"
+          }
+        },
+        "required": [
+          "message",
+          "moment",
+          "voiceMs",
+          "kiss",
+          "sentAt"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "entries"
+  ],
+  "additionalProperties": false
+}

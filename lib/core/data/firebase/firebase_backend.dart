@@ -18,7 +18,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:path_provider/path_provider.dart';
 
 /// Limits the app maps to [LimitReachedException] (shows the paywall).
 const _paywallLimits = {'sends', 'countdowns', 'plus', 'packs'};
@@ -63,6 +65,9 @@ class FirebaseBackend implements CloserBackend {
   String? _latestQuestionDate;
   String? _fcmToken;
   final Map<String, Future<String?>> _urlCache = {};
+
+  /// Capsule content never changes once written.
+  final Map<String, CapsuleContent> _capsuleCache = {};
 
   @override
   String get name => 'firebase';
@@ -204,13 +209,31 @@ class FirebaseBackend implements CloserBackend {
       });
 
   @override
-  Future<void> updateMood(Mood mood) => _updateMe({
-        'mood': {
-          'emoji': mood.emoji,
-          'label': _clip(mood.label, 40),
-          'updatedAt': FieldValue.serverTimestamp(),
-        },
+  Future<void> updateMood(Mood mood) async {
+    await _updateMe({
+      'mood': {
+        'emoji': mood.emoji,
+        'label': _clip(mood.label, 40),
+        'updatedAt': FieldValue.serverTimestamp(),
+      },
+    });
+    // Mood history for insights (best effort; the mood itself is saved).
+    final pairId = _pairId;
+    if (pairId == null) return;
+    final n = DateTime.now();
+    final date = '${n.year.toString().padLeft(4, '0')}-${n.month.toString().padLeft(2, '0')}-${n.day.toString().padLeft(2, '0')}';
+    try {
+      await _db.doc('pairs/$pairId/moods/${_uid}_$date').set({
+        'uid': _uid,
+        'date': date,
+        'emoji': mood.emoji,
+        'label': _clip(mood.label, 40),
+        'updatedAt': FieldValue.serverTimestamp(),
       });
+    } on Object catch (e) {
+      debugPrint('mood log: $e');
+    }
+  }
 
   @override
   Future<void> updateStatus(StatusText status) => _updateMe({
@@ -324,6 +347,20 @@ class FirebaseBackend implements CloserBackend {
     });
   }
 
+  /// `lastMetAt` is a member-writable pair field (see firestore.rules).
+  @override
+  Future<void> setLastMet(DateTime when) async {
+    if (when.isAfter(DateTime.now().add(const Duration(minutes: 5)))) {
+      throw const CloserException('Pick a time that already happened');
+    }
+    final pairId = await _requirePairId();
+    final now = DateTime.now();
+    await _db.doc('pairs/$pairId').update({
+      // Rules require lastMetAt <= request.time; clamp clock skew.
+      'lastMetAt': Timestamp.fromDate(when.isAfter(now) ? now : when),
+    });
+  }
+
   // ----------------------------------------------------------------- items
 
   @override
@@ -348,6 +385,7 @@ class FirebaseBackend implements CloserBackend {
       'noteStyle': request.noteStyle?.toJson(),
       'geo': request.geo?.toJson(),
       'saveToMemories': request.saveToMemories,
+      'secret': request.secret,
     });
     return Item.fromJson(data['id'] as String? ?? itemId, data);
   }
@@ -407,6 +445,16 @@ class FirebaseBackend implements CloserBackend {
     });
   }
 
+  @override
+  Future<void> reactToItem(String itemId, String? emoji) async {
+    await _call('reactItem', {'itemId': itemId, 'emoji': emoji});
+  }
+
+  @override
+  Future<void> revealSecret(String itemId) async {
+    await _call('revealAdmirer', {'itemId': itemId});
+  }
+
   // ------------------------------------------------------------------ taps
 
   @override
@@ -425,6 +473,86 @@ class FirebaseBackend implements CloserBackend {
             ? null
             : Tap.fromJson(q.docs.first.id, q.docs.first.data()),
       );
+
+  // ------------------------------------------------------------ miss meter
+
+  /// Recent days (doc id = the pair-local date) plus the caller's private
+  /// value for each, from `missMeters/{date}/private/{uid}`.
+  @override
+  Stream<List<MissMeter>> watchMissMeters(String pairId) {
+    late StreamController<List<MissMeter>> controller;
+    StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? listSub;
+    final privateSubs = <String, StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>>{};
+    final mine = <String, int?>{};
+    var days = <MissMeter>[];
+
+    void emit() {
+      if (controller.isClosed) return;
+      controller.add([for (final d in days) d.withMyValue(mine[d.date])]);
+    }
+
+    controller = StreamController<List<MissMeter>>(
+      onListen: () {
+        listSub = _db
+            .collection('pairs/$pairId/missMeters')
+            .orderBy('date', descending: true)
+            .limit(30)
+            .snapshots()
+            .listen(
+          (q) {
+            days = q.docs.map((d) => MissMeter.fromJson(d.id, d.data())).toList();
+            final uid = currentUid;
+            // Only today's (newest) value can still be hidden from the
+            // partner; older days carry both values once revealed.
+            if (uid != null && days.isNotEmpty) {
+              final latest = days.first.date;
+              if (!privateSubs.containsKey(latest)) {
+                privateSubs[latest] = _db
+                    .doc('pairs/$pairId/missMeters/$latest/private/$uid')
+                    .snapshots()
+                    .listen(
+                  (a) {
+                    mine[latest] = (a.data()?['value'] as num?)?.toInt();
+                    emit();
+                  },
+                  onError: (Object e) => debugPrint('miss meter private: $e'),
+                );
+              }
+            }
+            emit();
+          },
+          onError: (Object e, StackTrace st) {
+            if (_isPermissionDenied(e)) {
+              days = [];
+              emit();
+            } else {
+              controller.addError(e, st);
+            }
+          },
+        );
+      },
+      onCancel: () async {
+        await listSub?.cancel();
+        for (final s in privateSubs.values) {
+          await s.cancel();
+        }
+      },
+    );
+    return controller.stream;
+  }
+
+  @override
+  Future<void> submitMissMeter(int value) async {
+    final now = DateTime.now();
+    await _call('submitMissMeter', {
+      'value': value.clamp(0, MissMeter.max),
+      // The server accepts the device's local date if it is within a day of
+      // the pair's date, so late-night answers land on the day you meant.
+      'date': '${now.year.toString().padLeft(4, '0')}-'
+          '${now.month.toString().padLeft(2, '0')}-'
+          '${now.day.toString().padLeft(2, '0')}',
+    });
+  }
 
   // -------------------------------------------------------- daily question
 
@@ -533,17 +661,20 @@ class FirebaseBackend implements CloserBackend {
         (q) => q.docs.map((d) => Countdown.fromJson(d.id, d.data())).toList(),
       );
 
-  /// The free limit is enforced here (Firestore rules can't count docs).
+  /// Calendar events. The free countdown limit is enforced here (Firestore
+  /// rules can't count docs); plain calendar events are unlimited.
   @override
   Future<void> saveCountdown(Countdown countdown) async {
+    checkEvent(countdown);
     final pairId = await _requirePairId();
     final col = _db.collection('pairs/$pairId/countdowns');
-    final isNew = countdown.id.isEmpty || !(await col.doc(countdown.id).get()).exists;
-    if (isNew && AppConfig.monetizationEnabled) {
+    final existing = countdown.id.isEmpty ? null : await col.doc(countdown.id).get();
+    final wasCountdown = existing != null && existing.exists && (existing.data()?['showAsCountdown'] as bool? ?? true);
+    if (countdown.showAsCountdown && !wasCountdown && AppConfig.monetizationEnabled) {
       final pair = await _db.doc('pairs/$pairId').get();
       final premium = Pair.fromJson(pair.id, pair.data() ?? {}).premium.active;
       if (!premium) {
-        final count = (await col.count().get()).count ?? 0;
+        final count = (await col.where('showAsCountdown', isEqualTo: true).count().get()).count ?? 0;
         if (count >= FreeLimits.countdowns) {
           throw const LimitReachedException('countdowns');
         }
@@ -567,9 +698,194 @@ class FirebaseBackend implements CloserBackend {
       'remindDaysBefore': countdown.remindDaysBefore.clamp(0, 60),
       // The minute-level reminder job picks docs up by this instant.
       if (remindAt != null) 'nextRemindAt': Timestamp.fromDate(remindAt),
-      'createdBy': countdown.createdBy.isEmpty ? _uid : countdown.createdBy,
+      'createdBy': (existing?.data()?['createdBy'] as String?) ?? (countdown.createdBy.isEmpty ? _uid : countdown.createdBy),
+      'updatedAt': FieldValue.serverTimestamp(),
+      'category': countdown.category.name,
+      'endDate': countdown.endDate == null ? null : Timestamp.fromDate(countdown.endDate!),
+      'note': _clip(countdown.note.trim(), Countdown.maxNote),
+      'place': _clip(countdown.place.trim(), Countdown.maxPlace),
+      'isVirtual': countdown.isVirtual,
+      'showAsCountdown': countdown.showAsCountdown,
+      'done': countdown.done,
+      'ratings': countdown.ratings,
+    });
+  }
+
+  @override
+  Future<void> rateDate(String eventId, int hearts) async {
+    final pairId = await _requirePairId();
+    await _db.doc('pairs/$pairId/countdowns/$eventId').update({
+      'ratings.$_uid': hearts.clamp(1, 5),
+      'done': true,
       'updatedAt': FieldValue.serverTimestamp(),
     });
+  }
+
+  @override
+  Future<void> setDateGoal(DateGoal? goal) async {
+    final pairId = await _requirePairId();
+    await _db.doc('pairs/$pairId').update({'dateGoal': goal?.toJson() ?? FieldValue.delete()});
+  }
+
+  // ---------------------------------------------------------------- to-dos
+
+  Stream<List<T>> _watchCol<T>(
+    String path,
+    T Function(String id, Map<String, dynamic> data) parse, {
+    String? orderBy,
+    bool descending = false,
+  }) {
+    Query<Map<String, dynamic>> q = _db.collection(path);
+    if (orderBy != null) q = q.orderBy(orderBy, descending: descending);
+    return q
+        .limit(500)
+        .snapshots()
+        .map((s) => s.docs.map((d) => parse(d.id, d.data())).toList())
+        .transform(_emptyOnPermissionDenied());
+  }
+
+  @override
+  Stream<List<TodoList>> watchTodoLists(String pairId) =>
+      _watchCol('pairs/$pairId/todoLists', TodoList.fromJson, orderBy: 'createdAt');
+
+  @override
+  Future<String> saveTodoList(TodoList list) async {
+    if (list.title.trim().isEmpty) throw const CloserException('Name the list');
+    final pairId = await _requirePairId();
+    final col = _db.collection('pairs/$pairId/todoLists');
+    final data = {'title': _clip(list.title.trim(), TodoList.maxTitle), 'emoji': list.emoji};
+    if (list.id.isEmpty) {
+      final ref = await col.add({...data, 'createdBy': _uid, 'createdAt': FieldValue.serverTimestamp()});
+      return ref.id;
+    }
+    await col.doc(list.id).update(data);
+    return list.id;
+  }
+
+  @override
+  Future<void> deleteTodoList(String id) async {
+    final pairId = await _requirePairId();
+    final todos = await _db.collection('pairs/$pairId/todos').where('listId', isEqualTo: id).get();
+    final batch = _db.batch();
+    for (final t in todos.docs) {
+      batch.delete(t.reference);
+    }
+    batch.delete(_db.doc('pairs/$pairId/todoLists/$id'));
+    await batch.commit();
+  }
+
+  @override
+  Stream<List<Todo>> watchTodos(String pairId) => _watchCol('pairs/$pairId/todos', Todo.fromJson, orderBy: 'createdAt');
+
+  @override
+  Future<void> saveTodo(Todo todo) async {
+    checkTodo(todo);
+    final pairId = await _requirePairId();
+    final col = _db.collection('pairs/$pairId/todos');
+    final data = <String, Object?>{
+      'listId': todo.listId,
+      'text': _clip(todo.text.trim(), Todo.maxText),
+      'assignee': todo.assignee,
+      'due': todo.due == null ? null : Timestamp.fromDate(todo.due!),
+    };
+    if (todo.id.isEmpty) {
+      await col.add({...data, 'doneBy': null, 'doneAt': null, 'createdBy': _uid, 'createdAt': FieldValue.serverTimestamp()});
+    } else {
+      await col.doc(todo.id).update(data);
+    }
+  }
+
+  @override
+  Future<void> setTodoDone(String id, {required bool done}) async {
+    final pairId = await _requirePairId();
+    await _db.doc('pairs/$pairId/todos/$id').update({
+      'doneAt': done ? FieldValue.serverTimestamp() : null,
+      'doneBy': done ? _uid : null,
+    });
+  }
+
+  @override
+  Future<void> deleteTodo(String id) async {
+    final pairId = await _requirePairId();
+    await _db.doc('pairs/$pairId/todos/$id').delete();
+  }
+
+  // -------------------------------------------------------------- wishlist
+
+  @override
+  Stream<List<Wish>> watchWishes(String pairId) =>
+      _watchCol('pairs/$pairId/wishes', Wish.fromJson, orderBy: 'createdAt', descending: true);
+
+  @override
+  Future<void> saveWish(Wish wish) async {
+    checkWish(wish);
+    final pairId = await _requirePairId();
+    final col = _db.collection('pairs/$pairId/wishes');
+    final data = <String, Object?>{
+      'title': wish.title.trim(),
+      'category': wish.category.name,
+      'note': wish.note.trim(),
+      'url': wish.url.trim(),
+      'price': wish.price.trim(),
+      'photoPath': wish.photoPath,
+    };
+    if (wish.id.isEmpty) {
+      await col.add({
+        ...data,
+        'ownerUid': wish.isGift ? _uid : null,
+        'doneAt': null,
+        'createdBy': _uid,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } else {
+      await col.doc(wish.id).update(data);
+    }
+  }
+
+  @override
+  Future<void> deleteWish(String id) async {
+    final pairId = await _requirePairId();
+    await _db.doc('pairs/$pairId/wishes/$id').delete();
+  }
+
+  @override
+  Future<void> setWishDone(String id, {required bool done}) async {
+    final pairId = await _requirePairId();
+    await _db.doc('pairs/$pairId/wishes/$id').update({'doneAt': done ? FieldValue.serverTimestamp() : null});
+  }
+
+  /// Claims are readable only by whoever made them, so the person who
+  /// wished for the gift never sees it was claimed.
+  @override
+  Stream<Set<String>> watchMyWishClaims(String pairId) {
+    final uid = currentUid;
+    if (uid == null) return Stream.value(const {});
+    return _db
+        .collection('pairs/$pairId/wishClaims')
+        .where('claimedBy', isEqualTo: uid)
+        .snapshots()
+        .map((q) => q.docs.map((d) => d.id).toSet())
+        .transform(
+          StreamTransformer<Set<String>, Set<String>>.fromHandlers(
+            handleError: (e, st, sink) => _isPermissionDenied(e) ? sink.add(const {}) : sink.addError(e, st),
+          ),
+        );
+  }
+
+  @override
+  Future<void> claimWish(String wishId, {required bool claim}) async {
+    final pairId = await _requirePairId();
+    final ref = _db.doc('pairs/$pairId/wishClaims/$wishId');
+    try {
+      if (claim) {
+        await ref.set({'claimedBy': _uid, 'claimedAt': FieldValue.serverTimestamp()});
+      } else {
+        await ref.delete();
+      }
+    } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied') throw const CloserException('Already taken care of');
+      rethrow;
+    }
   }
 
   @override
@@ -577,6 +893,380 @@ class FirebaseBackend implements CloserBackend {
     final pairId = await _requirePairId();
     await _db.doc('pairs/$pairId/countdowns/$id').delete();
   }
+
+  // ----------------------------------------------------------------- media
+
+  /// Photos for capsules, the timeline and the shrine:
+  /// `pairs/{pairId}/media/{uid}/{id}.jpg` (see storage.rules).
+  @override
+  Future<String> uploadPhoto(String localPath) async {
+    final pairId = await _requirePairId();
+    final id = _db.collection('pairs/$pairId/capsules').doc().id;
+    final tmp = '${(await getTemporaryDirectory()).path}/upload_$id.jpg';
+    final out = await FlutterImageCompress.compressAndGetFile(
+      localPath,
+      tmp,
+      minWidth: 1600,
+      minHeight: 1600,
+      quality: 85,
+    );
+    final path = 'pairs/$pairId/media/$_uid/$id.jpg';
+    try {
+      await _storage.ref(path).putFile(
+            File(out?.path ?? localPath),
+            SettableMetadata(contentType: 'image/jpeg'),
+          );
+    } on FirebaseException catch (e) {
+      throw CloserException('Upload failed (${e.code}). Check your connection.');
+    }
+    return path;
+  }
+
+  // -------------------------------------------------------------- capsules
+
+  @override
+  Stream<List<Capsule>> watchCapsules(String pairId) => _db
+      .collection('pairs/$pairId/capsules')
+      .orderBy('createdAt', descending: true)
+      .limit(500)
+      .snapshots()
+      .map((q) => q.docs.map((d) => Capsule.fromJson(d.id, d.data())).toList())
+      .transform(_emptyOnPermissionDenied());
+
+  /// Envelope and content in one batch; the rules check the content against
+  /// the envelope with getAfter().
+  @override
+  Future<void> sendCapsule(Capsule envelope, CapsuleContent content) async {
+    final pairId = await _requirePairId();
+    final uid = _uid;
+    final pairSnap = await _db.doc('pairs/$pairId').get();
+    final pair = Pair.fromJson(pairSnap.id, pairSnap.data() ?? {});
+    final col = _db.collection('pairs/$pairId/capsules');
+    var written = 0;
+    if (envelope.kind == CapsuleKind.reason) {
+      written = (await col
+                  .where('authorId', isEqualTo: uid)
+                  .where('kind', isEqualTo: CapsuleKind.reason.name)
+                  .count()
+                  .get())
+              .count ??
+          0;
+    }
+    checkCapsule(envelope, content, reasonsWritten: written);
+    final ref = envelope.id.isEmpty ? col.doc() : col.doc(envelope.id);
+    final batch = _db.batch()
+      ..set(ref, {
+        'kind': envelope.kind.name,
+        'authorId': uid,
+        'forUid': pair.partnerOf(uid),
+        'title': _clip(envelope.title.trim(), Capsule.maxTitle),
+        'surpriseType': envelope.surpriseType?.name,
+        'createdAt': FieldValue.serverTimestamp(),
+        'unlockAt': Timestamp.fromDate(envelope.unlockAt),
+        'openedAt': null,
+        'notified': false,
+      })
+      ..set(ref.collection('content').doc('main'), {
+        'text': content.text.trim(),
+        'photoPath': content.photoPath,
+        'giftId': content.giftId,
+      });
+    await batch.commit();
+  }
+
+  @override
+  Future<CapsuleContent> openCapsule(Capsule capsule) async {
+    final cached = _capsuleCache[capsule.id];
+    if (cached != null) return cached;
+    final pairId = await _requirePairId();
+    try {
+      final snap = await _db.doc('pairs/$pairId/capsules/${capsule.id}/content/main').get();
+      if (!snap.exists) throw const CloserException('This one is gone');
+      return _capsuleCache[capsule.id] = CapsuleContent.fromJson(snap.data()!);
+    } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied') {
+        throw const CloserException('Still sealed — no peeking! 🙈');
+      }
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> markCapsuleOpened(String capsuleId) async {
+    final pairId = await _requirePairId();
+    try {
+      await _db.doc('pairs/$pairId/capsules/$capsuleId').update({'openedAt': FieldValue.serverTimestamp()});
+    } on FirebaseException catch (e) {
+      // Already opened, or clock skew around the unlock time: not worth an error.
+      debugPrint('markCapsuleOpened: ${e.code}');
+    }
+  }
+
+  @override
+  Future<void> deleteCapsule(String capsuleId) async {
+    final pairId = await _requirePairId();
+    final ref = _db.doc('pairs/$pairId/capsules/$capsuleId');
+    await (_db.batch()
+          ..delete(ref.collection('content').doc('main'))
+          ..delete(ref))
+        .commit();
+    _capsuleCache.remove(capsuleId);
+  }
+
+  // -------------------------------------------------------------- timeline
+
+  @override
+  Stream<List<TimelineEntry>> watchTimeline(String pairId) => _db
+      .collection('pairs/$pairId/timeline')
+      .orderBy('date')
+      .snapshots()
+      .map((q) => q.docs.map((d) => TimelineEntry.fromJson(d.id, d.data())).toList())
+      .transform(_emptyOnPermissionDenied());
+
+  @override
+  Future<void> saveTimelineEntry(TimelineEntry entry) async {
+    checkTimelineEntry(entry);
+    final pairId = await _requirePairId();
+    final col = _db.collection('pairs/$pairId/timeline');
+    final data = <String, Object?>{
+      'date': Timestamp.fromDate(entry.date),
+      'title': _clip(entry.title.trim(), TimelineEntry.maxTitle),
+      'emoji': entry.emoji,
+      'note': _clip(entry.note.trim(), TimelineEntry.maxNote),
+      'photoPath': entry.photoPath,
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+    if (entry.id.isEmpty) {
+      await col.add({...data, 'createdBy': _uid, 'createdAt': FieldValue.serverTimestamp()});
+    } else {
+      await col.doc(entry.id).update(data);
+    }
+  }
+
+  @override
+  Future<void> deleteTimelineEntry(String id) async {
+    final pairId = await _requirePairId();
+    await _db.doc('pairs/$pairId/timeline/$id').delete();
+  }
+
+  // ---------------------------------------------------------------- shrine
+
+  @override
+  Stream<Map<String, Shrine>> watchShrines(String pairId) => _db
+      .collection('pairs/$pairId/shrines')
+      .snapshots()
+      .map((q) => {for (final d in q.docs) d.id: Shrine.fromJson(d.id, d.data())})
+      .transform(
+        StreamTransformer<Map<String, Shrine>, Map<String, Shrine>>.fromHandlers(
+          handleError: (e, st, sink) => _isPermissionDenied(e) ? sink.add(const {}) : sink.addError(e, st),
+        ),
+      );
+
+  @override
+  Future<void> saveShrine(Shrine shrine) async {
+    final pairId = await _requirePairId();
+    final clean = clampShrine(shrine);
+    await _db.doc('pairs/$pairId/shrines/$_uid').set({
+      ...clean.toJson(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  // ------------------------------------------------------------------ chat
+
+  @override
+  Stream<List<ChatMessage>> watchMessages(String pairId, {int limit = 300}) => _db
+      .collection('pairs/$pairId/messages')
+      .orderBy('createdAt', descending: true)
+      .limit(limit)
+      .snapshots(includeMetadataChanges: true)
+      .map(
+        (q) => q.docs
+            .map((d) => ChatMessage.fromJson(d.id, d.data(), pending: d.metadata.hasPendingWrites))
+            .toList()
+            .reversed
+            .toList(),
+      )
+      .transform(_emptyOnPermissionDenied());
+
+  /// Messages are written directly (rules-checked) so they appear at once,
+  /// even offline; a function notifies the partner.
+  @override
+  Future<void> sendMessage(ChatDraft draft) async {
+    checkMessage(draft);
+    final pairId = await _requirePairId();
+    final ref = _db.collection('pairs/$pairId/messages').doc();
+    String? media;
+    final path = draft.localPath;
+    if (path != null) media = draft.type == MessageType.photo ? await uploadPhoto(path) : await uploadAudio(path);
+    final batch = _db.batch()
+      ..set(ref, {
+        'senderId': _uid,
+        'type': draft.type.name,
+        'text': _clip(draft.text.trim(), ChatMessage.maxText),
+        'mediaPath': media,
+        'durationMs': draft.durationMs,
+        'replyTo': draft.replyTo?.toJson(),
+        'reactions': <String, String>{},
+        'deletedAt': null,
+        'createdAt': FieldValue.serverTimestamp(),
+      })
+      ..set(
+        _db.doc('pairs/$pairId/chatState/$_uid'),
+        {'readAt': FieldValue.serverTimestamp(), 'typingUntil': null},
+        SetOptions(merge: true),
+      );
+    // Don't wait for the server: the local write shows the message now.
+    unawaited(batch.commit().catchError((Object e) => debugPrint('sendMessage: $e')));
+  }
+
+  @override
+  Future<void> reactToMessage(String messageId, String? emoji) async {
+    final pairId = await _requirePairId();
+    await _db.doc('pairs/$pairId/messages/$messageId').update({'reactions.$_uid': emoji ?? FieldValue.delete()});
+  }
+
+  @override
+  Future<void> deleteMessage(String messageId) async {
+    final pairId = await _requirePairId();
+    await _db.doc('pairs/$pairId/messages/$messageId').update({
+      'text': '',
+      'mediaPath': null,
+      'deletedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  @override
+  Stream<Map<String, ChatState>> watchChatState(String pairId) => _db
+      .collection('pairs/$pairId/chatState')
+      .snapshots()
+      .map((q) => {for (final d in q.docs) d.id: ChatState.fromJson(d.data())})
+      .transform(
+        StreamTransformer<Map<String, ChatState>, Map<String, ChatState>>.fromHandlers(
+          handleError: (e, st, sink) => _isPermissionDenied(e) ? sink.add(const {}) : sink.addError(e, st),
+        ),
+      );
+
+  @override
+  Future<void> markChatRead() async {
+    final uid = currentUid;
+    final pairId = _pairId;
+    if (uid == null || pairId == null) return;
+    await _db.doc('pairs/$pairId/chatState/$uid').set({'readAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
+  }
+
+  @override
+  Future<void> setTyping({required bool typing}) async {
+    final pairId = await _requirePairId();
+    await _db.doc('pairs/$pairId/chatState/$_uid').set({
+      'typingUntil': typing ? Timestamp.fromDate(DateTime.now().add(const Duration(seconds: 6))) : null,
+    }, SetOptions(merge: true));
+  }
+
+  /// `pairs/{pairId}/audio/{uid}/{id}.m4a` (see storage.rules).
+  @override
+  Future<String> uploadAudio(String localPath) async {
+    final pairId = await _requirePairId();
+    final id = _db.collection('pairs/$pairId/messages').doc().id;
+    final path = 'pairs/$pairId/audio/$_uid/$id.m4a';
+    try {
+      await _storage.ref(path).putFile(File(localPath), SettableMetadata(contentType: 'audio/mp4'));
+    } on FirebaseException catch (e) {
+      throw CloserException('Upload failed (${e.code}). Check your connection.');
+    }
+    return path;
+  }
+
+  // ------------------------------------------------------------- goodnight
+
+  @override
+  Stream<List<Goodnight>> watchGoodnights(String pairId) => _db
+      .collection('pairs/$pairId/goodnights')
+      .orderBy(FieldPath.documentId, descending: true)
+      .limit(30)
+      .snapshots()
+      .map((q) => q.docs.map((d) => Goodnight.fromJson(d.id, d.data())).toList())
+      .transform(_emptyOnPermissionDenied());
+
+  @override
+  Future<void> sendGoodnight(GoodnightEntry entry) async {
+    checkGoodnight(entry);
+    final pairId = await _requirePairId();
+    final photo = entry.momentPhotoPath == null ? null : await uploadPhoto(entry.momentPhotoPath!);
+    final voice = entry.voicePath == null ? null : await uploadAudio(entry.voicePath!);
+    final night = Goodnight.keyFor(DateTime.now());
+    await _db.doc('pairs/$pairId/goodnights/$night').set({
+      'entries': {
+        _uid: {
+          'message': _clip(entry.message.trim(), GoodnightEntry.maxText),
+          'moment': _clip(entry.moment.trim(), GoodnightEntry.maxText),
+          'momentPhotoPath': photo,
+          'voicePath': voice,
+          'voiceMs': entry.voiceMs,
+          'kiss': entry.kiss,
+          'sentAt': FieldValue.serverTimestamp(),
+        },
+      },
+    }, SetOptions(merge: true));
+  }
+
+  // ------------------------------------------------------------ pet & home
+
+  Future<Pair> _pair() async {
+    final pairId = await _requirePairId();
+    final snap = await _db.doc('pairs/$pairId').get();
+    return Pair.fromJson(snap.id, snap.data() ?? {});
+  }
+
+  @override
+  Future<void> savePet(Pet pet) async {
+    final pair = await _pair();
+    checkPet(pet, pair);
+    if (pair.pet != null) {
+      // Renaming: only the name changes (feeding times belong to each member).
+      await _db.doc('pairs/${pair.id}').update({'pet.name': _clip(pet.name.trim(), Pet.maxName)});
+      return;
+    }
+    await _db.doc('pairs/${pair.id}').update({
+      'pet': {
+        'species': pet.species,
+        'name': _clip(pet.name.trim(), Pet.maxName),
+        'hatchedAt': Timestamp.fromDate(pet.hatchedAt),
+        'lastFed': pet.lastFed.map((k, v) => MapEntry(k, Timestamp.fromDate(v))),
+        'lastPlayed': pet.lastPlayed.map((k, v) => MapEntry(k, Timestamp.fromDate(v))),
+      },
+    });
+  }
+
+  @override
+  Future<void> careForPet(String action) async {
+    final pairId = await _requirePairId();
+    final field = action == 'feed' ? 'lastFed' : 'lastPlayed';
+    try {
+      await _db.doc('pairs/$pairId').update({'pet.$field.$_uid': FieldValue.serverTimestamp()});
+    } on FirebaseException catch (e) {
+      if (e.code == 'not-found' || e.code == 'failed-precondition') throw const CloserException('Hatch your pet first');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> saveHome(PetHome home) async {
+    final pair = await _pair();
+    checkHome(pair.home, home, pair);
+    await _db.doc('pairs/${pair.id}').update({'home': home.toJson()});
+  }
+
+  // -------------------------------------------------------------- insights
+
+  @override
+  Stream<List<MoodEntry>> watchMoodLog(String pairId) => _db
+      .collection('pairs/$pairId/moods')
+      .orderBy('date', descending: true)
+      .limit(200)
+      .snapshots()
+      .map((q) => q.docs.map((d) => MoodEntry.fromJson(d.data())).toList())
+      .transform(_emptyOnPermissionDenied());
 
   // ----------------------------------------------------------------- games
 
@@ -714,6 +1404,18 @@ class FirebaseBackend implements CloserBackend {
         handleError: (e, st, sink) {
           if (_isPermissionDenied(e)) {
             sink.add(null);
+          } else {
+            sink.addError(e, st);
+          }
+        },
+      );
+
+  /// Like [_nullOnPermissionDenied] for list streams.
+  static StreamTransformer<List<T>, List<T>> _emptyOnPermissionDenied<T>() =>
+      StreamTransformer<List<T>, List<T>>.fromHandlers(
+        handleError: (e, st, sink) {
+          if (_isPermissionDenied(e)) {
+            sink.add(<T>[]);
           } else {
             sink.addError(e, st);
           }

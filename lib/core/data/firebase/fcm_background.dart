@@ -6,7 +6,7 @@
 // * type=item   data-only, high priority:
 //     {type, pairId, itemId, itemType, thumbUrl, caption, senderName, sentAt, silent}
 // * type=tap    data-only, high priority:
-//     {type, pairId, tapId, kind, senderName, sentAt, silent}
+//     {type, pairId, tapId, kind, message, senderName, sentAt, silent}
 // * type=unpaired  data-only: clear the widgets.
 // * everything else (question, game_turn, countdown, streak_reminder, ...) is
 //   a regular notification message with an Android channel id, which Android
@@ -18,6 +18,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:closer_app/core/models/models.dart';
 import 'package:closer_app/core/services/widget_contract.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -36,8 +37,10 @@ abstract final class CloserChannels {
   static const countdowns = 'countdowns';
   static const gameTurns = 'game_turns';
   static const account = 'account';
+  static const chat = 'chat';
 
   static const names = <String, String>{
+    chat: 'Chat & goodnights',
     partnerItems: 'Photos, notes & doodles',
     taps: 'Thinking-of-you taps',
     dailyQuestion: 'Daily question',
@@ -199,6 +202,8 @@ Future<void> _handleTap(
     WidgetKeys.heartUntil,
     '${until.millisecondsSinceEpoch}',
   );
+  final kind = TapKind.byId('${data['kind'] ?? 'heart'}');
+  await HomeWidget.saveWidgetData<String>(WidgetKeys.tapEmoji, kind.emoji);
   final senderName = '${data['senderName'] ?? ''}';
   if (senderName.isNotEmpty) {
     await HomeWidget.saveWidgetData<String>(WidgetKeys.partnerName, senderName);
@@ -211,7 +216,7 @@ Future<void> _handleTap(
     await _show(
       id: 'tap'.hashCode, // one tap notification at a time
       channelId: CloserChannels.taps,
-      title: '$name is thinking of you 💗',
+      title: '$name ${kind.message} ${kind.emoji}',
       body: 'Tap back to let them know.',
       importance: Importance.high,
       vibrationPattern: Int64List.fromList([0, 80, 120, 80]),
@@ -231,6 +236,10 @@ Future<void> _handleUnpaired() async {
     WidgetKeys.heartUntil,
     WidgetKeys.partnerName,
     WidgetKeys.partnerMood,
+    WidgetKeys.tapEmoji,
+    WidgetKeys.lastMetAt,
+    WidgetKeys.alwaysPhotoPath,
+    WidgetKeys.alwaysMessage,
   ]) {
     await HomeWidget.saveWidgetData<String>(key, '');
   }

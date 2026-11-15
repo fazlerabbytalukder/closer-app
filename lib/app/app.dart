@@ -7,6 +7,7 @@ import 'package:closer_app/core/services/live_sync.dart';
 import 'package:closer_app/core/services/notifications.dart';
 import 'package:closer_app/core/services/widget_bridge.dart';
 import 'package:closer_app/core/theme/app_theme.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -48,6 +49,21 @@ class _CloserAppState extends ConsumerState<CloserApp> with WidgetsBindingObserv
     final launchRoute = NotificationService.instance.takeLaunchRoute();
     if (launchRoute != null) open(launchRoute);
     _subs.add(NotificationService.instance.taps.listen(open));
+
+    // Taps on notifications the server sent (their `route` data field).
+    if (!ref.read(backendProvider).isSimulated) {
+      void openMessage(RemoteMessage? m) {
+        final route = m?.data['route'];
+        if (route is String && route.startsWith('/')) open(route);
+      }
+
+      try {
+        openMessage(await FirebaseMessaging.instance.getInitialMessage());
+        _subs.add(FirebaseMessaging.onMessageOpenedApp.listen(openMessage));
+      } on Object {
+        // Firebase not initialised (tests).
+      }
+    }
 
     try {
       final links = AppLinks();

@@ -22,6 +22,7 @@ import {
   nextLocalMidnight,
   sendWidgetData,
   getUser,
+  notify,
   logger,
 } from "./common";
 import {ensureThumbnail, rawPath, thumbPath} from "./thumbnails";
@@ -45,7 +46,11 @@ interface SendItemInput {
   noteStyle?: {bg?: string; font?: string};
   geo?: {lat?: unknown; lng?: unknown; place?: unknown};
   saveToMemories?: boolean;
+  secret?: boolean;
 }
+
+/** Shown instead of the sender's name on secret-admirer items. */
+const ADMIRER_NAME = "A secret admirer";
 
 /**
  * The app uploads the image to pairs/{pairId}/raw/{itemId}.jpg first, then
@@ -74,6 +79,7 @@ export const sendItem = onCall<SendItemInput>(
     const geo = type === "location" ? parseGeo(input.geo) : null;
     if (type === "location" && !geo) throw userError("invalid-argument", "bad-geo", "Missing location.");
     const saveToMemories = input.saveToMemories !== false;
+    const secret = input.secret === true;
 
     const raw = bucket().file(rawPath(pairId, itemId));
     const [rawExists] = await raw.exists();
@@ -116,6 +122,9 @@ export const sendItem = onCall<SendItemInput>(
       noteStyle,
       geo,
       saveToMemories,
+      reactions: {},
+      secret,
+      revealedAt: null,
       createdAt,
     };
 
@@ -152,6 +161,7 @@ export const sendItem = onCall<SendItemInput>(
           type,
           thumbPath: thumb.thumbPath,
           caption,
+          secret,
           sentAt: createdAt,
         },
         "stats.itemsSent": FieldValue.increment(1),
@@ -171,7 +181,8 @@ export const sendItem = onCall<SendItemInput>(
           itemType: type,
           thumbUrl: thumb.thumbUrl,
           caption,
-          senderName: firstName(ctx.user),
+          senderName: secret ? ADMIRER_NAME : firstName(ctx.user),
+          secret: secret ? "1" : "0",
           sentAt: String(createdAt.toMillis()),
         },
         {user: partner},
@@ -204,11 +215,108 @@ function serializeItem(id: string, d: Record<string, unknown>) {
     noteStyle: d.noteStyle ?? null,
     geo: d.geo ?? null,
     saveToMemories: d.saveToMemories !== false,
+    reactions: d.reactions ?? {},
+    secret: d.secret === true,
+    revealedAt: d.revealedAt instanceof Timestamp ? d.revealedAt.toMillis() : null,
     createdAt: created,
   };
 }
 
+/** Keep in sync with `reactionEmojis` in lib/core/models/models.dart. */
+const REACTIONS = ["❤️", "😍", "🥹", "😂", "😘", "🔥", "👏"];
+
+const ITEM_WORD: Record<string, string> = {
+  photo: "photo",
+  note: "note",
+  doodle: "doodle",
+  location: "location photo",
+};
+
+/** Sets or (emoji = null) clears the caller's reaction on an item. */
+export const reactItem = onCall<{pairId?: string; itemId?: string; emoji?: string | null}>(
+  CALLABLE_OPTS,
+  async (req) => {
+    const uid = requireAuth(req);
+    const ctx = await requirePair(uid, req.data?.pairId);
+    const itemId = str(req.data?.itemId, 40);
+    if (!ID_RE.test(itemId)) throw userError("invalid-argument", "bad-item", "Invalid item id.");
+    const emoji = req.data?.emoji ?? null;
+    if (emoji !== null && !REACTIONS.includes(String(emoji))) {
+      throw userError("invalid-argument", "bad-reaction", "Unknown reaction.");
+    }
+    const itemRef = ctx.pairRef.collection("items").doc(itemId);
+    const snap = await itemRef.get();
+    if (!snap.exists) throw userError("not-found", "no-item", "That memory is gone.");
+    const previous = snap.get(`reactions.${uid}`) as string | undefined;
+    await itemRef.update({[`reactions.${uid}`]: emoji === null ? FieldValue.delete() : emoji});
+
+    const senderId = String(snap.get("senderId") ?? "");
+    if (emoji !== null && emoji !== previous && senderId && senderId !== uid) {
+      const what = ITEM_WORD[String(snap.get("type"))] ?? "photo";
+      await notify(senderId, {
+        channel: "taps",
+        type: "reaction",
+        title: `${firstName(ctx.user)} reacted ${emoji}`,
+        body: `to your ${what}`,
+        data: {route: `/item/${itemId}`, pairId: ctx.pairId, itemId},
+        prefKey: "taps",
+      });
+    }
+    return {itemId, emoji};
+  },
+);
+
+/** The sender of a secret-admirer item reveals who they are. */
+export const revealAdmirer = onCall<{pairId?: string; itemId?: string}>(CALLABLE_OPTS, async (req) => {
+  const uid = requireAuth(req);
+  const ctx = await requirePair(uid, req.data?.pairId);
+  const itemId = str(req.data?.itemId, 40);
+  if (!ID_RE.test(itemId)) throw userError("invalid-argument", "bad-item", "Invalid item id.");
+  const itemRef = ctx.pairRef.collection("items").doc(itemId);
+  let changed = false as boolean;
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(itemRef);
+    if (!snap.exists) throw userError("not-found", "no-item", "That note is gone.");
+    if (snap.get("senderId") !== uid) {
+      throw userError("permission-denied", "not-sender", "Only the sender can reveal this.");
+    }
+    if (snap.get("secret") !== true || snap.get("revealedAt")) return;
+    const pair = (await tx.get(ctx.pairRef)).data() as
+      (PairDoc & {latestItemByUser?: Record<string, {itemId?: string}>}) | undefined;
+    tx.update(itemRef, {revealedAt: FieldValue.serverTimestamp()});
+    if (pair?.latestItemByUser?.[uid]?.itemId === itemId) {
+      tx.update(ctx.pairRef, {[`latestItemByUser.${uid}.secret`]: false});
+    }
+    changed = true;
+  });
+  if (changed && ctx.partnerUid) {
+    await notify(ctx.partnerUid, {
+      channel: "partner_items",
+      type: "admirer_revealed",
+      title: `Your secret admirer was ${firstName(ctx.user)} 💘`,
+      body: "Of course it was. Tap to see the note again.",
+      data: {route: `/item/${itemId}`, pairId: ctx.pairId, itemId},
+    });
+  }
+  return {itemId, revealed: true};
+});
+
 const TAP_KIND_RE = /^[a-z0-9_-]{1,24}$/;
+
+/**
+ * One-tap messages everyone gets ("I can't stop thinking about you").
+ * Keep in sync with TapKind.all in lib/core/models/models.dart. Any other
+ * kind is a custom tap (Plus).
+ */
+const TAP_KINDS: Record<string, string> = {
+  heart: "is thinking of you 💗",
+  thinking: "can't stop thinking about you 💭",
+  miss: "misses you so much 🥺",
+  hug: "sent you a big warm hug 🤗",
+  kiss: "sent you a kiss 😘",
+  proud: "is so proud of you 🌟",
+  love: "loves you ❤️",
+};
 
 /** Thinking-of-you tap, rate limited to one per 10 s per sender. */
 export const sendTap = onCall<{pairId?: string; kind?: string}>(CALLABLE_OPTS, async (req) => {
@@ -216,7 +324,7 @@ export const sendTap = onCall<{pairId?: string; kind?: string}>(CALLABLE_OPTS, a
   const ctx = await requirePair(uid, req.data?.pairId);
   const {pairId, pairRef, partnerUid} = ctx;
   const kind = TAP_KIND_RE.test(String(req.data?.kind ?? "heart")) ? String(req.data?.kind ?? "heart") : "heart";
-  if (kind !== "heart" && !isPremium(ctx.pair)) {
+  if (!(kind in TAP_KINDS) && !isPremium(ctx.pair)) {
     throw limitError("plus", "Custom taps are part of Closer Plus.");
   }
 
@@ -256,6 +364,7 @@ export const sendTap = onCall<{pairId?: string; kind?: string}>(CALLABLE_OPTS, a
         pairId,
         tapId: tapRef.id,
         kind,
+        message: TAP_KINDS[kind] ?? TAP_KINDS.heart,
         senderName: firstName(ctx.user),
         sentAt: String(now.toMillis()),
       },

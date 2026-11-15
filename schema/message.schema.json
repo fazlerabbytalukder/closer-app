@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://closer.app/schema/message.schema.json",
+  "title": "pairs/{pairId}/messages/{messageId}",
+  "description": "Private chat message, written by the sender. Either member sets only their own reaction; the sender may delete (text and media cleared, deletedAt set).",
+  "type": "object",
+  "properties": {
+    "senderId": {
+      "$ref": "common.schema.json#/$defs/uid"
+    },
+    "type": {
+      "enum": [
+        "text",
+        "photo",
+        "voice"
+      ]
+    },
+    "text": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "mediaPath": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^pairs/[^/]+/(media/[^/]+/[A-Za-z0-9_-]+\\.jpg|audio/[^/]+/[A-Za-z0-9_-]+\\.m4a)$"
+    },
+    "durationMs": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 300000
+    },
+    "replyTo": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "senderId": {
+              "type": "string"
+            },
+            "preview": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          "required": [
+            "id",
+            "senderId",
+            "preview"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "reactions": {
+      "type": "object",
+      "maxProperties": 2,
+      "additionalProperties": {
+        "type": "string",
+        "maxLength": 16
+      }
+    },
+    "deletedAt": {
+      "oneOf": [
+        {
+          "$ref": "common.schema.json#/$defs/timestamp"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "createdAt": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    }
+  },
+  "required": [
+    "senderId",
+    "type",
+    "text",
+    "durationMs",
+    "reactions",
+    "createdAt"
+  ],
+  "additionalProperties": false
+}

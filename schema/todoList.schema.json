@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://closer.app/schema/todoList.schema.json",
+  "title": "pairs/{pairId}/todoLists/{listId}",
+  "description": "A shared to-do list; either member edits or deletes it.",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40
+    },
+    "emoji": {
+      "type": "string",
+      "maxLength": 16
+    },
+    "createdBy": {
+      "$ref": "common.schema.json#/$defs/uid"
+    },
+    "createdAt": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    }
+  },
+  "required": [
+    "title",
+    "emoji",
+    "createdBy"
+  ],
+  "additionalProperties": false
+}

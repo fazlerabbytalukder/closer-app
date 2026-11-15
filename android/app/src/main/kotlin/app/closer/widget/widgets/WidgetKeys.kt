@@ -19,6 +19,7 @@ object WidgetKeys {
     const val LATEST_CAPTION = "latest_caption"
     const val LATEST_SENT_AT = "latest_sent_at"
     const val HEART_UNTIL = "heart_until"
+    const val TAP_EMOJI = "tap_emoji"
     const val PARTNER_MOOD = "partner_mood"
 
     const val THEME_ID = "theme_id"
@@ -30,6 +31,10 @@ object WidgetKeys {
     const val STREAK_COUNT = "streak_count"
     const val PLANT_STAGE = "plant_stage"
     const val PLANT_HEALTH = "plant_health"
+
+    const val LAST_MET_AT = "last_met_at"
+    const val ALWAYS_PHOTO_PATH = "always_photo_path"
+    const val ALWAYS_MESSAGE = "always_message"
 }
 
 /** Mirror of WidgetLinks in widget_contract.dart. */
@@ -37,6 +42,7 @@ object WidgetLinks {
     const val REPLY = "closer://reply"
     const val COUNTDOWNS = "closer://countdowns"
     const val PLANT = "closer://plant"
+    const val ALWAYS = "closer://always"
 }
 
 /**

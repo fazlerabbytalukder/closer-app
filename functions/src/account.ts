@@ -87,10 +87,19 @@ export const exportMemories = onCall<{pairId?: string}>(
       throw userError("permission-denied", "wrong-pair", "You can't export these memories.");
     }
 
-    const [items, questions, countdowns] = await Promise.all([
+    const [items, questions, countdowns, missMeters, timeline, shrines, todoLists, todos, wishes, messages, goodnights] =
+      await Promise.all([
       pairRef.collection("items").orderBy("createdAt", "asc").get(),
       pairRef.collection("dailyQuestions").where("revealed", "==", true).get(),
       pairRef.collection("countdowns").get(),
+      pairRef.collection("missMeters").where("revealed", "==", true).get(),
+      pairRef.collection("timeline").orderBy("date", "asc").get(),
+      pairRef.collection("shrines").get(),
+      pairRef.collection("todoLists").get(),
+      pairRef.collection("todos").get(),
+      pairRef.collection("wishes").get(),
+      pairRef.collection("messages").orderBy("createdAt", "asc").get(),
+      pairRef.collection("goodnights").get(),
     ]);
 
     const b = bucket();
@@ -117,6 +126,14 @@ export const exportMemories = onCall<{pairId?: string}>(
       items: items.docs.map(plain),
       dailyQuestions: questions.docs.map(plain),
       countdowns: countdowns.docs.map(plain),
+      missMeters: missMeters.docs.map(plain),
+      timeline: timeline.docs.map(plain),
+      shrines: shrines.docs.map(plain),
+      todoLists: todoLists.docs.map(plain),
+      todos: todos.docs.map(plain),
+      wishes: wishes.docs.map(plain),
+      chat: messages.docs.map(plain),
+      goodnights: goodnights.docs.map(plain),
     };
     archive.append(JSON.stringify(json, null, 2), {name: "memories.json"});
 
@@ -194,6 +211,40 @@ export const deleteAccount = onCall(
         quiet(writer.delete(q.ref.collection("private").doc(uid)));
         quiet(writer.update(q.ref, {[`answers.${uid}`]: FieldValue.delete()}));
       });
+      const meters = await pair.ref.collection("missMeters").get();
+      meters.docs.forEach((m) => {
+        quiet(writer.delete(m.ref.collection("private").doc(uid)));
+        quiet(writer.update(m.ref, {[`values.${uid}`]: FieldValue.delete()}));
+      });
+      // Capsules this user wrote (with their locked content), their shrine
+      // and timeline moments, and the photos they uploaded for them.
+      const capsules = await pair.ref.collection("capsules").where("authorId", "==", uid).get();
+      capsules.docs.forEach((c) => {
+        quiet(writer.delete(c.ref.collection("content").doc("main")));
+        quiet(writer.delete(c.ref));
+      });
+      quiet(writer.delete(pair.ref.collection("shrines").doc(uid)));
+      const moments = await pair.ref.collection("timeline").where("createdBy", "==", uid).get();
+      moments.docs.forEach((m) => quiet(writer.delete(m.ref)));
+      await b.deleteFiles({prefix: `pairs/${pair.id}/media/${uid}/`});
+      // Gift wishes they made (and the photos above), and their secret claims.
+      const gifts = await pair.ref.collection("wishes").where("ownerUid", "==", uid).get();
+      gifts.docs.forEach((g) => quiet(writer.delete(g.ref)));
+      const claims = await pair.ref.collection("wishClaims").where("claimedBy", "==", uid).get();
+      claims.docs.forEach((c) => quiet(writer.delete(c.ref)));
+      // Chat: their messages, chat state, goodnight entries and voice files.
+      const messages = await pair.ref.collection("messages").where("senderId", "==", uid).get();
+      messages.docs.forEach((m) => quiet(writer.delete(m.ref)));
+      quiet(writer.delete(pair.ref.collection("chatState").doc(uid)));
+      const nights = await pair.ref.collection("goodnights").get();
+      nights.docs.forEach((n) => quiet(writer.update(n.ref, {[`entries.${uid}`]: FieldValue.delete()})));
+      await b.deleteFiles({prefix: `pairs/${pair.id}/audio/${uid}/`});
+      // Their mood history.
+      const moods = await pair.ref.collection("moods").where("uid", "==", uid).get();
+      moods.docs.forEach((m) => quiet(writer.delete(m.ref)));
+      // Reactions this user left on the partner's items.
+      const reacted = await pair.ref.collection("items").where(`reactions.${uid}`, "!=", null).get();
+      reacted.docs.forEach((d) => quiet(writer.update(d.ref, {[`reactions.${uid}`]: FieldValue.delete()})));
       quiet(writer.update(pair.ref, {[`latestItemByUser.${uid}`]: FieldValue.delete()}));
       await writer.close();
     }

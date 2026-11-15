@@ -1,6 +1,16 @@
 import 'package:closer_app/app/providers.dart';
 import 'package:closer_app/app/shell.dart';
+import 'package:closer_app/core/models/models.dart';
+import 'package:closer_app/features/chat/chat_screen.dart';
 import 'package:closer_app/features/home/home_screen.dart';
+import 'package:closer_app/features/insights/insights_screen.dart';
+import 'package:closer_app/features/love/goodnight_screen.dart';
+import 'package:closer_app/features/love/letters_screens.dart';
+import 'package:closer_app/features/love/reasons_screen.dart';
+import 'package:closer_app/features/love/shrine_screen.dart';
+import 'package:closer_app/features/love/surprise_screens.dart';
+import 'package:closer_app/features/love/timeline_screens.dart';
+import 'package:closer_app/features/me/always_with_me_screen.dart';
 import 'package:closer_app/features/me/me_screen.dart';
 import 'package:closer_app/features/me/mood_screen.dart';
 import 'package:closer_app/features/me/relationship_screen.dart';
@@ -9,11 +19,16 @@ import 'package:closer_app/features/me/widgets_screen.dart';
 import 'package:closer_app/features/memories/memories_screen.dart';
 import 'package:closer_app/features/onboarding/onboarding_screens.dart';
 import 'package:closer_app/features/onboarding/pairing_screens.dart';
+import 'package:closer_app/features/pet/pet_screen.dart';
+import 'package:closer_app/features/plan/calendar_screens.dart';
+import 'package:closer_app/features/plan/date_planner_screen.dart';
+import 'package:closer_app/features/plan/todo_screen.dart';
+import 'package:closer_app/features/plan/wishlist_screens.dart';
 import 'package:closer_app/features/premium/paywall_screen.dart';
 import 'package:closer_app/features/send/reply_screen.dart';
 import 'package:closer_app/features/send/send_screen.dart';
-import 'package:closer_app/features/together/countdown_screens.dart';
 import 'package:closer_app/features/together/game_screens.dart';
+import 'package:closer_app/features/together/miss_meter_screen.dart';
 import 'package:closer_app/features/together/plant_screen.dart';
 import 'package:closer_app/features/together/question_screens.dart';
 import 'package:closer_app/features/together/together_screen.dart';
@@ -123,7 +138,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootKey,
         pageBuilder: (_, state) => MaterialPage(
           fullscreenDialog: true,
-          child: SendScreen(initialTab: state.uri.queryParameters['tab']),
+          child: SendScreen(
+            initialTab: state.uri.queryParameters['tab'],
+            secret: state.uri.queryParameters['secret'] == '1',
+          ),
         ),
       ),
       GoRoute(path: '/reply', parentNavigatorKey: _rootKey, builder: (_, _) => const ReplyScreen()),
@@ -149,13 +167,67 @@ final routerProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootKey,
         builder: (_, state) => GamePlayScreen(gameId: state.pathParameters['id']!),
       ),
-      GoRoute(path: '/countdowns', parentNavigatorKey: _rootKey, builder: (_, _) => const CountdownsScreen()),
+      // Countdowns live in the calendar now; the old paths stay for the
+      // countdown widget link and notifications from older servers.
+      for (final path in ['/calendar', '/countdowns'])
+        GoRoute(path: path, parentNavigatorKey: _rootKey, builder: (_, _) => const CalendarScreen()),
+      for (final path in ['/calendar/edit', '/countdowns/edit'])
+        GoRoute(
+          path: path,
+          parentNavigatorKey: _rootKey,
+          builder: (_, state) {
+            final q = state.uri.queryParameters;
+            return EventEditScreen(
+              eventId: q['id'],
+              initialDate: DateTime.tryParse(q['date'] ?? ''),
+              category: q['category'] == null ? null : EventCategory.parse(q['category']),
+              title: q['title'],
+              emoji: q['emoji'],
+              isVirtual: q['virtual'] == null ? null : q['virtual'] == '1',
+            );
+          },
+        ),
+      GoRoute(path: '/dates', parentNavigatorKey: _rootKey, builder: (_, _) => const DatePlannerScreen()),
+      GoRoute(path: '/chat', parentNavigatorKey: _rootKey, builder: (_, _) => const ChatScreen()),
+      GoRoute(path: '/pet', parentNavigatorKey: _rootKey, builder: (_, _) => const PetScreen()),
+      GoRoute(path: '/insights', parentNavigatorKey: _rootKey, builder: (_, _) => const InsightsScreen()),
+      GoRoute(path: '/goodnight', parentNavigatorKey: _rootKey, builder: (_, _) => const GoodnightScreen()),
+      GoRoute(path: '/todos', parentNavigatorKey: _rootKey, builder: (_, _) => const TodoScreen()),
+      GoRoute(path: '/wishlist', parentNavigatorKey: _rootKey, builder: (_, _) => const WishlistScreen()),
       GoRoute(
-        path: '/countdowns/edit',
+        path: '/wishlist/edit',
         parentNavigatorKey: _rootKey,
-        builder: (_, state) => CountdownEditScreen(countdownId: state.uri.queryParameters['id']),
+        builder: (_, state) => WishEditScreen(
+          wishId: state.uri.queryParameters['id'],
+          category: state.uri.queryParameters['category'] == null ? null : WishCategory.parse(state.uri.queryParameters['category']),
+        ),
       ),
       GoRoute(path: '/plant', parentNavigatorKey: _rootKey, builder: (_, _) => const PlantScreen()),
+      GoRoute(path: '/miss-meter', parentNavigatorKey: _rootKey, builder: (_, _) => const MissMeterScreen()),
+      GoRoute(path: '/always', parentNavigatorKey: _rootKey, builder: (_, _) => const AlwaysWithMeScreen()),
+      GoRoute(path: '/reasons', parentNavigatorKey: _rootKey, builder: (_, _) => const ReasonsScreen()),
+      GoRoute(path: '/letters', parentNavigatorKey: _rootKey, builder: (_, _) => const LettersScreen()),
+      GoRoute(path: '/letters/write', parentNavigatorKey: _rootKey, builder: (_, _) => const WriteLetterScreen()),
+      GoRoute(
+        path: '/letters/:id',
+        parentNavigatorKey: _rootKey,
+        builder: (_, state) => LetterScreen(capsuleId: state.pathParameters['id']!),
+      ),
+      GoRoute(path: '/surprises', parentNavigatorKey: _rootKey, builder: (_, _) => const SurprisesScreen()),
+      GoRoute(
+        path: '/surprises/new',
+        parentNavigatorKey: _rootKey,
+        builder: (_, state) => NewSurpriseScreen(
+          type: SurpriseType.parse(state.uri.queryParameters['type']) ?? SurpriseType.note,
+        ),
+      ),
+      GoRoute(path: '/timeline', parentNavigatorKey: _rootKey, builder: (_, _) => const TimelineScreen()),
+      GoRoute(
+        path: '/timeline/edit',
+        parentNavigatorKey: _rootKey,
+        builder: (_, state) => TimelineEditScreen(entryId: state.uri.queryParameters['id']),
+      ),
+      GoRoute(path: '/shrine', parentNavigatorKey: _rootKey, builder: (_, _) => const ShrineScreen()),
       GoRoute(path: '/mood', parentNavigatorKey: _rootKey, builder: (_, _) => const MoodScreen()),
       GoRoute(path: '/widgets', parentNavigatorKey: _rootKey, builder: (_, _) => const WidgetsScreen()),
       GoRoute(path: '/widget-help', parentNavigatorKey: _rootKey, builder: (_, _) => const WidgetHelpScreen()),
@@ -174,8 +246,9 @@ String routeForLink(Uri uri) {
   if (uri.scheme == 'closer') {
     return switch (uri.host) {
       'reply' => '/reply',
-      'countdowns' => '/countdowns',
+      'countdowns' => '/calendar',
       'plant' => '/plant',
+      'always' => '/always',
       _ => '/home',
     };
   }

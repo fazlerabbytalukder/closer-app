@@ -50,6 +50,7 @@ class _WidgetsScreenState extends ConsumerState<WidgetsScreen> {
           _AddRow(emoji: '💌', title: 'Photo widget', subtitle: 'Their latest photo, note or doodle · S/M/L', onTap: () => pin(WidgetReceivers.partnerPhoto)),
           _AddRow(emoji: '📅', title: 'Countdown widget', subtitle: 'Days until your next date · S/M', onTap: () => pin(WidgetReceivers.countdown)),
           _AddRow(emoji: '🌱', title: 'Plant widget', subtitle: 'Your shared plant and streak · S/M', onTap: () => pin(WidgetReceivers.plant)),
+          _AddRow(emoji: '💞', title: 'Always with me', subtitle: 'Memory of the day, a sweet line and time since you met · S/M/L', onTap: () => context.push('/always')),
           const SectionHeader('Theme'),
           SizedBox(
             height: 112,

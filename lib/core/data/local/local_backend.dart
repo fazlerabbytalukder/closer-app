@@ -29,10 +29,13 @@ String dayKey(DateTime d) =>
 /// It mirrors the server rules from the plan: limits, reveal-when-both and
 /// streak logic are enforced here exactly where Cloud Functions would do it.
 class LocalBackend implements CloserBackend {
-  LocalBackend({Duration simulatorScale = const Duration(seconds: 1)})
+  LocalBackend({Duration simulatorScale = const Duration(seconds: 1), this.dbFileName = 'closer_local_db.json'})
       : _scale = simulatorScale;
 
   final Duration _scale;
+
+  /// Separate file names keep test runs away from real local data.
+  final String dbFileName;
   final _uuid = const Uuid();
   final _rand = Random();
   final _changes = StreamController<void>.broadcast();
@@ -56,7 +59,7 @@ class LocalBackend implements CloserBackend {
   @override
   Future<void> init() async {
     _dir = await getApplicationSupportDirectory();
-    _dbFile = File('${_dir.path}/closer_local_db.json');
+    _dbFile = File('${_dir.path}/$dbFileName');
     await mediaDir.create(recursive: true);
     if (_dbFile.existsSync()) {
       try {
@@ -239,8 +242,17 @@ class LocalBackend implements CloserBackend {
   @override
   Future<void> updateMood(Mood mood) async {
     userDoc(_me)!['mood'] = mood.toJson();
+    final pairId = myPairId;
+    if (pairId != null) logMood(pairId, _me, mood, _today);
     _commit();
     _sim.onMyMood(mood);
+  }
+
+  /// Mood history for insights: one entry per member per day.
+  void logMood(String pairId, String uid, Mood mood, String date) {
+    _sub('moodLog', pairId)['${uid}_$date'] =
+        MoodEntry(uid: uid, date: date, emoji: mood.emoji, label: mood.label).toJson();
+    _commit();
   }
 
   @override
@@ -357,7 +369,10 @@ class LocalBackend implements CloserBackend {
       userDoc(m)?['pairId'] = null;
     }
     // Plan: data deleted after the export window — locally, immediately.
-    for (final c in ['pairs', 'items', 'taps', 'questions', 'privateAnswers', 'countdowns', 'games', 'questionPack']) {
+    for (final c in ['pairs', 'items', 'taps', 'questions', 'privateAnswers', 'countdowns', 'games', 'questionPack', 'missMeters', 'missPrivate',
+                    'capsules', 'capsuleContent', 'timeline', 'shrines',
+                    'todoLists', 'todos', 'wishes', 'wishClaims',
+                    'messages', 'chatState', 'goodnights', 'moodLog']) {
       _col(c).remove(pairId);
     }
     _sim.onUnpaired();
@@ -416,7 +431,7 @@ class LocalBackend implements CloserBackend {
   }) async {
     final p = pairDoc(_pairId)!;
     final newMode = mode ?? PairMode.parse(p['mode']);
-    final labels = (p['relationLabels'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
+    final labels = Map<String, dynamic>.from(p['relationLabels'] as Map? ?? const {});
     if (mode != null) {
       p['mode'] = mode.name;
       // Drop labels that don't fit the new mode ("girlfriend" → friends).
@@ -429,7 +444,7 @@ class LocalBackend implements CloserBackend {
     }
     p['relationLabels'] = labels;
     if (nickname != null) {
-      final nicks = (p['nicknames'] as Map?)?.cast<String, dynamic>() ?? <String, dynamic>{};
+      final nicks = Map<String, dynamic>.from(p['nicknames'] as Map? ?? const {});
       final n = nickname.trim();
       if (n.isEmpty) {
         nicks.remove(_me);
@@ -446,6 +461,15 @@ class LocalBackend implements CloserBackend {
       }
       p['anniversary'] = DateTime(anniversary.year, anniversary.month, anniversary.day).millisecondsSinceEpoch;
     }
+    _commit();
+  }
+
+  @override
+  Future<void> setLastMet(DateTime when) async {
+    if (when.isAfter(DateTime.now().add(const Duration(minutes: 5)))) {
+      throw const CloserException('Pick a time that already happened');
+    }
+    pairDoc(_pairId)!['lastMetAt'] = when.millisecondsSinceEpoch;
     _commit();
   }
 
@@ -490,6 +514,7 @@ class LocalBackend implements CloserBackend {
       noteStyle: request.noteStyle,
       geo: request.geo,
       saveToMemories: request.saveToMemories,
+      secret: request.secret,
     );
     usage['sends'] = (usage['sends'] as int) + 1;
     _commit();
@@ -509,6 +534,7 @@ class LocalBackend implements CloserBackend {
     NoteStyle? noteStyle,
     GeoTag? geo,
     bool saveToMemories = true,
+    bool secret = false,
   }) async {
     final id = _uuid.v4();
     final isPng = sourcePath.toLowerCase().endsWith('.png');
@@ -534,17 +560,19 @@ class LocalBackend implements CloserBackend {
       noteStyle: noteStyle,
       geo: geo,
       saveToMemories: saveToMemories,
+      secret: secret,
       createdAt: DateTime.now(),
     );
     _sub('items', pairId)[id] = item.toJson();
     final p = pairDoc(pairId);
     if (p != null) {
-      final latest = (p['latestItemByUser'] as Map?)?.cast<String, dynamic>() ?? {};
+      final latest = Map<String, dynamic>.from(p['latestItemByUser'] as Map? ?? const {});
       latest[senderId] = LatestItem(
         itemId: id,
         type: type,
         thumbPath: item.thumbPath,
         caption: item.caption,
+        secret: secret,
         sentAt: item.createdAt,
       ).toJson();
       p['latestItemByUser'] = latest;
@@ -573,6 +601,44 @@ class LocalBackend implements CloserBackend {
   @override
   Future<String?> resolveImage(String? ref) async => ref;
 
+  @override
+  Future<void> reactToItem(String itemId, String? emoji) async {
+    final item = setReaction(_pairId, itemId, _me, emoji);
+    if (emoji != null) _sim.onMyReaction(item);
+  }
+
+  /// `reactItem` function: one reaction per member per item.
+  Item setReaction(String pairId, String itemId, String uid, String? emoji) {
+    final raw = _sub('items', pairId)[itemId] as Map<String, dynamic>?;
+    if (raw == null) throw const CloserException('That memory is gone');
+    if (emoji != null && !reactionEmojis.contains(emoji)) {
+      throw const CloserException('Unknown reaction');
+    }
+    final reactions = Map<String, dynamic>.from(raw['reactions'] as Map? ?? const {});
+    if (emoji == null) {
+      reactions.remove(uid);
+    } else {
+      reactions[uid] = emoji;
+    }
+    raw['reactions'] = reactions;
+    _commit();
+    return Item.fromJson(itemId, raw);
+  }
+
+  @override
+  Future<void> revealSecret(String itemId) async => revealItem(_pairId, itemId, _me);
+
+  /// `revealAdmirer` function: only the sender may reveal.
+  void revealItem(String pairId, String itemId, String uid) {
+    final raw = _sub('items', pairId)[itemId] as Map<String, dynamic>?;
+    if (raw == null) throw const CloserException('That note is gone');
+    if (raw['senderId'] != uid) throw const CloserException('Only the sender can reveal this');
+    raw['revealedAt'] ??= _now;
+    final latest = (pairDoc(pairId)?['latestItemByUser'] as Map?)?[uid] as Map?;
+    if (latest != null && latest['itemId'] == itemId) latest['secret'] = false;
+    _commit();
+  }
+
   // ---------------------------------------------------------------- taps
   @override
   Future<void> sendTap({String kind = 'heart'}) async {
@@ -582,8 +648,9 @@ class LocalBackend implements CloserBackend {
       throw const CloserException('Easy there! One tap every 10 seconds 💗');
     }
     _col('lastTap')[_me] = _now;
-    writeTap(pairId, _me, kind);
-    _sim.onMyTap();
+    final k = TapKind.byId(kind);
+    writeTap(pairId, _me, k.id);
+    _sim.onMyTap(k);
   }
 
   void writeTap(String pairId, String senderId, String kind) {
@@ -610,6 +677,50 @@ class LocalBackend implements CloserBackend {
         }
         return latest;
       });
+
+  // -------------------------------------------------------- miss meter
+  @override
+  Stream<List<MissMeter>> watchMissMeters(String pairId) => _watch(() {
+        final uid = currentUid;
+        final priv = _sub('missPrivate', pairId);
+        final list = _sub('missMeters', pairId)
+            .entries
+            .map((e) => MissMeter.fromJson(e.key, Map<String, dynamic>.from(e.value as Map))
+                .withMyValue((priv[e.key] as Map?)?[uid] as int?))
+            .toList()
+          ..sort((a, b) => b.date.compareTo(a.date));
+        return list.take(30).toList();
+      });
+
+  @override
+  Future<void> submitMissMeter(int value) async {
+    answerMissMeter(_pairId, _me, value);
+    _sim.onMyMissMeter(_pairId);
+  }
+
+  /// `submitMissMeter` function: private value; reveal when both answered.
+  void answerMissMeter(String pairId, String uid, int value) {
+    final v = value.clamp(0, MissMeter.max);
+    final doc = (_sub('missMeters', pairId)[_today] ??= <String, dynamic>{}) as Map<String, dynamic>;
+    if (doc['revealed'] == true) throw const CloserException('Already revealed today — come back tomorrow!');
+    final priv = (_sub('missPrivate', pairId)[_today] ??= <String, dynamic>{}) as Map<String, dynamic>;
+    priv[uid] = v;
+    final answeredBy = (doc['answeredBy'] as List? ?? []).cast<String>().toSet()..add(uid);
+    doc['answeredBy'] = answeredBy.toList();
+    final members = pairOf(pairId)?.memberIds ?? const [];
+    if (members.isNotEmpty && members.every(answeredBy.contains)) {
+      doc
+        ..['revealed'] = true
+        ..['values'] = Map<String, dynamic>.from(priv);
+    }
+    markActive(pairId, uid);
+    _commit();
+  }
+
+  MissMeter? readTodayMissMeter(String pairId) {
+    final raw = _sub('missMeters', pairId)[_today];
+    return raw == null ? null : MissMeter.fromJson(_today, Map<String, dynamic>.from(raw as Map));
+  }
 
   // ----------------------------------------------------- daily question
   void _ensureTodayQuestion(String pairId) {
@@ -704,35 +815,245 @@ class LocalBackend implements CloserBackend {
   // ----------------------------------------------------------- countdowns
   @override
   Stream<List<Countdown>> watchCountdowns(String pairId) => _watch(() {
-        final now = DateTime.now();
         final list = _sub('countdowns', pairId)
             .entries
             .map((e) => Countdown.fromJson(e.key, Map<String, dynamic>.from(e.value as Map)))
-            .where((c) => c.daysLeft(now) >= 0)
             .toList()
-          ..sort((a, b) => a.daysLeft(now).compareTo(b.daysLeft(now)));
+          ..sort((a, b) => a.date.compareTo(b.date));
         return list;
       });
 
   @override
   Future<void> saveCountdown(Countdown countdown) async {
-    final pairId = _pairId;
+    final c = putEvent(_pairId, _me, countdown);
+    _sim.onMyEvent(c);
+  }
+
+  /// Calendar event write (the app's direct Firestore write).
+  Countdown putEvent(String pairId, String uid, Countdown countdown) {
+    checkEvent(countdown);
     final all = _sub('countdowns', pairId);
-    final isNew = countdown.id.isEmpty || !all.containsKey(countdown.id);
-    if (isNew && !_isPlus(pairId) && all.length >= FreeLimits.countdowns) {
-      throw const LimitReachedException('countdowns', 'Free plan includes 3 countdowns');
+    final existing = countdown.id.isEmpty ? null : all[countdown.id] as Map?;
+    final wasCountdown = existing != null && (existing['showAsCountdown'] as bool? ?? true);
+    if (countdown.showAsCountdown && !wasCountdown && !_isPlus(pairId)) {
+      final used = all.values.where((v) => ((v as Map)['showAsCountdown'] as bool? ?? true)).length;
+      if (used >= FreeLimits.countdowns) {
+        throw const LimitReachedException('countdowns', 'Free plan includes 3 countdowns');
+      }
     }
     final id = countdown.id.isEmpty ? _uuid.v4() : countdown.id;
-    all[id] = Countdown(
+    final saved = Countdown(
       id: id,
-      title: countdown.title,
+      title: countdown.title.trim(),
       date: countdown.date,
       emoji: countdown.emoji,
       repeatsYearly: countdown.repeatsYearly,
       hasTime: countdown.hasTime,
       remindMinutesBefore: countdown.remindMinutesBefore,
-      createdBy: countdown.createdBy.isEmpty ? _me : countdown.createdBy,
+      createdBy: existing?['createdBy'] as String? ?? (countdown.createdBy.isEmpty ? uid : countdown.createdBy),
+      category: countdown.category,
+      endDate: countdown.endDate,
+      note: countdown.note.trim(),
+      place: countdown.place.trim(),
+      isVirtual: countdown.isVirtual,
+      showAsCountdown: countdown.showAsCountdown,
+      done: countdown.done,
+      ratings: countdown.ratings,
+    );
+    all[id] = saved.toJson();
+    _commit();
+    return saved;
+  }
+
+  @override
+  Future<void> rateDate(String eventId, int hearts) async => setDateRating(_pairId, _me, eventId, hearts);
+
+  void setDateRating(String pairId, String uid, String eventId, int hearts) {
+    final raw = _sub('countdowns', pairId)[eventId] as Map<String, dynamic>?;
+    if (raw == null) throw const CloserException('That date is gone');
+    final ratings = Map<String, dynamic>.from(raw['ratings'] as Map? ?? const {});
+    ratings[uid] = hearts.clamp(1, 5);
+    raw
+      ..['ratings'] = ratings
+      ..['done'] = true;
+    markActive(pairId, uid);
+    _commit();
+  }
+
+  @override
+  Future<void> setDateGoal(DateGoal? goal) async {
+    pairDoc(_pairId)!['dateGoal'] = goal?.toJson();
+    _commit();
+  }
+
+  // --------------------------------------------------------------- to-dos
+  @override
+  Stream<List<TodoList>> watchTodoLists(String pairId) => _watch(() {
+        final list = _sub('todoLists', pairId)
+            .entries
+            .map((e) => TodoList.fromJson(e.key, Map<String, dynamic>.from(e.value as Map)))
+            .toList()
+          ..sort((a, b) => (a.createdAt ?? DateTime(0)).compareTo(b.createdAt ?? DateTime(0)));
+        return list;
+      });
+
+  @override
+  Future<String> saveTodoList(TodoList list) async => putTodoList(_pairId, _me, list);
+
+  String putTodoList(String pairId, String uid, TodoList list) {
+    if (list.title.trim().isEmpty) throw const CloserException('Name the list');
+    final all = _sub('todoLists', pairId);
+    final id = list.id.isEmpty ? _uuid.v4() : list.id;
+    final existing = all[id] as Map?;
+    all[id] = TodoList(
+      id: id,
+      title: list.title.trim(),
+      emoji: list.emoji,
+      createdBy: existing?['createdBy'] as String? ?? uid,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(existing?['createdAt'] as int? ?? _now),
     ).toJson();
+    _commit();
+    return id;
+  }
+
+  @override
+  Future<void> deleteTodoList(String id) async {
+    final pairId = _pairId;
+    _sub('todoLists', pairId).remove(id);
+    _sub('todos', pairId).removeWhere((_, v) => (v as Map)['listId'] == id);
+    _commit();
+  }
+
+  @override
+  Stream<List<Todo>> watchTodos(String pairId) => _watch(() {
+        final list = _sub('todos', pairId)
+            .entries
+            .map((e) => Todo.fromJson(e.key, Map<String, dynamic>.from(e.value as Map)))
+            .toList()
+          ..sort((a, b) => (a.createdAt ?? DateTime(0)).compareTo(b.createdAt ?? DateTime(0)));
+        return list;
+      });
+
+  @override
+  Future<void> saveTodo(Todo todo) async {
+    final t = putTodo(_pairId, _me, todo);
+    _sim.onMyTodo(t);
+  }
+
+  Todo putTodo(String pairId, String uid, Todo todo) {
+    checkTodo(todo);
+    final all = _sub('todos', pairId);
+    final id = todo.id.isEmpty ? _uuid.v4() : todo.id;
+    final existing = all[id] as Map?;
+    final t = Todo(
+      id: id,
+      listId: todo.listId,
+      text: todo.text.trim(),
+      assignee: todo.assignee,
+      due: todo.due,
+      doneBy: existing?['doneBy'] as String?,
+      doneAt: existing?['doneAt'] == null ? null : DateTime.fromMillisecondsSinceEpoch(existing!['doneAt'] as int),
+      createdBy: existing?['createdBy'] as String? ?? uid,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(existing?['createdAt'] as int? ?? _now),
+    );
+    all[id] = t.toJson();
+    _commit();
+    return t;
+  }
+
+  @override
+  Future<void> setTodoDone(String id, {required bool done}) async => markTodo(_pairId, _me, id, done: done);
+
+  void markTodo(String pairId, String uid, String id, {required bool done}) {
+    final raw = _sub('todos', pairId)[id] as Map<String, dynamic>?;
+    if (raw == null) return;
+    raw
+      ..['doneAt'] = done ? _now : null
+      ..['doneBy'] = done ? uid : null;
+    if (done) markActive(pairId, uid);
+    _commit();
+  }
+
+  @override
+  Future<void> deleteTodo(String id) async {
+    _sub('todos', _pairId).remove(id);
+    _commit();
+  }
+
+  // ------------------------------------------------------------- wishlist
+  @override
+  Stream<List<Wish>> watchWishes(String pairId) => _watch(() {
+        final list = _sub('wishes', pairId)
+            .entries
+            .map((e) => Wish.fromJson(e.key, Map<String, dynamic>.from(e.value as Map)))
+            .toList()
+          ..sort((a, b) => (b.createdAt ?? DateTime(0)).compareTo(a.createdAt ?? DateTime(0)));
+        return list;
+      });
+
+  @override
+  Future<void> saveWish(Wish wish) async => putWish(_pairId, _me, wish);
+
+  void putWish(String pairId, String uid, Wish wish) {
+    checkWish(wish);
+    final all = _sub('wishes', pairId);
+    final id = wish.id.isEmpty ? _uuid.v4() : wish.id;
+    final existing = all[id] as Map?;
+    all[id] = Wish(
+      id: id,
+      title: wish.title.trim(),
+      category: wish.category,
+      note: wish.note.trim(),
+      url: wish.url.trim(),
+      price: wish.price.trim(),
+      photoPath: wish.photoPath,
+      ownerUid: wish.isGift ? (existing?['ownerUid'] as String? ?? uid) : null,
+      createdBy: existing?['createdBy'] as String? ?? uid,
+      doneAt: existing?['doneAt'] == null ? null : DateTime.fromMillisecondsSinceEpoch(existing!['doneAt'] as int),
+      createdAt: DateTime.fromMillisecondsSinceEpoch(existing?['createdAt'] as int? ?? _now),
+    ).toJson();
+    _commit();
+  }
+
+  @override
+  Future<void> deleteWish(String id) async {
+    final pairId = _pairId;
+    _sub('wishes', pairId).remove(id);
+    _sub('wishClaims', pairId).remove(id);
+    _commit();
+  }
+
+  @override
+  Future<void> setWishDone(String id, {required bool done}) async {
+    final raw = _sub('wishes', _pairId)[id] as Map<String, dynamic>?;
+    if (raw == null) return;
+    raw['doneAt'] = done ? _now : null;
+    _commit();
+  }
+
+  @override
+  Stream<Set<String>> watchMyWishClaims(String pairId) => _watch(() {
+        final uid = currentUid;
+        return {
+          for (final e in _sub('wishClaims', pairId).entries)
+            if ((e.value as Map)['claimedBy'] == uid) e.key,
+        };
+      });
+
+  @override
+  Future<void> claimWish(String wishId, {required bool claim}) async {
+    final pairId = _pairId;
+    final wish = _sub('wishes', pairId)[wishId] as Map?;
+    if (wish == null) throw const CloserException('That wish is gone');
+    if (wish['ownerUid'] == _me) throw const CloserException('That’s your own wish 😄');
+    final claims = _sub('wishClaims', pairId);
+    if (claim) {
+      final other = claims[wishId] as Map?;
+      if (other != null && other['claimedBy'] != _me) throw const CloserException('Already taken care of');
+      claims[wishId] = {'claimedBy': _me, 'claimedAt': _now};
+    } else {
+      claims.remove(wishId);
+    }
     _commit();
   }
 
@@ -741,6 +1062,360 @@ class LocalBackend implements CloserBackend {
     _sub('countdowns', _pairId).remove(id);
     _commit();
   }
+
+  // -------------------------------------------------------------- media
+  @override
+  Future<String> uploadPhoto(String localPath) async {
+    final target = '${mediaDir.path}/photo_${_uuid.v4()}.jpg';
+    final out = await FlutterImageCompress.compressAndGetFile(
+      localPath,
+      target,
+      minWidth: 1600,
+      minHeight: 1600,
+      quality: 85,
+    );
+    if (out == null) await File(localPath).copy(target);
+    return target;
+  }
+
+  // ------------------------------------------------------------ capsules
+  @override
+  Stream<List<Capsule>> watchCapsules(String pairId) => _watch(() {
+        final list = _sub('capsules', pairId)
+            .entries
+            .map((e) => Capsule.fromJson(e.key, Map<String, dynamic>.from(e.value as Map)))
+            .toList()
+          ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        return list;
+      });
+
+  @override
+  Future<void> sendCapsule(Capsule envelope, CapsuleContent content) async {
+    final c = writeCapsule(_pairId, _me, envelope, content);
+    _sim.onMyCapsule(c);
+  }
+
+  /// Envelope + locked content (the app's batched write on Firebase).
+  Capsule writeCapsule(String pairId, String authorId, Capsule env, CapsuleContent content) {
+    final pair = pairOf(pairId);
+    if (pair == null) throw const CloserException('You are not paired yet');
+    final written = _sub('capsules', pairId).values.where((v) {
+      final m = v as Map;
+      return m['authorId'] == authorId && m['kind'] == CapsuleKind.reason.name;
+    }).length;
+    checkCapsule(env, content, reasonsWritten: written);
+    final id = env.id.isEmpty ? _uuid.v4() : env.id;
+    final c = Capsule(
+      id: id,
+      kind: env.kind,
+      authorId: authorId,
+      forUid: pair.partnerOf(authorId),
+      title: env.title.trim(),
+      surpriseType: env.surpriseType,
+      createdAt: DateTime.now(),
+      unlockAt: env.unlockAt,
+    );
+    _sub('capsules', pairId)[id] = c.toJson();
+    _sub('capsuleContent', pairId)[id] = CapsuleContent(
+      text: content.text.trim(),
+      photoPath: content.photoPath,
+      giftId: content.giftId,
+    ).toJson();
+    markActive(pairId, authorId);
+    _commit();
+    return c;
+  }
+
+  @override
+  Future<CapsuleContent> openCapsule(Capsule capsule) async {
+    final raw = _sub('capsuleContent', _pairId)[capsule.id];
+    if (raw == null) throw const CloserException('This one is gone');
+    if (capsule.authorId != _me && !capsule.isUnlocked(DateTime.now())) {
+      throw const CloserException('Still sealed — no peeking! 🙈');
+    }
+    return CapsuleContent.fromJson(Map<String, dynamic>.from(raw as Map));
+  }
+
+  @override
+  Future<void> markCapsuleOpened(String capsuleId) async {
+    final raw = _sub('capsules', _pairId)[capsuleId] as Map<String, dynamic>?;
+    if (raw == null) return;
+    final c = Capsule.fromJson(capsuleId, raw);
+    if (c.forUid != _me || !c.isUnlocked(DateTime.now()) || c.openedAt != null) return;
+    raw['openedAt'] = _now;
+    _commit();
+    _sim.onCapsuleOpened(c);
+  }
+
+  @override
+  Future<void> deleteCapsule(String capsuleId) async {
+    final pairId = _pairId;
+    final raw = _sub('capsules', pairId)[capsuleId] as Map?;
+    if (raw == null) return;
+    if (raw['authorId'] != _me) throw const CloserException('Only the writer can delete this');
+    _sub('capsules', pairId).remove(capsuleId);
+    _sub('capsuleContent', pairId).remove(capsuleId);
+    _commit();
+  }
+
+  // ------------------------------------------------------------ timeline
+  @override
+  Stream<List<TimelineEntry>> watchTimeline(String pairId) => _watch(() {
+        final list = _sub('timeline', pairId)
+            .entries
+            .map((e) => TimelineEntry.fromJson(e.key, Map<String, dynamic>.from(e.value as Map)))
+            .toList()
+          ..sort((a, b) => a.date.compareTo(b.date));
+        return list;
+      });
+
+  @override
+  Future<void> saveTimelineEntry(TimelineEntry entry) async {
+    checkTimelineEntry(entry);
+    final all = _sub('timeline', _pairId);
+    final id = entry.id.isEmpty ? _uuid.v4() : entry.id;
+    final existing = all[id] as Map?;
+    all[id] = TimelineEntry(
+      id: id,
+      date: entry.date,
+      title: entry.title.trim(),
+      emoji: entry.emoji,
+      note: entry.note.trim(),
+      photoPath: entry.photoPath,
+      createdBy: existing?['createdBy'] as String? ?? _me,
+    ).toJson();
+    _commit();
+  }
+
+  @override
+  Future<void> deleteTimelineEntry(String id) async {
+    _sub('timeline', _pairId).remove(id);
+    _commit();
+  }
+
+  // -------------------------------------------------------------- shrine
+  @override
+  Stream<Map<String, Shrine>> watchShrines(String pairId) => _watch(
+        () => {
+          for (final e in _sub('shrines', pairId).entries)
+            e.key: Shrine.fromJson(e.key, Map<String, dynamic>.from(e.value as Map)),
+        },
+      );
+
+  @override
+  Future<void> saveShrine(Shrine shrine) async => putShrine(_pairId, _me, shrine);
+
+  void putShrine(String pairId, String ownerUid, Shrine shrine) {
+    final clean = clampShrine(shrine);
+    _sub('shrines', pairId)[ownerUid] = {...clean.toJson(), 'updatedAt': _now};
+    _commit();
+  }
+
+  // ----------------------------------------------------------------- chat
+  @override
+  Stream<List<ChatMessage>> watchMessages(String pairId, {int limit = 300}) => _watch(() {
+        final list = _sub('messages', pairId)
+            .entries
+            .map((e) => ChatMessage.fromJson(e.key, Map<String, dynamic>.from(e.value as Map)))
+            .toList()
+          ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        return list.length > limit ? list.sublist(list.length - limit) : list;
+      });
+
+  @override
+  Future<void> sendMessage(ChatDraft draft) async {
+    checkMessage(draft);
+    final pairId = _pairId;
+    String? media;
+    final path = draft.localPath;
+    if (path != null) media = draft.type == MessageType.photo ? await uploadPhoto(path) : await uploadAudio(path);
+    final m = writeMessage(pairId, _me, draft, mediaPath: media);
+    _sim.onMyMessage(m);
+  }
+
+  ChatMessage writeMessage(String pairId, String uid, ChatDraft draft, {String? mediaPath}) {
+    final m = ChatMessage(
+      id: _uuid.v4(),
+      senderId: uid,
+      type: draft.type,
+      text: draft.text.trim(),
+      mediaPath: mediaPath,
+      durationMs: draft.durationMs,
+      replyTo: draft.replyTo,
+      createdAt: DateTime.now(),
+    );
+    _sub('messages', pairId)[m.id] = m.toJson();
+    // Sending also counts as reading.
+    (_sub('chatState', pairId)[uid] ??= <String, dynamic>{}) as Map<String, dynamic>
+      ..['readAt'] = _now
+      ..['typingUntil'] = null;
+    markActive(pairId, uid);
+    _commit();
+    return m;
+  }
+
+  @override
+  Future<void> reactToMessage(String messageId, String? emoji) async => setMessageReaction(_pairId, _me, messageId, emoji);
+
+  void setMessageReaction(String pairId, String uid, String messageId, String? emoji) {
+    final raw = _sub('messages', pairId)[messageId] as Map<String, dynamic>?;
+    if (raw == null) return;
+    final r = Map<String, dynamic>.from(raw['reactions'] as Map? ?? const {});
+    if (emoji == null) {
+      r.remove(uid);
+    } else {
+      r[uid] = emoji;
+    }
+    raw['reactions'] = r;
+    _commit();
+  }
+
+  @override
+  Future<void> deleteMessage(String messageId) async {
+    final raw = _sub('messages', _pairId)[messageId] as Map<String, dynamic>?;
+    if (raw == null) return;
+    if (raw['senderId'] != _me) throw const CloserException('You can only delete your own messages');
+    raw
+      ..['text'] = ''
+      ..['mediaPath'] = null
+      ..['deletedAt'] = _now;
+    _commit();
+  }
+
+  @override
+  Stream<Map<String, ChatState>> watchChatState(String pairId) => _watch(
+        () => {
+          for (final e in _sub('chatState', pairId).entries)
+            e.key: ChatState.fromJson(Map<String, dynamic>.from(e.value as Map)),
+        },
+      );
+
+  @override
+  Future<void> markChatRead() async {
+    final pairId = myPairId;
+    final uid = currentUid;
+    if (pairId == null || uid == null) return;
+    final state = (_sub('chatState', pairId)[uid] ??= <String, dynamic>{}) as Map<String, dynamic>;
+    state['readAt'] = _now;
+    _commit();
+  }
+
+  void markChatReadFor(String pairId, String uid) {
+    final state = (_sub('chatState', pairId)[uid] ??= <String, dynamic>{}) as Map<String, dynamic>;
+    state['readAt'] = _now;
+    _commit();
+  }
+
+  @override
+  Future<void> setTyping({required bool typing}) async => setTypingFor(_pairId, _me, typing: typing);
+
+  void setTypingFor(String pairId, String uid, {required bool typing}) {
+    final state = (_sub('chatState', pairId)[uid] ??= <String, dynamic>{}) as Map<String, dynamic>;
+    state['typingUntil'] = typing ? _now + 6000 : null;
+    _commit();
+  }
+
+  @override
+  Future<String> uploadAudio(String localPath) async {
+    final ext = localPath.contains('.') ? localPath.substring(localPath.lastIndexOf('.')) : '.m4a';
+    final target = '${mediaDir.path}/voice_${_uuid.v4()}$ext';
+    await File(localPath).copy(target);
+    return target;
+  }
+
+  // ------------------------------------------------------------ goodnight
+  @override
+  Stream<List<Goodnight>> watchGoodnights(String pairId) => _watch(() {
+        final list = _sub('goodnights', pairId)
+            .entries
+            .map((e) => Goodnight.fromJson(e.key, Map<String, dynamic>.from(e.value as Map)))
+            .toList()
+          ..sort((a, b) => b.night.compareTo(a.night));
+        return list.take(30).toList();
+      });
+
+  @override
+  Future<void> sendGoodnight(GoodnightEntry entry) async {
+    checkGoodnight(entry);
+    final pairId = _pairId;
+    final photo = entry.momentPhotoPath == null ? null : await uploadPhoto(entry.momentPhotoPath!);
+    final voice = entry.voicePath == null ? null : await uploadAudio(entry.voicePath!);
+    writeGoodnight(
+      pairId,
+      _me,
+      GoodnightEntry(
+        message: entry.message.trim(),
+        moment: entry.moment.trim(),
+        momentPhotoPath: photo,
+        voicePath: voice,
+        voiceMs: entry.voiceMs,
+        kiss: entry.kiss,
+      ),
+    );
+    _sim.onMyGoodnight(pairId);
+  }
+
+  void writeGoodnight(String pairId, String uid, GoodnightEntry entry) {
+    final night = Goodnight.keyFor(DateTime.now());
+    final doc = (_sub('goodnights', pairId)[night] ??= <String, dynamic>{'entries': <String, dynamic>{}}) as Map<String, dynamic>;
+    final entries = Map<String, dynamic>.from(doc['entries'] as Map? ?? const {});
+    entries[uid] = {...entry.toJson(), 'sentAt': _now};
+    doc['entries'] = entries;
+    markActive(pairId, uid);
+    _commit();
+  }
+
+  Goodnight? readTonight(String pairId) {
+    final night = Goodnight.keyFor(DateTime.now());
+    final raw = _sub('goodnights', pairId)[night];
+    return raw == null ? null : Goodnight.fromJson(night, Map<String, dynamic>.from(raw as Map));
+  }
+
+  // ------------------------------------------------------------ pet & home
+  @override
+  Future<void> savePet(Pet pet) async {
+    final pairId = _pairId;
+    checkPet(pet, pairOf(pairId)!);
+    putPet(pairId, Pet(species: pet.species, name: pet.name.trim(), hatchedAt: pet.hatchedAt, lastFed: pet.lastFed, lastPlayed: pet.lastPlayed));
+    _sim.onPetChanged(pairId);
+  }
+
+  void putPet(String pairId, Pet pet) {
+    pairDoc(pairId)!['pet'] = pet.toJson();
+    _commit();
+  }
+
+  @override
+  Future<void> careForPet(String action) async => petCare(_pairId, _me, action);
+
+  void petCare(String pairId, String uid, String action) {
+    final pet = pairOf(pairId)?.pet;
+    if (pet == null) throw const CloserException('Hatch your pet first');
+    final now = DateTime.now();
+    putPet(
+      pairId,
+      action == 'feed'
+          ? pet.copyWith(lastFed: {...pet.lastFed, uid: now})
+          : pet.copyWith(lastPlayed: {...pet.lastPlayed, uid: now}),
+    );
+  }
+
+  @override
+  Future<void> saveHome(PetHome home) async {
+    final pairId = _pairId;
+    final pair = pairOf(pairId)!;
+    checkHome(pair.home, home, pair);
+    pairDoc(pairId)!['home'] = home.toJson();
+    _commit();
+  }
+
+  // -------------------------------------------------------------- insights
+  @override
+  Stream<List<MoodEntry>> watchMoodLog(String pairId) => _watch(() {
+        final list = _sub('moodLog', pairId).values.map((v) => MoodEntry.fromJson(Map<String, dynamic>.from(v as Map))).toList()
+          ..sort((a, b) => b.date.compareTo(a.date));
+        return list.take(200).toList();
+      });
 
   // ---------------------------------------------------------------- games
   @override
@@ -808,7 +1483,7 @@ class LocalBackend implements CloserBackend {
   @override
   Future<void> setWidgetTheme(String themeId) async {
     final p = pairDoc(_pairId)!;
-    final themes = (p['widgetTheme'] as Map?)?.cast<String, dynamic>() ?? {};
+    final themes = Map<String, dynamic>.from(p['widgetTheme'] as Map? ?? const {});
     themes[_me] = themeId;
     p['widgetTheme'] = themes;
     _commit();
@@ -880,6 +1555,8 @@ class LocalBackend implements CloserBackend {
   }
 
   Map<String, dynamic> get simState => _col('sim');
+
+  Map<String, dynamic> simStateCapsules(String pairId) => _sub('capsules', pairId);
 
   void commit() => _commit();
 

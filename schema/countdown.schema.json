@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://closer.app/schema/countdown.schema.json",
-  "title": "pairs/{pairId}/countdowns/{id}",
-  "description": "Written by the app. dateKey (local yyyy-mm-dd) is what the reminder job uses; lastReminded* are function-written.",
+  "title": "pairs/{pairId}/countdowns/{id} (shared calendar event)",
+  "description": "A shared calendar event; countdowns are events with showAsCountdown (missing = true for events made before the calendar). Written by the app. dateKey (local yyyy-mm-dd) is what the reminder job uses; lastReminded* are function-written.",
   "type": "object",
   "properties": {
     "title": {"type": "string", "minLength": 1, "maxLength": 60},
@@ -18,7 +18,15 @@
     "createdAt": {"$ref": "common.schema.json#/$defs/timestamp"},
     "updatedAt": {"$ref": "common.schema.json#/$defs/timestamp"},
     "lastRemindedFor": {"type": "string"},
-    "lastRemindedAt": {"$ref": "common.schema.json#/$defs/timestamp"}
+    "lastRemindedAt": {"$ref": "common.schema.json#/$defs/timestamp"},
+    "category": {"enum": ["date", "meetup", "trip", "call", "birthday", "anniversary", "other"]},
+    "endDate": {"oneOf": [{"$ref": "common.schema.json#/$defs/timestamp"}, {"type": "null"}], "description": "Last day of a multi-day event."},
+    "note": {"type": "string", "maxLength": 500},
+    "place": {"type": "string", "maxLength": 120},
+    "isVirtual": {"type": "boolean", "description": "Dates: online rather than in person."},
+    "showAsCountdown": {"type": "boolean"},
+    "done": {"type": "boolean", "description": "Dates: happened (set when rated)."},
+    "ratings": {"type": "object", "maxProperties": 2, "additionalProperties": {"type": "integer", "minimum": 1, "maximum": 5}, "description": "Dates: uid -> hearts; each member writes only their own."}
   },
   "required": ["title", "date", "createdBy"],
   "additionalProperties": false

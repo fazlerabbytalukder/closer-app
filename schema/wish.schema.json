@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://closer.app/schema/wish.schema.json",
+  "title": "pairs/{pairId}/wishes/{wishId}",
+  "description": "Gift wishes belong to ownerUid (== createdBy) and only they edit them; other categories are shared (ownerUid null).",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "category": {
+      "enum": [
+        "gift",
+        "date",
+        "restaurant",
+        "travel",
+        "experience",
+        "other"
+      ]
+    },
+    "note": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "url": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "price": {
+      "type": "string",
+      "maxLength": 20
+    },
+    "photoPath": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^pairs/[^/]+/media/[^/]+/[A-Za-z0-9_-]+\\.jpg$"
+    },
+    "ownerUid": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "createdBy": {
+      "$ref": "common.schema.json#/$defs/uid"
+    },
+    "doneAt": {
+      "oneOf": [
+        {
+          "$ref": "common.schema.json#/$defs/timestamp"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "createdAt": {
+      "$ref": "common.schema.json#/$defs/timestamp"
+    }
+  },
+  "required": [
+    "title",
+    "category",
+    "note",
+    "url",
+    "price",
+    "createdBy"
+  ],
+  "additionalProperties": false
+}

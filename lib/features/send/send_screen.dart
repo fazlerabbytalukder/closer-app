@@ -48,9 +48,12 @@ const _stickerPacks = <(String, bool, List<String>)>[
 ];
 
 class SendScreen extends ConsumerStatefulWidget {
-  const SendScreen({super.key, this.initialTab});
+  const SendScreen({super.key, this.initialTab, this.secret = false});
 
   final String? initialTab;
+
+  /// Start with "Send as a secret admirer" switched on.
+  final bool secret;
 
   @override
   ConsumerState<SendScreen> createState() => _SendScreenState();
@@ -75,6 +78,7 @@ class _SendScreenState extends ConsumerState<SendScreen> with SingleTickerProvid
   String _noteBg = noteBackgrounds.first.id;
   String _noteFont = 'rounded';
   bool _saveToMemories = true;
+  late bool _secret = widget.secret;
   bool _sending = false;
 
   // Location tab: camera shot + where/when it was taken.
@@ -262,6 +266,7 @@ class _SendScreenState extends ConsumerState<SendScreen> with SingleTickerProvid
               noteStyle: _type == ItemType.note ? NoteStyle(bg: _noteBg, font: _noteFont) : null,
               geo: _type == ItemType.location ? _geo : null,
               saveToMemories: _saveToMemories,
+              secret: _secret && _type != ItemType.location,
             ),
           );
     });
@@ -269,7 +274,11 @@ class _SendScreenState extends ConsumerState<SendScreen> with SingleTickerProvid
     setState(() => _sending = false);
     if (ok) {
       hapticMedium();
-      showToast(context, 'Sent to $name’s widget 💌', icon: Icons.check_circle_rounded);
+      showToast(
+        context,
+        _secret && _type != ItemType.location ? 'Sent anonymously 🕵️ Reveal it from Memories when you’re ready' : 'Sent to $name’s widget 💌',
+        icon: Icons.check_circle_rounded,
+      );
       context.pop();
     }
   }
@@ -367,6 +376,16 @@ class _SendScreenState extends ConsumerState<SendScreen> with SingleTickerProvid
                     value: _saveToMemories,
                     onChanged: (v) => setState(() => _saveToMemories = v),
                   ),
+                  // A stamped location gives the sender away, so no secrets there.
+                  if (_type != ItemType.location)
+                    SwitchListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Send as a secret admirer 🕵️'),
+                      subtitle: Text('$name won’t see it’s from you until you reveal it'),
+                      value: _secret,
+                      onChanged: (v) => setState(() => _secret = v),
+                    ),
                   CloserButton(
                     label: 'Send to $name’s widget',
                     icon: Icons.send_rounded,

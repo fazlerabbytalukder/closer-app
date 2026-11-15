@@ -6,7 +6,11 @@
 // Global options (region, maxInstances) are set in ./common, which every
 // module imports first.
 export {createInvite, acceptInvite, unpair} from "./pairing";
-export {sendItem, sendTap, grantRewardedSends} from "./items";
+export {sendItem, sendTap, grantRewardedSends, reactItem, revealAdmirer} from "./items";
+export {submitMissMeter} from "./missMeter";
+export {onCapsuleCreated, capsuleUnlocks} from "./capsules";
+export {onEventCreated, onTodoCreated, onTodoUpdated, onWishCreated} from "./shared";
+export {onMessageCreated, onGoodnightWritten, goodnightReminders} from "./chat";
 export {makeThumbnail} from "./thumbnails";
 export {submitAnswer, assignDailyQuestions, startGame, submitGameAnswers} from "./questions";
 export {updateStreaks, countdownReminders, countdownTimedReminders} from "./streaks";

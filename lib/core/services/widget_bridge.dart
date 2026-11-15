@@ -26,6 +26,11 @@ class WidgetSnapshot {
     this.streak = 0,
     this.plantStage = 0,
     this.plantHealth = PlantHealth.healthy,
+    this.tapEmoji = '',
+    this.lastMetAt,
+    this.memoryImage,
+    this.memoryId,
+    this.alwaysMessage = '',
   });
 
   final bool paired;
@@ -45,6 +50,15 @@ class WidgetSnapshot {
   final int streak;
   final int plantStage;
   final PlantHealth plantHealth;
+  final String tapEmoji;
+
+  // "Always with me" widget.
+  final DateTime? lastMetAt;
+
+  /// Local path or URL of today's memory photo thumbnail.
+  final String? memoryImage;
+  final String? memoryId;
+  final String alwaysMessage;
 }
 
 /// Writes widget state for the native Kotlin Glance widgets through
@@ -61,9 +75,9 @@ abstract final class WidgetBridge {
 
   /// Copies (or downloads) the latest thumbnail to a widget-owned file so the
   /// widget keeps working even if the original is deleted.
-  static Future<String> _stageImage(String source, String itemId) async {
+  static Future<String> _stageImage(String source, String itemId, {String prefix = 'latest_'}) async {
     final dir = await _widgetDir();
-    final target = File('${dir.path}/latest_$itemId.jpg');
+    final target = File('${dir.path}/$prefix$itemId.jpg');
     if (!target.existsSync()) {
       if (source.startsWith('http')) {
         final res = await http.get(Uri.parse(source));
@@ -72,9 +86,9 @@ abstract final class WidgetBridge {
       } else {
         await File(source).copy(target.path);
       }
-      // Remove older thumbnails.
+      // Remove older thumbnails of the same kind.
       for (final f in dir.listSync().whereType<File>()) {
-        if (f.path != target.path && f.path.contains('latest_')) {
+        if (f.path != target.path && f.uri.pathSegments.last.startsWith(prefix)) {
           try {
             f.deleteSync();
           } on Object {
@@ -92,7 +106,8 @@ abstract final class WidgetBridge {
       s.paired, s.partnerName, s.mode, s.latestItemId, s.latestCaption,
       s.heartUntil?.millisecondsSinceEpoch, s.partnerMood, s.themeId,
       s.countdown?.id, s.countdown?.title, s.countdown?.date, s.countdown?.emoji,
-      s.streak, s.plantStage, s.plantHealth,
+      s.streak, s.plantStage, s.plantHealth, s.tapEmoji,
+      s.lastMetAt?.millisecondsSinceEpoch, s.memoryId, s.alwaysMessage,
     ].join('|');
     if (fingerprint == _lastFingerprint) return;
     _lastFingerprint = fingerprint;
@@ -104,6 +119,14 @@ abstract final class WidgetBridge {
           latestPath = await _stageImage(s.latestImage!, s.latestItemId!);
         } on Object catch (e) {
           debugPrint('Widget image staging failed: $e');
+        }
+      }
+      var memoryPath = '';
+      if (s.memoryImage != null && s.memoryId != null) {
+        try {
+          memoryPath = await _stageImage(s.memoryImage!, s.memoryId!, prefix: 'memory_');
+        } on Object catch (e) {
+          debugPrint('Widget memory staging failed: $e');
         }
       }
       final cd = s.countdown;
@@ -126,6 +149,10 @@ abstract final class WidgetBridge {
         WidgetKeys.streakCount: s.streak.toString(),
         WidgetKeys.plantStage: s.plantStage.toString(),
         WidgetKeys.plantHealth: s.plantHealth.name,
+        WidgetKeys.tapEmoji: s.tapEmoji,
+        WidgetKeys.lastMetAt: s.lastMetAt?.millisecondsSinceEpoch.toString() ?? '',
+        WidgetKeys.alwaysPhotoPath: memoryPath,
+        WidgetKeys.alwaysMessage: s.alwaysMessage,
       };
       await HomeWidget.saveWidgetData<bool>(WidgetKeys.paired, s.paired);
       for (final e in data.entries) {

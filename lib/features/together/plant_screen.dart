@@ -97,6 +97,7 @@ class _PlantScreenState extends ConsumerState<PlantScreen> with SingleTickerProv
             ),
           ),
           const SizedBox(height: Space.m),
+          _PetLink(plantStage: plant.stage),
           for (final b in _banners(s, plant, today, now, meActive: meActive, partnerActive: partnerActive, partner: name))
             Padding(padding: const EdgeInsets.only(bottom: Space.s), child: b),
           const SizedBox(height: Space.xs),
@@ -525,6 +526,43 @@ class _Check extends StatelessWidget {
         const SizedBox(width: Space.m),
         Text(text, style: context.tt.bodyLarge),
       ],
+    );
+  }
+}
+
+/// The pet that grows out of the plant: an egg until stage 3, then the pet.
+class _PetLink extends ConsumerWidget {
+  const _PetLink({required this.plantStage});
+
+  final int plantStage;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pet = ref.watch(pairProvider).value?.pet;
+    final ready = plantStage >= Pet.hatchStage;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Space.s),
+      child: CloserCard(
+        onTap: () => context.push('/pet'),
+        color: context.cc.accentTint,
+        child: Row(
+          children: [
+            Text(pet?.info.emoji ?? '🥚', style: const TextStyle(fontSize: 30)),
+            const SizedBox(width: Space.m),
+            Expanded(
+              child: Text(
+                pet != null
+                    ? '${pet.name} lives here. Visit their home'
+                    : ready
+                        ? 'Your plant grew an egg! Tap to hatch it 🐣'
+                        : 'At a ${Plant.milestones[Pet.hatchStage - 1]}-day streak your plant grows a surprise…',
+                style: context.tt.titleSmall,
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -31,7 +31,7 @@
       "properties": {
         "taps": {"type": "boolean"},
         "questions": {"type": "boolean"},
-        "reminders": {"type": "boolean"},
+        "reminders": {"type": "boolean"}, "chat": {"type": "boolean"},
         "quietHours": {
           "type": "object",
           "properties": {

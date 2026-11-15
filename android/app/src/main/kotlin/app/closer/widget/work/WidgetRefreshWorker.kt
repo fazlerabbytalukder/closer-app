@@ -14,6 +14,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import app.closer.widget.widgets.AlwaysWithMeWidget
 import app.closer.widget.widgets.CountdownWidget
 import app.closer.widget.widgets.PartnerPhotoWidget
 import app.closer.widget.widgets.PlantWidget
@@ -94,6 +95,7 @@ class WidgetRefreshWorker(
             refresh(context, PartnerPhotoWidget())
             refresh(context, CountdownWidget())
             refresh(context, PlantWidget())
+            refresh(context, AlwaysWithMeWidget())
         }
 
         private suspend fun refresh(context: Context, widget: GlanceAppWidget) {

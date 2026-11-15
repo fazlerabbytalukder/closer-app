@@ -114,6 +114,96 @@ final latestTapProvider = StreamProvider<Tap?>((ref) {
   return ref.watch(backendProvider).watchLatestTap(id);
 });
 
+final missMetersProvider = StreamProvider<List<MissMeter>>((ref) {
+  final id = ref.watch(pairIdProvider);
+  if (id == null) return Stream.value(const []);
+  return ref.watch(backendProvider).watchMissMeters(id);
+});
+
+/// Today's miss meter (device-local date), or null before anyone answered.
+final todayMissMeterProvider = Provider<MissMeter?>((ref) {
+  final n = DateTime.now();
+  final key = '${n.year.toString().padLeft(4, '0')}-${n.month.toString().padLeft(2, '0')}-${n.day.toString().padLeft(2, '0')}';
+  final list = ref.watch(missMetersProvider).value ?? const <MissMeter>[];
+  return list.where((m) => m.date == key).firstOrNull;
+});
+
+/// Ticks every minute so sealed capsules unlock on screen without a reload.
+final clockProvider = StreamProvider<DateTime>(
+  (ref) => Stream<DateTime>.periodic(const Duration(minutes: 1), (_) => DateTime.now()),
+);
+
+DateTime _now(Ref ref) => ref.watch(clockProvider).value ?? DateTime.now();
+
+final capsulesProvider = StreamProvider<List<Capsule>>((ref) {
+  final id = ref.watch(pairIdProvider);
+  if (id == null) return Stream.value(const []);
+  return ref.watch(backendProvider).watchCapsules(id);
+});
+
+/// Unlocked capsules for me that I haven't opened yet.
+final newCapsulesProvider = Provider<List<Capsule>>((ref) {
+  final me = ref.watch(authUidProvider).value;
+  final now = _now(ref);
+  return (ref.watch(capsulesProvider).value ?? const <Capsule>[]).where((c) => c.isNewFor(me, now)).toList();
+});
+
+/// Locked content of a capsule (cached by the backend once read).
+final capsuleContentProvider = FutureProvider.autoDispose.family<CapsuleContent, Capsule>(
+  (ref, capsule) => ref.watch(backendProvider).openCapsule(capsule),
+);
+
+final timelineProvider = StreamProvider<List<TimelineEntry>>((ref) {
+  final id = ref.watch(pairIdProvider);
+  if (id == null) return Stream.value(const []);
+  return ref.watch(backendProvider).watchTimeline(id);
+});
+
+final shrinesProvider = StreamProvider<Map<String, Shrine>>((ref) {
+  final id = ref.watch(pairIdProvider);
+  if (id == null) return Stream.value(const {});
+  return ref.watch(backendProvider).watchShrines(id);
+});
+
+final messagesProvider = StreamProvider<List<ChatMessage>>((ref) {
+  final id = ref.watch(pairIdProvider);
+  if (id == null) return Stream.value(const []);
+  return ref.watch(backendProvider).watchMessages(id);
+});
+
+final chatStateProvider = StreamProvider<Map<String, ChatState>>((ref) {
+  final id = ref.watch(pairIdProvider);
+  if (id == null) return Stream.value(const {});
+  return ref.watch(backendProvider).watchChatState(id);
+});
+
+/// Partner messages newer than my last read.
+final unreadChatProvider = Provider<int>((ref) {
+  final me = ref.watch(authUidProvider).value;
+  if (me == null) return 0;
+  final readAt = ref.watch(chatStateProvider).value?[me]?.readAt;
+  final messages = ref.watch(messagesProvider).value ?? const <ChatMessage>[];
+  return messages.where((m) => m.senderId != me && !m.isDeleted && (readAt == null || m.createdAt.isAfter(readAt))).length;
+});
+
+final goodnightsProvider = StreamProvider<List<Goodnight>>((ref) {
+  final id = ref.watch(pairIdProvider);
+  if (id == null) return Stream.value(const []);
+  return ref.watch(backendProvider).watchGoodnights(id);
+});
+
+/// Tonight's ritual (null until someone says goodnight).
+final tonightProvider = Provider<Goodnight?>((ref) {
+  final key = Goodnight.keyFor(_now(ref));
+  return (ref.watch(goodnightsProvider).value ?? const <Goodnight>[]).where((g) => g.night == key).firstOrNull;
+});
+
+final moodLogProvider = StreamProvider<List<MoodEntry>>((ref) {
+  final id = ref.watch(pairIdProvider);
+  if (id == null) return Stream.value(const []);
+  return ref.watch(backendProvider).watchMoodLog(id);
+});
+
 final todayQuestionProvider = StreamProvider<DailyQuestion?>((ref) {
   final id = ref.watch(pairIdProvider);
   if (id == null) return Stream.value(null);
@@ -126,10 +216,46 @@ final pastQuestionsProvider = StreamProvider<List<DailyQuestion>>((ref) {
   return ref.watch(backendProvider).watchPastQuestions(id);
 });
 
-final countdownsProvider = StreamProvider<List<Countdown>>((ref) {
+/// Every calendar event (past and future), sorted by date.
+final eventsProvider = StreamProvider<List<Countdown>>((ref) {
   final id = ref.watch(pairIdProvider);
   if (id == null) return Stream.value(const []);
   return ref.watch(backendProvider).watchCountdowns(id);
+});
+
+/// Upcoming events marked "show as countdown", soonest first (Home, the
+/// countdown widget, the countdown strip on the calendar).
+final countdownsProvider = Provider<AsyncValue<List<Countdown>>>((ref) {
+  final now = DateTime.now();
+  return ref.watch(eventsProvider).whenData(
+        (all) => all.where((c) => c.showAsCountdown && c.daysLeft(now) >= 0).toList()
+          ..sort((a, b) => a.nextMoment(now).compareTo(b.nextMoment(now))),
+      );
+});
+
+final todoListsProvider = StreamProvider<List<TodoList>>((ref) {
+  final id = ref.watch(pairIdProvider);
+  if (id == null) return Stream.value(const []);
+  return ref.watch(backendProvider).watchTodoLists(id);
+});
+
+final todosProvider = StreamProvider<List<Todo>>((ref) {
+  final id = ref.watch(pairIdProvider);
+  if (id == null) return Stream.value(const []);
+  return ref.watch(backendProvider).watchTodos(id);
+});
+
+final wishesProvider = StreamProvider<List<Wish>>((ref) {
+  final id = ref.watch(pairIdProvider);
+  if (id == null) return Stream.value(const []);
+  return ref.watch(backendProvider).watchWishes(id);
+});
+
+final wishClaimsProvider = StreamProvider<Set<String>>((ref) {
+  final id = ref.watch(pairIdProvider);
+  ref.watch(authUidProvider);
+  if (id == null) return Stream.value(const {});
+  return ref.watch(backendProvider).watchMyWishClaims(id);
 });
 
 final gamesProvider = StreamProvider<List<Game>>((ref) {

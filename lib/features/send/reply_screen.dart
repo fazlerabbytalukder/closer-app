@@ -6,6 +6,7 @@ import 'package:closer_app/core/services/note_renderer.dart';
 import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:closer_app/core/ui/actions.dart';
 import 'package:closer_app/core/ui/components.dart';
+import 'package:closer_app/core/ui/reactions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -59,7 +60,7 @@ class _ReplyScreenState extends ConsumerState<ReplyScreen> {
     final image = ref.watch(imageUrlProvider(item?.storagePath ?? latest?.thumbPath)).value;
 
     return Scaffold(
-      appBar: AppBar(title: Text('From $name')),
+      appBar: AppBar(title: Text(item != null && item.hidesSenderFrom(me) ? 'From a secret admirer 🕵️' : 'From $name')),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(Space.m),
@@ -76,6 +77,10 @@ class _ReplyScreenState extends ConsumerState<ReplyScreen> {
                 [if (latest.caption.isNotEmpty) latest.caption, timeAgo(latest.sentAt)].join(' · '),
                 style: context.tt.bodyMedium?.copyWith(color: context.cc.muted),
               ),
+              if (item != null) ...[
+                const SizedBox(height: Space.m),
+                Center(child: ReactionBar(item: item)),
+              ],
             ],
             const SizedBox(height: Space.l),
             Text('Quick reply', style: context.tt.titleMedium),
