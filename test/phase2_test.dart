@@ -20,7 +20,7 @@ void main() {
       forUid: 'b',
       title: 'Hi',
       surpriseType: SurpriseType.gift,
-      createdAt: DateTime(2026, 11, 1),
+      createdAt: DateTime(2026, 11),
       unlockAt: DateTime(2026, 11, 2, 9),
     );
 

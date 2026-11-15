@@ -8,9 +8,9 @@ import 'package:closer_app/core/data/closer_backend.dart';
 import 'package:closer_app/core/data/content.dart';
 import 'package:closer_app/core/data/local/partner_simulator.dart';
 import 'package:closer_app/core/data/local/text_repair.dart';
-import 'package:closer_app/core/services/note_renderer.dart';
 import 'package:closer_app/core/models/models.dart';
 import 'package:closer_app/core/models/streak_rules.dart';
+import 'package:closer_app/core/services/note_renderer.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
@@ -340,7 +340,7 @@ class LocalBackend implements CloserBackend {
     // over if it fits the invite's mode.
     final labels = <String, String>{
       for (final uid in [inviter, joiner])
-        if (RelationLabel.validFor(userDoc(uid)?['pendingLabel'] as String?, mode) case final l?) uid: l,
+        uid: ?RelationLabel.validFor(userDoc(uid)?['pendingLabel'] as String?, mode),
     };
     final pair = Pair(
       id: id,
@@ -547,7 +547,6 @@ class LocalBackend implements CloserBackend {
       minWidth: 600,
       minHeight: 600,
       quality: 80,
-      keepExif: false,
     );
     final item = Item(
       id: id,
@@ -836,7 +835,7 @@ class LocalBackend implements CloserBackend {
     final existing = countdown.id.isEmpty ? null : all[countdown.id] as Map?;
     final wasCountdown = existing != null && (existing['showAsCountdown'] as bool? ?? true);
     if (countdown.showAsCountdown && !wasCountdown && !_isPlus(pairId)) {
-      final used = all.values.where((v) => ((v as Map)['showAsCountdown'] as bool? ?? true)).length;
+      final used = all.values.where((v) => (v as Map)['showAsCountdown'] as bool? ?? true).length;
       if (used >= FreeLimits.countdowns) {
         throw const LimitReachedException('countdowns', 'Free plan includes 3 countdowns');
       }

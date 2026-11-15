@@ -26,7 +26,7 @@ Countdown _event({
 void main() {
   group('Calendar events (merged countdowns)', () {
     test('old countdown docs parse as countdowns in the "other" category', () {
-      final c = Countdown.fromJson('c', {'title': 'Paris', 'date': DateTime(2026, 12, 1).millisecondsSinceEpoch});
+      final c = Countdown.fromJson('c', {'title': 'Paris', 'date': DateTime(2026, 12).millisecondsSinceEpoch});
       expect(c.showAsCountdown, isTrue);
       expect(c.category, EventCategory.other);
       expect(c.ratings, isEmpty);
@@ -94,7 +94,7 @@ void main() {
     test('monthly periods start on the 1st', () {
       const g = DateGoal(count: 2, perMonth: true);
       expect(g.periodStart(now), DateTime(2026, 11));
-      expect(g.previousStart(DateTime(2026, 1)), DateTime(2025, 12));
+      expect(g.previousStart(DateTime(2026)), DateTime(2025, 12));
       expect(DateGoal.fromJson(g.toJson()).perMonth, isTrue);
     });
 

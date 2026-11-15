@@ -34,7 +34,7 @@ const questionPacks = <QuestionPack>[
     questions: [
       "What's a small thing that made you smile today?",
       'If we could teleport anywhere for dinner tonight, where would we go?',
-      "What song is stuck in your head right now?",
+      'What song is stuck in your head right now?',
       'What would your perfect lazy Sunday look like?',
       "What's one thing you're looking forward to this week?",
       'Which snack could you eat every day forever?',

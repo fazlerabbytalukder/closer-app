@@ -22,17 +22,17 @@ void main() {
     });
 
     test('yearly dates roll forward', () {
-      final c = Countdown(id: 'a', title: 'Anniversary', date: DateTime(2020, 3, 1), createdBy: 'u', repeatsYearly: true);
-      expect(c.nextOccurrence(now), DateTime(2027, 3, 1));
+      final c = Countdown(id: 'a', title: 'Anniversary', date: DateTime(2020, 3), createdBy: 'u', repeatsYearly: true);
+      expect(c.nextOccurrence(now), DateTime(2027, 3));
     });
 
     test('one-off past dates stay in the past', () {
-      final c = Countdown(id: 'a', title: 'Old', date: DateTime(2026, 1, 1), createdBy: 'u');
+      final c = Countdown(id: 'a', title: 'Old', date: DateTime(2026), createdBy: 'u');
       expect(c.daysLeft(now), isNegative);
     });
 
     test('old docs map remindDaysBefore to minutes', () {
-      final c = Countdown.fromJson('a', {'title': 'Old', 'date': 0, 'remindDaysBefore': 3});
+      final c = Countdown.fromJson('a', const {'title': 'Old', 'date': 0, 'remindDaysBefore': 3});
       expect(c.remindMinutesBefore, 3 * 24 * 60);
       expect(c.hasTime, isFalse);
     });
@@ -79,7 +79,7 @@ void main() {
         subjectUid: 'a',
         guesserUid: 'b',
         questions: const [GameQuestion(text: 'Q', options: ['x', 'y'])],
-        createdAt: DateTime(2026, 5, 1),
+        createdAt: DateTime(2026, 5),
         subjectAnswers: const [1],
         status: GameStatus.guesserTurn,
       );

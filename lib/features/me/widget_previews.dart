@@ -125,7 +125,7 @@ class CountdownWidgetPreview extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: c == null
-              ? [Text('📅', style: const TextStyle(fontSize: 24)), Text('Add a date', style: TextStyle(color: p.text, fontWeight: FontWeight.w700, fontSize: 12))]
+              ? [const Text('📅', style: TextStyle(fontSize: 24)), Text('Add a date', style: TextStyle(color: p.text, fontWeight: FontWeight.w700, fontSize: 12))]
               : [
                   Text(c.emoji, style: const TextStyle(fontSize: 20)),
                   Text(days == 0 ? 'Today!' : '$days', style: TextStyle(color: p.primary, fontWeight: FontWeight.w900, fontSize: days == 0 ? 22 : 34, height: 1.1)),

@@ -20,7 +20,7 @@ void main() {
       id: 'i',
       type: ItemType.note,
       senderId: 'a',
-      createdAt: DateTime(2026, 11, 1),
+      createdAt: DateTime(2026, 11),
       reactions: const {'b': '❤️'},
       secret: true,
     );
@@ -33,7 +33,7 @@ void main() {
     });
 
     test('old items without the new fields still parse', () {
-      final old = Item.fromJson('i', {'type': 'photo', 'senderId': 'a', 'createdAt': 0});
+      final old = Item.fromJson('i', const {'type': 'photo', 'senderId': 'a', 'createdAt': 0});
       expect(old.reactions, isEmpty);
       expect(old.secret, isFalse);
     });
@@ -52,7 +52,7 @@ void main() {
 
   group('MissMeter', () {
     test('parses revealed values', () {
-      final m = MissMeter.fromJson('2026-11-15', {
+      final m = MissMeter.fromJson('2026-11-15', const {
         'answeredBy': ['a', 'b'],
         'revealed': true,
         'values': {'a': 80, 'b': 95},

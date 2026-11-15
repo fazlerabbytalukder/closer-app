@@ -75,7 +75,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                 loading: _busy,
                 onPressed: () async {
                   setState(() => _busy = true);
-                  await runAction(context, () => backend.signInWithGoogle());
+                  await runAction(context, backend.signInWithGoogle);
                   if (mounted) setState(() => _busy = false);
                 },
               ),

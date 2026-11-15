@@ -200,7 +200,7 @@ void main() {
     await go('/reasons');
     await shot('reasons_for_me');
     await tap(find.textContaining('Tap to open it'), what: 'open reason');
-    await wait(1200);
+    await wait();
     await shot('reasons_opened');
     await tap(find.text('Written by you'));
     await tap(find.text('Add a reason'), what: 'add reason');
@@ -282,7 +282,6 @@ void main() {
         id: '',
         title: 'Picnic',
         date: now.subtract(const Duration(days: 1)),
-        hasTime: false,
         category: EventCategory.date,
         showAsCountdown: false,
         createdBy: '',

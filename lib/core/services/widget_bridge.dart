@@ -130,7 +130,7 @@ abstract final class WidgetBridge {
         }
       }
       final cd = s.countdown;
-      final cdDate = cd == null ? null : cd.nextOccurrence(DateTime.now());
+      final cdDate = cd?.nextOccurrence(DateTime.now());
       final data = <String, Object>{
         WidgetKeys.partnerName: s.partnerName,
         WidgetKeys.mode: s.mode.name,

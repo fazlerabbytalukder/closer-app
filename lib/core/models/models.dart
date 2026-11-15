@@ -13,7 +13,6 @@ DateTime? _date(Object? v) {
   if (v is String) return DateTime.tryParse(v);
   // Firestore Timestamp (duck-typed so models stay Firebase-free).
   try {
-    // ignore: avoid_dynamic_calls
     return (v as dynamic).toDate() as DateTime;
   } on Object {
     return null;
@@ -1006,7 +1005,7 @@ enum EventCategory {
   anniversary('💍', 'Anniversary'),
   other('📅', 'Other');
 
-  const EventCategory(this.emoji, this.label);
+  EventCategory(this.emoji, this.label);
 
   final String emoji;
   final String label;
@@ -1771,9 +1770,9 @@ class DateIdea {
 }
 
 const dateIdeas = [
-  DateIdea('picnic', '🧺', 'Sunset picnic', vibe: 'cozy'),
+  DateIdea('picnic', '🧺', 'Sunset picnic'),
   DateIdea('cook', '🍝', 'Cook a new recipe together', vibe: 'food'),
-  DateIdea('stargaze', '🌌', 'Stargazing night', vibe: 'cozy'),
+  DateIdea('stargaze', '🌌', 'Stargazing night'),
   DateIdea('museum', '🖼️', 'Museum or gallery afternoon', vibe: 'creative'),
   DateIdea('hike', '🥾', 'Hike to a view', vibe: 'active'),
   DateIdea('arcade', '🕹️', 'Arcade or bowling night', vibe: 'active'),
@@ -1781,17 +1780,17 @@ const dateIdeas = [
   DateIdea('daytrip', '🚆', 'Day trip somewhere new', vibe: 'adventure'),
   DateIdea('pottery', '🏺', 'Pottery or painting class', vibe: 'creative'),
   DateIdea('karaoke', '🎤', 'Karaoke night', vibe: 'active'),
-  DateIdea('breakfast', '🥞', 'Breakfast in bed', vibe: 'cozy'),
+  DateIdea('breakfast', '🥞', 'Breakfast in bed'),
   DateIdea('bikes', '🚲', 'Bike ride and ice cream', vibe: 'active'),
-  DateIdea('movie_v', '🎬', 'Watch a movie in sync', virtual: true, vibe: 'cozy'),
+  DateIdea('movie_v', '🎬', 'Watch a movie in sync', virtual: true),
   DateIdea('dinner_v', '🍜', 'Dinner over video call', virtual: true, vibe: 'food'),
   DateIdea('game_v', '🎮', 'Play an online game together', virtual: true, vibe: 'active'),
-  DateIdea('quiz_v', '❓', 'Play 36 questions', virtual: true, vibe: 'cozy'),
+  DateIdea('quiz_v', '❓', 'Play 36 questions', virtual: true),
   DateIdea('tour_v', '🌍', 'Take a virtual museum tour', virtual: true, vibe: 'creative'),
   DateIdea('cook_v', '👩‍🍳', 'Cook the same recipe on video', virtual: true, vibe: 'food'),
   DateIdea('playlist_v', '🎧', 'Make a playlist for each other', virtual: true, vibe: 'creative'),
   DateIdea('walk_v', '📞', 'Walk and talk on the phone', virtual: true, vibe: 'active'),
-  DateIdea('stars_v', '✨', 'Stargaze on a call', virtual: true, vibe: 'cozy'),
+  DateIdea('stars_v', '✨', 'Stargaze on a call', virtual: true),
   DateIdea('letters_v', '💌', 'Write each other a letter, read it live', virtual: true, vibe: 'creative'),
 ];
 
@@ -1894,7 +1893,7 @@ enum WishCategory {
   experience('🎟️', 'Experience'),
   other('✨', 'Other');
 
-  const WishCategory(this.emoji, this.label);
+  WishCategory(this.emoji, this.label);
 
   final String emoji;
   final String label;
@@ -2234,7 +2233,7 @@ enum PetMood {
   happy('😊', 'is happy'),
   overjoyed('🥰', 'is over the moon. You both took care of them today');
 
-  const PetMood(this.emoji, this.text);
+  PetMood(this.emoji, this.text);
 
   final String emoji;
   final String text;
@@ -2349,10 +2348,10 @@ class Decor {
     Decor('lantern', '🏮', 'Lantern', cost: 45),
     Decor('cactus', '🌵', 'Cactus', cost: 20),
     Decor('tree', '🎄', 'Little tree', cost: 80),
-    Decor('heart', '💝', 'Heart box', cost: 0, unlockStage: 3),
-    Decor('rainbow', '🌈', 'Rainbow', cost: 0, unlockStage: 5),
-    Decor('crown', '👑', 'Crown', cost: 0, unlockStage: 7),
-    Decor('castle', '🏰', 'Castle', cost: 0, unlockStage: 8),
+    Decor('heart', '💝', 'Heart box', unlockStage: 3),
+    Decor('rainbow', '🌈', 'Rainbow', unlockStage: 5),
+    Decor('crown', '👑', 'Crown', unlockStage: 7),
+    Decor('castle', '🏰', 'Castle', unlockStage: 8),
   ];
 
   static Decor? byId(String id) => all.where((d) => d.id == id).firstOrNull;

@@ -29,7 +29,7 @@ void main() {
     });
 
     test('pending server timestamps read as now', () {
-      final m = ChatMessage.fromJson('m', {'senderId': 'a', 'type': 'text', 'text': 'hi', 'createdAt': null}, pending: true);
+      final m = ChatMessage.fromJson('m', const {'senderId': 'a', 'type': 'text', 'text': 'hi', 'createdAt': null}, pending: true);
       expect(m.pending, isTrue);
       expect(DateTime.now().difference(m.createdAt).inSeconds, lessThan(5));
     });

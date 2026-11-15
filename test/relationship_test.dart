@@ -41,18 +41,18 @@ void main() {
 
     test('pair reads labels, nicknames and days together', () {
       final pair = Pair.fromJson('p', {
-        'memberIds': ['a', 'b'],
+        'memberIds': const ['a', 'b'],
         'mode': 'couple',
-        'anniversary': DateTime(2026, 11, 1).millisecondsSinceEpoch,
-        'relationLabels': {'a': 'girlfriend', 'b': 'bff'},
-        'nicknames': {'a': 'Babe'},
+        'anniversary': DateTime(2026, 11).millisecondsSinceEpoch,
+        'relationLabels': const {'a': 'girlfriend', 'b': 'bff'},
+        'nicknames': const {'a': 'Babe'},
       });
       expect(pair.labelBy('a')?.title, 'Girlfriend');
       // A friends label in a couple pair is ignored.
       expect(pair.labelBy('b'), isNull);
       expect(pair.nicknames['a'], 'Babe');
       expect(pair.daysTogether(DateTime(2026, 11, 8, 23)), 7);
-      expect(Pair.fromJson('q', pair.toJson()).anniversary, DateTime(2026, 11, 1));
+      expect(Pair.fromJson('q', pair.toJson()).anniversary, DateTime(2026, 11));
     });
   });
 }

@@ -27,7 +27,6 @@ const _paywallLimits = {'sends', 'countdowns', 'plus', 'packs'};
 
 class FirebaseBackend implements CloserBackend {
   // Classic constructor syntax, kept for readability.
-  // ignore: unnecessary_type_name_in_constructor
   FirebaseBackend({
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,

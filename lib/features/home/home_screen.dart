@@ -612,7 +612,7 @@ class _HeartTapState extends ConsumerState<_HeartTap> with SingleTickerProviderS
 
   Future<void> _tap([TapKind kind = TapKind.heart]) async {
     hapticMedium();
-    unawaited(_ctrl.forward(from: 0));
+    _ctrl.forward(from: 0);
     final id = DateTime.now().microsecondsSinceEpoch;
     setState(() {
       _bursts.add(id);
@@ -782,10 +782,10 @@ class _HeartTapState extends ConsumerState<_HeartTap> with SingleTickerProviderS
             child: GestureDetector(
               onTap: _tap,
               child: ScaleTransition(
-                scale: TweenSequence([
-                  TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.8), weight: 1),
+                scale: TweenSequence<double>([
+                  TweenSequenceItem(tween: Tween(begin: 1, end: 0.8), weight: 1),
                   TweenSequenceItem(tween: Tween(begin: 0.8, end: 1.15), weight: 1),
-                  TweenSequenceItem(tween: Tween(begin: 1.15, end: 1.0), weight: 1),
+                  TweenSequenceItem(tween: Tween(begin: 1.15, end: 1), weight: 1),
                 ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut)),
                 child: Container(
                   width: 72,
