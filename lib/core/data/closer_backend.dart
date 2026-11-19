@@ -40,6 +40,7 @@ abstract class CloserBackend {
   // --------------------------------------------------------------- users
   Stream<AppUser?> watchUser(String uid);
   Future<void> updateProfile({String? displayName, String? photoFilePath});
+
   /// Onboarding choice before pairing: couple / best friends and, optionally,
   /// what the other person is to you ([RelationLabel] id).
   Future<void> setPendingMode(PairMode mode, {String? label});
@@ -198,6 +199,13 @@ abstract class CloserBackend {
   /// Sender only: replaces the message with "Deleted message".
   Future<void> deleteMessage(String messageId);
 
+  /// Partner only: counts one opening of a snap. When it's used up the
+  /// photo is deleted (by a function on Firebase).
+  Future<void> openSnap(String messageId);
+
+  /// Posts a system line: "📸 took a screenshot" / "⬇️ saved a photo".
+  Future<void> sendChatEvent(ChatEvent event, {ReplyRef? about});
+
   /// uid → read / typing state.
   Stream<Map<String, ChatState>> watchChatState(String pairId);
   Future<void> markChatRead();
@@ -333,6 +341,13 @@ void checkMessage(ChatDraft d) {
       if (d.text.trim().isEmpty) throw const CloserException('Write a message first');
     case MessageType.photo:
       if (d.localPath == null) throw const CloserException('Pick a photo');
+    case MessageType.snap:
+      if (d.localPath == null) throw const CloserException('Take a snap first');
+      if (d.viewLimit < 1 || d.viewLimit > ChatMessage.maxSnapViews) {
+        throw const CloserException('A snap opens once or twice');
+      }
+    case MessageType.event:
+      if (d.event == null) throw const CloserException('Unknown event');
     case MessageType.voice:
       if (d.localPath == null || d.durationMs < 500) throw const CloserException('That voice message was too short');
       if (d.durationMs > ChatMessage.maxVoiceMs) throw const CloserException('Voice messages can be up to 5 minutes');

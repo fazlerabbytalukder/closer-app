@@ -15,7 +15,7 @@ const _partnerColor = Color(0xFFFF6B8A);
 
 /// "You" in charts: purple, so it never matches the partner's pink (the
 /// theme accent is pink in couple mode).
-const _meColor = Color(0xFF7B6CF6);
+const _meColor = Color(0xFF1770FF);
 
 /// Something you did together, with who did it and when (for charts).
 typedef Act = ({String uid, DateTime at, String kind});
@@ -88,7 +88,7 @@ final _insightsProvider = Provider<InsightData?>((ref) {
   final acts = <Act>[
     for (final i in items) (uid: i.senderId, at: i.createdAt, kind: 'items'),
     for (final m in messages)
-      if (!m.isDeleted) (uid: m.senderId, at: m.createdAt, kind: 'chat'),
+      if (!m.isDeleted && !m.isEvent) (uid: m.senderId, at: m.createdAt, kind: 'chat'),
     for (final c in capsules) (uid: c.authorId, at: c.createdAt, kind: 'love'),
     for (final g in goodnights)
       for (final e in g.entries.entries)
@@ -121,7 +121,11 @@ class InsightsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final d = ref.watch(_insightsProvider);
     final name = ref.watch(partnerNameProvider);
-    if (d == null) return Scaffold(appBar: AppBar(), body: const Center(child: CircularProgressIndicator()));
+    if (d == null)
+      return Scaffold(
+        appBar: AppBar(),
+        body: const Center(child: CircularProgressIndicator()),
+      );
     final now = DateTime.now();
     final since = d.pair.anniversary ?? d.pair.pairedAt;
     final days = DateTime(now.year, now.month, now.day).difference(DateTime(since.year, since.month, since.day)).inDays;
@@ -140,9 +144,14 @@ class InsightsScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('$days', style: context.tt.displaySmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w800)),
                       Text(
-                        d.pair.anniversary != null ? (couple ? 'days together' : 'days of friendship') : 'days on Closer',
+                        '$days',
+                        style: context.tt.displaySmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+                      ),
+                      Text(
+                        d.pair.anniversary != null
+                            ? (couple ? 'days together' : 'days of friendship')
+                            : 'days on Closer',
                         style: context.tt.titleMedium?.copyWith(color: Colors.white),
                       ),
                     ],
@@ -151,9 +160,15 @@ class InsightsScreen extends ConsumerWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text('🔥 ${d.pair.streak.count} day streak', style: context.tt.titleSmall?.copyWith(color: Colors.white)),
+                    Text(
+                      '🔥 ${d.pair.streak.count} day streak',
+                      style: context.tt.titleSmall?.copyWith(color: Colors.white),
+                    ),
                     Text('best ${d.pair.streak.best}', style: context.tt.bodySmall?.copyWith(color: Colors.white70)),
-                    Text('💗 ${d.pair.lovePointsEarned} love points', style: context.tt.bodySmall?.copyWith(color: Colors.white70)),
+                    Text(
+                      '💗 ${d.pair.lovePointsEarned} love points',
+                      style: context.tt.bodySmall?.copyWith(color: Colors.white70),
+                    ),
                   ],
                 ),
               ],
@@ -185,14 +200,24 @@ class _Legend extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget dot(Color c, String label) => Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(width: 10, height: 10, decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
-            const SizedBox(width: 4),
-            Text(label, style: context.tt.labelSmall),
-          ],
-        );
-    return Row(children: [dot(_meColor, 'You'), const SizedBox(width: Space.m), dot(_partnerColor, name)]);
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: c, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Text(label, style: context.tt.labelSmall),
+      ],
+    );
+    return Row(
+      children: [
+        dot(_meColor, 'You'),
+        const SizedBox(width: Space.m),
+        dot(_partnerColor, name),
+      ],
+    );
   }
 }
 
@@ -206,23 +231,51 @@ class _Milestones extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = [...d.items]..sort((a, b) => a.createdAt.compareTo(b.createdAt));
     final best = d.pair.streak.best;
-    final datesDone = d.events.where((e) => e.isDate && (e.done || e.date.isBefore(DateTime.now()))).toList()..sort((a, b) => a.date.compareTo(b.date));
+    final datesDone = d.events.where((e) => e.isDate && (e.done || e.date.isBefore(DateTime.now()))).toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
     final lettersRead = d.capsules.where((c) => c.kind == CapsuleKind.letter && c.openedAt != null).toList()
       ..sort((a, b) => a.openedAt!.compareTo(b.openedAt!));
-    final reasonsRevealed = d.capsules.where((c) => c.kind == CapsuleKind.reason && c.isUnlocked(DateTime.now())).length;
+    final reasonsRevealed = d.capsules
+        .where((c) => c.kind == CapsuleKind.reason && c.isUnlocked(DateTime.now()))
+        .length;
     final list = <(String, String, bool, String)>[
       ('📲', 'Connected on Closer', true, DateFormat('d MMM yyyy').format(d.pair.pairedAt)),
-      ('📸', 'First photo', items.isNotEmpty, items.isEmpty ? 'Send one!' : DateFormat('d MMM yyyy').format(items.first.createdAt)),
+      (
+        '📸',
+        'First photo',
+        items.isNotEmpty,
+        items.isEmpty ? 'Send one!' : DateFormat('d MMM yyyy').format(items.first.createdAt),
+      ),
       ('🔥', '7-day streak', best >= 7, best >= 7 ? 'Done' : '$best / 7'),
       ('🌿', '30-day streak', best >= 30, best >= 30 ? 'Done' : '$best / 30'),
       ('💯', '100-day streak', best >= 100, best >= 100 ? 'Done' : '$best / 100'),
       ('🌸', 'A whole year', best >= 365, best >= 365 ? 'Full bloom!' : '$best / 365'),
       ('🗂️', '100 shared memories', items.length >= 100, '${math.min(items.length, 100)} / 100'),
-      ('💑', 'First date planned & done', datesDone.isNotEmpty, datesDone.isEmpty ? 'Plan one' : DateFormat('d MMM yyyy').format(datesDone.first.date)),
-      ('💌', 'First letter opened', lettersRead.isNotEmpty, lettersRead.isEmpty ? 'Write one' : DateFormat('d MMM yyyy').format(lettersRead.first.openedAt!)),
+      (
+        '💑',
+        'First date planned & done',
+        datesDone.isNotEmpty,
+        datesDone.isEmpty ? 'Plan one' : DateFormat('d MMM yyyy').format(datesDone.first.date),
+      ),
+      (
+        '💌',
+        'First letter opened',
+        lettersRead.isNotEmpty,
+        lettersRead.isEmpty ? 'Write one' : DateFormat('d MMM yyyy').format(lettersRead.first.openedAt!),
+      ),
       ('💗', '25 reasons revealed', reasonsRevealed >= 25, '${math.min(reasonsRevealed, 25)} / 25'),
-      ('☀️', '50 daily questions', d.pair.stats.questionsAnswered >= 50, '${math.min(d.pair.stats.questionsAnswered, 50)} / 50'),
-      ('🐣', 'Pet hatched', d.pair.pet != null, d.pair.pet == null ? 'Grow your plant' : DateFormat('d MMM yyyy').format(d.pair.pet!.hatchedAt)),
+      (
+        '☀️',
+        '50 daily questions',
+        d.pair.stats.questionsAnswered >= 50,
+        '${math.min(d.pair.stats.questionsAnswered, 50)} / 50',
+      ),
+      (
+        '🐣',
+        'Pet hatched',
+        d.pair.pet != null,
+        d.pair.pet == null ? 'Grow your plant' : DateFormat('d MMM yyyy').format(d.pair.pet!.hatchedAt),
+      ),
     ];
     final done = list.where((m) => m.$3).length;
     return Column(
@@ -249,10 +302,18 @@ class _Milestones extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Opacity(opacity: reached ? 1 : 0.35, child: Text(emoji, style: const TextStyle(fontSize: 26))),
+                    Opacity(
+                      opacity: reached ? 1 : 0.35,
+                      child: Text(emoji, style: const TextStyle(fontSize: 26)),
+                    ),
                     const Spacer(),
-                    Text(title, maxLines: 2, style: context.tt.labelMedium?.copyWith(fontWeight: FontWeight.w800)),
-                    Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.tt.labelSmall?.copyWith(color: context.cc.muted)),
+                    Text(title, maxLines: 2, style: context.tt.labelMedium?.copyWith(fontWeight: FontWeight.w700)),
+                    Text(
+                      sub,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.tt.labelSmall?.copyWith(color: context.cc.muted),
+                    ),
                   ],
                 ),
               ).animate(delay: (i * 40).ms).fadeIn().moveX(begin: 12, end: 0);
@@ -281,7 +342,10 @@ class _WeeklyChart extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('$total things shared in 8 weeks', style: context.tt.titleSmall),
-          Text('Photos, notes, messages, love notes, goodnights and finished to-dos', style: context.tt.bodySmall?.copyWith(color: context.cc.muted)),
+          Text(
+            'Photos, notes, messages, love notes, goodnights and finished to-dos',
+            style: context.tt.bodySmall?.copyWith(color: context.cc.muted),
+          ),
           const SizedBox(height: Space.m),
           SizedBox(
             height: 140,
@@ -299,11 +363,19 @@ class _WeeklyChart extends StatelessWidget {
                           children: [
                             _Bar(value: mine / maxV, color: _meColor, delay: i * 60, tooltip: 'You: $mine'),
                             const SizedBox(width: 2),
-                            _Bar(value: theirs / maxV, color: _partnerColor, delay: i * 60 + 30, tooltip: '$name: $theirs'),
+                            _Bar(
+                              value: theirs / maxV,
+                              color: _partnerColor,
+                              delay: i * 60 + 30,
+                              tooltip: '$name: $theirs',
+                            ),
                           ],
                         ),
                         const SizedBox(height: 4),
-                        Text(DateFormat('d/M').format(start), style: context.tt.labelSmall?.copyWith(fontSize: 9, color: context.cc.muted)),
+                        Text(
+                          DateFormat('d/M').format(start),
+                          style: context.tt.labelSmall?.copyWith(fontSize: 9, color: context.cc.muted),
+                        ),
                       ],
                     ),
                   ),
@@ -360,7 +432,10 @@ class _Participation extends StatelessWidget {
       ('✅', 'To-dos finished', d.split('todos')),
     ].where((r) => r.$3.$1 + r.$3.$2 > 0).toList();
     if (rows.isEmpty) {
-      return Text('Start sharing and you’ll see who does what here.', style: context.tt.bodyMedium?.copyWith(color: context.cc.muted));
+      return Text(
+        'Start sharing and you’ll see who does what here.',
+        style: context.tt.bodyMedium?.copyWith(color: context.cc.muted),
+      );
     }
     return CloserCard(
       child: Column(
@@ -385,8 +460,16 @@ class _Participation extends StatelessWidget {
                       height: 10,
                       child: Row(
                         children: [
-                          if (mine > 0) Expanded(flex: mine, child: const ColoredBox(color: _meColor)),
-                          if (theirs > 0) Expanded(flex: theirs, child: const ColoredBox(color: _partnerColor)),
+                          if (mine > 0)
+                            Expanded(
+                              flex: mine,
+                              child: const ColoredBox(color: _meColor),
+                            ),
+                          if (theirs > 0)
+                            Expanded(
+                              flex: theirs,
+                              child: const ColoredBox(color: _partnerColor),
+                            ),
                         ],
                       ),
                     ),
@@ -411,10 +494,11 @@ class _MoodTrend extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final days = [for (var i = 13; i >= 0; i--) now.subtract(Duration(days: i))];
-    String key(DateTime t) => '${t.year.toString().padLeft(4, '0')}-${t.month.toString().padLeft(2, '0')}-${t.day.toString().padLeft(2, '0')}';
+    String key(DateTime t) =>
+        '${t.year.toString().padLeft(4, '0')}-${t.month.toString().padLeft(2, '0')}-${t.day.toString().padLeft(2, '0')}';
     List<int?> series(String uid) => [
-          for (final day in days) d.moods.where((m) => m.uid == uid && m.date == key(day)).firstOrNull?.score,
-        ];
+      for (final day in days) d.moods.where((m) => m.uid == uid && m.date == key(day)).firstOrNull?.score,
+    ];
     final mine = series(d.me);
     final theirs = series(d.partner);
     if (mine.every((v) => v == null) && theirs.every((v) => v == null)) {
@@ -440,13 +524,22 @@ class _MoodTrend extends StatelessWidget {
             height: 120,
             child: CustomPaint(
               size: Size.infinite,
-              painter: _MoodPainter(mine: mine, theirs: theirs, me: _meColor, partner: _partnerColor, grid: context.cc.muted.withValues(alpha: 0.2)),
+              painter: _MoodPainter(
+                mine: mine,
+                theirs: theirs,
+                me: _meColor,
+                partner: _partnerColor,
+                grid: context.cc.muted.withValues(alpha: 0.2),
+              ),
             ),
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(DateFormat('d MMM').format(days.first), style: context.tt.labelSmall?.copyWith(color: context.cc.muted)),
+              Text(
+                DateFormat('d MMM').format(days.first),
+                style: context.tt.labelSmall?.copyWith(color: context.cc.muted),
+              ),
               Text('Today', style: context.tt.labelSmall?.copyWith(color: context.cc.muted)),
             ],
           ),
@@ -522,7 +615,9 @@ class _Numbers extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = d.pair.stats;
     final doneGames = d.games.where((g) => g.status == GameStatus.done).toList();
-    final avgGame = doneGames.isEmpty ? null : doneGames.map((g) => g.score / math.max(1, g.questions.length)).reduce((a, b) => a + b) / doneGames.length;
+    final avgGame = doneGames.isEmpty
+        ? null
+        : doneGames.map((g) => g.score / math.max(1, g.questions.length)).reduce((a, b) => a + b) / doneGames.length;
     final revealed = d.missMeters.where((m) => m.revealed).toList();
     double? avgMiss(String uid) {
       final v = revealed.map((m) => m.values[uid]).whereType<int>().toList();
@@ -540,7 +635,13 @@ class _Numbers extends StatelessWidget {
       ('☀️', '${s.questionsAnswered}', 'questions answered together'),
       ('🎯', avgGame == null ? '–' : '${(avgGame * 100).round()}%', 'average quiz score'),
       ('🥺', missMe == null ? '–' : '${missMe.round()}% · ${missThem?.round() ?? '–'}%', 'miss-o-meter (you · $name)'),
-      ('💑', '${dates.length}', ratings.isEmpty ? 'dates' : 'dates · ${(ratings.reduce((a, b) => a + b) / ratings.length).toStringAsFixed(1)} ❤️ avg'),
+      (
+        '💑',
+        '${dates.length}',
+        ratings.isEmpty
+            ? 'dates'
+            : 'dates · ${(ratings.reduce((a, b) => a + b) / ratings.length).toStringAsFixed(1)} ❤️ avg',
+      ),
       ('🌙', '$bothGoodnight', 'nights you both said goodnight'),
       ('💌', '${d.capsules.length}', 'reasons, letters & surprises'),
     ];
@@ -560,8 +661,15 @@ class _Numbers extends StatelessWidget {
               children: [
                 Text(emoji, style: const TextStyle(fontSize: 20)),
                 const Spacer(),
-                FittedBox(child: Text(value, style: context.tt.titleLarge?.copyWith(fontWeight: FontWeight.w800))),
-                Text(label, maxLines: 2, overflow: TextOverflow.ellipsis, style: context.tt.labelSmall?.copyWith(color: context.cc.muted)),
+                FittedBox(
+                  child: Text(value, style: context.tt.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                ),
+                Text(
+                  label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.tt.labelSmall?.copyWith(color: context.cc.muted),
+                ),
               ],
             ),
           ),
@@ -581,7 +689,10 @@ class _Moments extends StatelessWidget {
       ..sort((a, b) => b.reactions.length.compareTo(a.reactions.length));
     final latest = [...d.timeline]..sort((a, b) => b.date.compareTo(a.date));
     if (loved.isEmpty && latest.isEmpty) {
-      return Text('React to photos and add moments to your timeline to see them here.', style: context.tt.bodyMedium?.copyWith(color: context.cc.muted));
+      return Text(
+        'React to photos and add moments to your timeline to see them here.',
+        style: context.tt.bodyMedium?.copyWith(color: context.cc.muted),
+      );
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -610,7 +721,10 @@ class _Moments extends StatelessWidget {
                                 bottom: 4,
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(99)),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(99),
+                                  ),
                                   child: Text(i.reactions.values.toSet().join(), style: const TextStyle(fontSize: 12)),
                                 ),
                               ),
@@ -634,7 +748,10 @@ class _Moments extends StatelessWidget {
                   Text(t.emoji, style: const TextStyle(fontSize: 24)),
                   const SizedBox(width: Space.s + 4),
                   Expanded(child: Text(t.title, style: context.tt.titleSmall)),
-                  Text(DateFormat('d MMM yyyy').format(t.date), style: context.tt.labelSmall?.copyWith(color: context.cc.muted)),
+                  Text(
+                    DateFormat('d MMM yyyy').format(t.date),
+                    style: context.tt.labelSmall?.copyWith(color: context.cc.muted),
+                  ),
                 ],
               ),
             ),

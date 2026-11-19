@@ -32,10 +32,10 @@ class FirebaseBackend implements CloserBackend {
     FirebaseFirestore? firestore,
     FirebaseStorage? storage,
     FirebaseFunctions? functions,
-  })  : _authOverride = auth,
-        _dbOverride = firestore,
-        _storageOverride = storage,
-        _functionsOverride = functions;
+  }) : _authOverride = auth,
+       _dbOverride = firestore,
+       _storageOverride = storage,
+       _functionsOverride = functions;
 
   static const region = 'europe-west1';
 
@@ -47,8 +47,7 @@ class FirebaseBackend implements CloserBackend {
   FirebaseAuth get _auth => _authOverride ?? FirebaseAuth.instance;
   FirebaseFirestore get _db => _dbOverride ?? FirebaseFirestore.instance;
   FirebaseStorage get _storage => _storageOverride ?? FirebaseStorage.instance;
-  FirebaseFunctions get _functions =>
-      _functionsOverride ?? FirebaseFunctions.instanceFor(region: region);
+  FirebaseFunctions get _functions => _functionsOverride ?? FirebaseFunctions.instanceFor(region: region);
 
   Future<void>? _googleInit;
   // Lives as long as the backend (app lifetime).
@@ -91,14 +90,16 @@ class FirebaseBackend implements CloserBackend {
     _userSub = null;
     _pairId = null;
     if (user == null) return;
-    _userSub = _db.doc('users/${user.uid}').snapshots().listen(
-      (snap) => _pairId = snap.data()?['pairId'] as String?,
-      onError: (Object e) => debugPrint('FirebaseBackend user stream: $e'),
-    );
+    _userSub = _db
+        .doc('users/${user.uid}')
+        .snapshots()
+        .listen(
+          (snap) => _pairId = snap.data()?['pairId'] as String?,
+          onError: (Object e) => debugPrint('FirebaseBackend user stream: $e'),
+        );
   }
 
-  Future<void> _ensureGoogle() =>
-      _googleInit ??= GoogleSignIn.instance.initialize();
+  Future<void> _ensureGoogle() => _googleInit ??= GoogleSignIn.instance.initialize();
 
   // ------------------------------------------------------------------ auth
 
@@ -130,9 +131,7 @@ class FirebaseBackend implements CloserBackend {
     if (idToken == null) {
       throw const CloserException('Google sign-in returned no ID token.');
     }
-    final cred = await _auth.signInWithCredential(
-      GoogleAuthProvider.credential(idToken: idToken),
-    );
+    final cred = await _auth.signInWithCredential(GoogleAuthProvider.credential(idToken: idToken));
     final user = cred.user;
     if (user == null) throw const CloserException('Sign-in failed.');
     await _ensureUserDoc(user, account);
@@ -192,35 +191,27 @@ class FirebaseBackend implements CloserBackend {
     if (displayName != null) update['displayName'] = _clip(displayName.trim(), 40);
     if (photoFilePath != null) {
       final ref = _storage.ref('users/$uid/avatar.jpg');
-      await ref.putFile(
-        File(photoFilePath),
-        SettableMetadata(contentType: _contentType(photoFilePath)),
-      );
+      await ref.putFile(File(photoFilePath), SettableMetadata(contentType: _contentType(photoFilePath)));
       update['photoUrl'] = await ref.getDownloadURL();
     }
     await _db.doc('users/$uid').set(update, SetOptions(merge: true));
   }
 
   @override
-  Future<void> setPendingMode(PairMode mode, {String? label}) => _updateMe({
-        'pendingMode': mode.name,
-        'pendingLabel': RelationLabel.validFor(label, mode),
-      });
+  Future<void> setPendingMode(PairMode mode, {String? label}) =>
+      _updateMe({'pendingMode': mode.name, 'pendingLabel': RelationLabel.validFor(label, mode)});
 
   @override
   Future<void> updateMood(Mood mood) async {
     await _updateMe({
-      'mood': {
-        'emoji': mood.emoji,
-        'label': _clip(mood.label, 40),
-        'updatedAt': FieldValue.serverTimestamp(),
-      },
+      'mood': {'emoji': mood.emoji, 'label': _clip(mood.label, 40), 'updatedAt': FieldValue.serverTimestamp()},
     });
     // Mood history for insights (best effort; the mood itself is saved).
     final pairId = _pairId;
     if (pairId == null) return;
     final n = DateTime.now();
-    final date = '${n.year.toString().padLeft(4, '0')}-${n.month.toString().padLeft(2, '0')}-${n.day.toString().padLeft(2, '0')}';
+    final date =
+        '${n.year.toString().padLeft(4, '0')}-${n.month.toString().padLeft(2, '0')}-${n.day.toString().padLeft(2, '0')}';
     try {
       await _db.doc('pairs/$pairId/moods/${_uid}_$date').set({
         'uid': _uid,
@@ -236,22 +227,16 @@ class FirebaseBackend implements CloserBackend {
 
   @override
   Future<void> updateStatus(StatusText status) => _updateMe({
-        'status': {
-          'text': _clip(status.text, 80),
-          'updatedAt': FieldValue.serverTimestamp(),
-        },
-      });
+    'status': {'text': _clip(status.text, 80), 'updatedAt': FieldValue.serverTimestamp()},
+  });
 
   @override
-  Future<void> setAgeConfirmed({required bool confirmed}) =>
-      _updateMe({'ageConfirmed18': confirmed});
+  Future<void> setAgeConfirmed({required bool confirmed}) => _updateMe({'ageConfirmed18': confirmed});
 
   @override
-  Future<void> updateNotificationPrefs(NotificationPrefs prefs) =>
-      _updateMe({'notificationPrefs': prefs.toJson()});
+  Future<void> updateNotificationPrefs(NotificationPrefs prefs) => _updateMe({'notificationPrefs': prefs.toJson()});
 
-  Future<void> _updateMe(Map<String, Object?> data) =>
-      _db.doc('users/$_uid').set(data, SetOptions(merge: true));
+  Future<void> _updateMe(Map<String, Object?> data) => _db.doc('users/$_uid').set(data, SetOptions(merge: true));
 
   // --------------------------------------------------------------- pairing
 
@@ -329,8 +314,7 @@ class FirebaseBackend implements CloserBackend {
       }
       if (nickname != null) {
         final n = nickname.trim();
-        update['nicknames.$_uid'] =
-            n.isEmpty ? FieldValue.delete() : (n.length > 24 ? n.substring(0, 24) : n);
+        update['nicknames.$_uid'] = n.isEmpty ? FieldValue.delete() : (n.length > 24 ? n.substring(0, 24) : n);
       }
       if (clearAnniversary) {
         update['anniversary'] = FieldValue.delete();
@@ -338,9 +322,7 @@ class FirebaseBackend implements CloserBackend {
         if (anniversary.isAfter(DateTime.now())) {
           throw const CloserException('Pick a date in the past');
         }
-        update['anniversary'] = Timestamp.fromDate(
-          DateTime(anniversary.year, anniversary.month, anniversary.day),
-        );
+        update['anniversary'] = Timestamp.fromDate(DateTime(anniversary.year, anniversary.month, anniversary.day));
       }
       if (update.isNotEmpty) tx.update(ref, update);
     });
@@ -368,10 +350,7 @@ class FirebaseBackend implements CloserBackend {
     final itemId = _db.collection('pairs/$pairId/items').doc().id;
     final ref = _storage.ref('pairs/$pairId/raw/$itemId.jpg');
     try {
-      await ref.putFile(
-        File(request.imagePath),
-        SettableMetadata(contentType: _contentType(request.imagePath)),
-      );
+      await ref.putFile(File(request.imagePath), SettableMetadata(contentType: _contentType(request.imagePath)));
     } on FirebaseException catch (e) {
       throw CloserException('Upload failed (${e.code}). Check your connection.');
     }
@@ -411,14 +390,14 @@ class FirebaseBackend implements CloserBackend {
         .limit(1)
         .snapshots()
         .map((q) {
-      if (q.docs.isEmpty) return 0;
-      final d = q.docs.first.data();
-      final expires = d['expiresAt'];
-      if (expires is Timestamp && expires.toDate().isBefore(DateTime.now())) {
-        return 0;
-      }
-      return (d['sends'] as num?)?.toInt() ?? 0;
-    });
+          if (q.docs.isEmpty) return 0;
+          final d = q.docs.first.data();
+          final expires = d['expiresAt'];
+          if (expires is Timestamp && expires.toDate().isBefore(DateTime.now())) {
+            return 0;
+          }
+          return (d['sends'] as num?)?.toInt() ?? 0;
+        });
   }
 
   @override
@@ -467,11 +446,7 @@ class FirebaseBackend implements CloserBackend {
       .orderBy('createdAt', descending: true)
       .limit(1)
       .snapshots()
-      .map(
-        (q) => q.docs.isEmpty
-            ? null
-            : Tap.fromJson(q.docs.first.id, q.docs.first.data()),
-      );
+      .map((q) => q.docs.isEmpty ? null : Tap.fromJson(q.docs.first.id, q.docs.first.data()));
 
   // ------------------------------------------------------------ miss meter
 
@@ -498,37 +473,33 @@ class FirebaseBackend implements CloserBackend {
             .limit(30)
             .snapshots()
             .listen(
-          (q) {
-            days = q.docs.map((d) => MissMeter.fromJson(d.id, d.data())).toList();
-            final uid = currentUid;
-            // Only today's (newest) value can still be hidden from the
-            // partner; older days carry both values once revealed.
-            if (uid != null && days.isNotEmpty) {
-              final latest = days.first.date;
-              if (!privateSubs.containsKey(latest)) {
-                privateSubs[latest] = _db
-                    .doc('pairs/$pairId/missMeters/$latest/private/$uid')
-                    .snapshots()
-                    .listen(
-                  (a) {
-                    mine[latest] = (a.data()?['value'] as num?)?.toInt();
-                    emit();
-                  },
-                  onError: (Object e) => debugPrint('miss meter private: $e'),
-                );
-              }
-            }
-            emit();
-          },
-          onError: (Object e, StackTrace st) {
-            if (_isPermissionDenied(e)) {
-              days = [];
-              emit();
-            } else {
-              controller.addError(e, st);
-            }
-          },
-        );
+              (q) {
+                days = q.docs.map((d) => MissMeter.fromJson(d.id, d.data())).toList();
+                final uid = currentUid;
+                // Only today's (newest) value can still be hidden from the
+                // partner; older days carry both values once revealed.
+                if (uid != null && days.isNotEmpty) {
+                  final latest = days.first.date;
+                  if (!privateSubs.containsKey(latest)) {
+                    privateSubs[latest] = _db.doc('pairs/$pairId/missMeters/$latest/private/$uid').snapshots().listen((
+                      a,
+                    ) {
+                      mine[latest] = (a.data()?['value'] as num?)?.toInt();
+                      emit();
+                    }, onError: (Object e) => debugPrint('miss meter private: $e'));
+                  }
+                }
+                emit();
+              },
+              onError: (Object e, StackTrace st) {
+                if (_isPermissionDenied(e)) {
+                  days = [];
+                  emit();
+                } else {
+                  controller.addError(e, st);
+                }
+              },
+            );
       },
       onCancel: () async {
         await listSub?.cancel();
@@ -547,7 +518,8 @@ class FirebaseBackend implements CloserBackend {
       'value': value.clamp(0, MissMeter.max),
       // The server accepts the device's local date if it is within a day of
       // the pair's date, so late-night answers land on the day you meant.
-      'date': '${now.year.toString().padLeft(4, '0')}-'
+      'date':
+          '${now.year.toString().padLeft(4, '0')}-'
           '${now.month.toString().padLeft(2, '0')}-'
           '${now.day.toString().padLeft(2, '0')}',
     });
@@ -579,39 +551,36 @@ class FirebaseBackend implements CloserBackend {
             .limit(1)
             .snapshots()
             .listen(
-          (q) {
-            if (q.docs.isEmpty) {
-              question = null;
-              emit();
-              return;
-            }
-            final doc = q.docs.first;
-            question = DailyQuestion.fromJson(doc.id, doc.data());
-            _latestQuestionDate = doc.id;
-            final uid = currentUid;
-            if (uid != null && privateFor != doc.id) {
-              privateFor = doc.id;
-              myAnswer = null;
-              unawaited(aSub?.cancel());
-              aSub = doc.reference.collection('private').doc(uid).snapshots().listen(
-                (a) {
-                  myAnswer = a.data()?['answer'] as String?;
+              (q) {
+                if (q.docs.isEmpty) {
+                  question = null;
                   emit();
-                },
-                onError: (Object e) => debugPrint('private answer: $e'),
-              );
-            }
-            emit();
-          },
-          onError: (Object e, StackTrace st) {
-            if (_isPermissionDenied(e)) {
-              question = null;
-              emit();
-            } else {
-              controller.addError(e, st);
-            }
-          },
-        );
+                  return;
+                }
+                final doc = q.docs.first;
+                question = DailyQuestion.fromJson(doc.id, doc.data());
+                _latestQuestionDate = doc.id;
+                final uid = currentUid;
+                if (uid != null && privateFor != doc.id) {
+                  privateFor = doc.id;
+                  myAnswer = null;
+                  unawaited(aSub?.cancel());
+                  aSub = doc.reference.collection('private').doc(uid).snapshots().listen((a) {
+                    myAnswer = a.data()?['answer'] as String?;
+                    emit();
+                  }, onError: (Object e) => debugPrint('private answer: $e'));
+                }
+                emit();
+              },
+              onError: (Object e, StackTrace st) {
+                if (_isPermissionDenied(e)) {
+                  question = null;
+                  emit();
+                } else {
+                  controller.addError(e, st);
+                }
+              },
+            );
       },
       onCancel: () async {
         await qSub?.cancel();
@@ -628,19 +597,11 @@ class FirebaseBackend implements CloserBackend {
       .orderBy('assignedAt', descending: true)
       .limit(120)
       .snapshots()
-      .map(
-        (q) => q.docs
-            .map((d) => DailyQuestion.fromJson(d.id, d.data()))
-            .where((d) => d.revealed)
-            .toList(),
-      );
+      .map((q) => q.docs.map((d) => DailyQuestion.fromJson(d.id, d.data())).where((d) => d.revealed).toList());
 
   @override
   Future<void> submitAnswer(String text) async {
-    await _call('submitAnswer', {
-      'answer': text,
-      if (_latestQuestionDate != null) 'date': _latestQuestionDate,
-    });
+    await _call('submitAnswer', {'answer': text, if (_latestQuestionDate != null) 'date': _latestQuestionDate});
   }
 
   @override
@@ -656,9 +617,7 @@ class FirebaseBackend implements CloserBackend {
       .collection('pairs/$pairId/countdowns')
       .orderBy('date')
       .snapshots()
-      .map(
-        (q) => q.docs.map((d) => Countdown.fromJson(d.id, d.data())).toList(),
-      );
+      .map((q) => q.docs.map((d) => Countdown.fromJson(d.id, d.data())).toList());
 
   /// Calendar events. The free countdown limit is enforced here (Firestore
   /// rules can't count docs); plain calendar events are unlimited.
@@ -687,7 +646,8 @@ class FirebaseBackend implements CloserBackend {
     await ref.set({
       'title': _clip(countdown.title, 60),
       'date': Timestamp.fromDate(moment),
-      'dateKey': '${day.year.toString().padLeft(4, '0')}-'
+      'dateKey':
+          '${day.year.toString().padLeft(4, '0')}-'
           '${day.month.toString().padLeft(2, '0')}-'
           '${day.day.toString().padLeft(2, '0')}',
       'emoji': countdown.emoji,
@@ -697,7 +657,8 @@ class FirebaseBackend implements CloserBackend {
       'remindDaysBefore': countdown.remindDaysBefore.clamp(0, 60),
       // The minute-level reminder job picks docs up by this instant.
       if (remindAt != null) 'nextRemindAt': Timestamp.fromDate(remindAt),
-      'createdBy': (existing?.data()?['createdBy'] as String?) ?? (countdown.createdBy.isEmpty ? _uid : countdown.createdBy),
+      'createdBy':
+          (existing?.data()?['createdBy'] as String?) ?? (countdown.createdBy.isEmpty ? _uid : countdown.createdBy),
       'updatedAt': FieldValue.serverTimestamp(),
       'category': countdown.category.name,
       'endDate': countdown.endDate == null ? null : Timestamp.fromDate(countdown.endDate!),
@@ -788,7 +749,13 @@ class FirebaseBackend implements CloserBackend {
       'due': todo.due == null ? null : Timestamp.fromDate(todo.due!),
     };
     if (todo.id.isEmpty) {
-      await col.add({...data, 'doneBy': null, 'doneAt': null, 'createdBy': _uid, 'createdAt': FieldValue.serverTimestamp()});
+      await col.add({
+        ...data,
+        'doneBy': null,
+        'doneAt': null,
+        'createdBy': _uid,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
     } else {
       await col.doc(todo.id).update(data);
     }
@@ -911,10 +878,7 @@ class FirebaseBackend implements CloserBackend {
     );
     final path = 'pairs/$pairId/media/$_uid/$id.jpg';
     try {
-      await _storage.ref(path).putFile(
-            File(out?.path ?? localPath),
-            SettableMetadata(contentType: 'image/jpeg'),
-          );
+      await _storage.ref(path).putFile(File(out?.path ?? localPath), SettableMetadata(contentType: 'image/jpeg'));
     } on FirebaseException catch (e) {
       throw CloserException('Upload failed (${e.code}). Check your connection.');
     }
@@ -943,11 +907,8 @@ class FirebaseBackend implements CloserBackend {
     final col = _db.collection('pairs/$pairId/capsules');
     var written = 0;
     if (envelope.kind == CapsuleKind.reason) {
-      written = (await col
-                  .where('authorId', isEqualTo: uid)
-                  .where('kind', isEqualTo: CapsuleKind.reason.name)
-                  .count()
-                  .get())
+      written =
+          (await col.where('authorId', isEqualTo: uid).where('kind', isEqualTo: CapsuleKind.reason.name).count().get())
               .count ??
           0;
     }
@@ -1065,10 +1026,7 @@ class FirebaseBackend implements CloserBackend {
   Future<void> saveShrine(Shrine shrine) async {
     final pairId = await _requirePairId();
     final clean = clampShrine(shrine);
-    await _db.doc('pairs/$pairId/shrines/$_uid').set({
-      ...clean.toJson(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+    await _db.doc('pairs/$pairId/shrines/$_uid').set({...clean.toJson(), 'updatedAt': FieldValue.serverTimestamp()});
   }
 
   // ------------------------------------------------------------------ chat
@@ -1097,7 +1055,7 @@ class FirebaseBackend implements CloserBackend {
     final ref = _db.collection('pairs/$pairId/messages').doc();
     String? media;
     final path = draft.localPath;
-    if (path != null) media = draft.type == MessageType.photo ? await uploadPhoto(path) : await uploadAudio(path);
+    if (path != null) media = draft.isImage ? await uploadPhoto(path) : await uploadAudio(path);
     final batch = _db.batch()
       ..set(ref, {
         'senderId': _uid,
@@ -1108,13 +1066,15 @@ class FirebaseBackend implements CloserBackend {
         'replyTo': draft.replyTo?.toJson(),
         'reactions': <String, String>{},
         'deletedAt': null,
+        'viewLimit': draft.type == MessageType.snap ? draft.viewLimit : 0,
+        'views': 0,
+        'event': draft.event?.name,
         'createdAt': FieldValue.serverTimestamp(),
       })
-      ..set(
-        _db.doc('pairs/$pairId/chatState/$_uid'),
-        {'readAt': FieldValue.serverTimestamp(), 'typingUntil': null},
-        SetOptions(merge: true),
-      );
+      ..set(_db.doc('pairs/$pairId/chatState/$_uid'), {
+        'readAt': FieldValue.serverTimestamp(),
+        'typingUntil': null,
+      }, SetOptions(merge: true));
     // Don't wait for the server: the local write shows the message now.
     unawaited(batch.commit().catchError((Object e) => debugPrint('sendMessage: $e')));
   }
@@ -1136,6 +1096,39 @@ class FirebaseBackend implements CloserBackend {
   }
 
   @override
+  Future<void> openSnap(String messageId) async {
+    final pairId = await _requirePairId();
+    final ref = _db.doc('pairs/$pairId/messages/$messageId');
+    await _db.runTransaction((tx) async {
+      final snap = await tx.get(ref);
+      final m = ChatMessage.fromJson(snap.id, snap.data() ?? const {});
+      if (!m.isSnap || m.senderId == _uid) return;
+      if (m.snapUsedUp) throw const CloserException('This snap has already been opened');
+      tx.update(ref, {'views': m.views + 1});
+    });
+  }
+
+  @override
+  Future<void> sendChatEvent(ChatEvent event, {ReplyRef? about}) async {
+    final pairId = _pairId;
+    if (currentUid == null || pairId == null) return;
+    await _db.collection('pairs/$pairId/messages').add({
+      'senderId': _uid,
+      'type': MessageType.event.name,
+      'text': '',
+      'mediaPath': null,
+      'durationMs': 0,
+      'replyTo': about?.toJson(),
+      'reactions': <String, String>{},
+      'deletedAt': null,
+      'viewLimit': 0,
+      'views': 0,
+      'event': event.name,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  @override
   Stream<Map<String, ChatState>> watchChatState(String pairId) => _db
       .collection('pairs/$pairId/chatState')
       .snapshots()
@@ -1151,7 +1144,9 @@ class FirebaseBackend implements CloserBackend {
     final uid = currentUid;
     final pairId = _pairId;
     if (uid == null || pairId == null) return;
-    await _db.doc('pairs/$pairId/chatState/$uid').set({'readAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
+    await _db.doc('pairs/$pairId/chatState/$uid').set({
+      'readAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   @override
@@ -1305,9 +1300,7 @@ class FirebaseBackend implements CloserBackend {
 
   @override
   Future<void> debugSetPremium({required bool active}) {
-    throw UnsupportedError(
-      'Premium is set by the RevenueCat webhook on the Firebase backend.',
-    );
+    throw UnsupportedError('Premium is set by the RevenueCat webhook on the Firebase backend.');
   }
 
   // ------------------------------------------------------------------- FCM
@@ -1324,9 +1317,11 @@ class FirebaseBackend implements CloserBackend {
     // Token refresh for the same classic-token flow as above.
     // ignore: deprecated_member_use
     _tokenSub ??= messaging.onTokenRefresh.listen(
-      (t) => unawaited(_registerToken(t).catchError((Object e) {
-        debugPrint('registerFcmToken failed: $e');
-      })),
+      (t) => unawaited(
+        _registerToken(t).catchError((Object e) {
+          debugPrint('registerFcmToken failed: $e');
+        }),
+      ),
     );
   }
 
@@ -1349,10 +1344,7 @@ class FirebaseBackend implements CloserBackend {
     return _pairId = pairId;
   }
 
-  Future<Map<String, dynamic>> _call(
-    String name,
-    Map<String, Object?> data,
-  ) async {
+  Future<Map<String, dynamic>> _call(String name, Map<String, Object?> data) async {
     try {
       final result = await _functions.httpsCallable(name).call<Object?>(data);
       final value = _deep(result.data);
@@ -1368,9 +1360,7 @@ class FirebaseBackend implements CloserBackend {
     final message = e.message ?? 'Something went wrong.';
     final limit = map['limit'] as String?;
     if (e.code == 'resource-exhausted' && limit != null) {
-      return _paywallLimits.contains(limit)
-          ? LimitReachedException(limit, message)
-          : CloserException(message);
+      return _paywallLimits.contains(limit) ? LimitReachedException(limit, message) : CloserException(message);
     }
     switch (e.code) {
       case 'unavailable':
@@ -1393,21 +1383,19 @@ class FirebaseBackend implements CloserBackend {
     return v;
   }
 
-  static bool _isPermissionDenied(Object e) =>
-      e is FirebaseException && e.code == 'permission-denied';
+  static bool _isPermissionDenied(Object e) => e is FirebaseException && e.code == 'permission-denied';
 
   /// After unpairing (or before a doc exists) listeners can be denied; turn
   /// that into `null` instead of an error.
-  static StreamTransformer<T?, T?> _nullOnPermissionDenied<T>() =>
-      StreamTransformer<T?, T?>.fromHandlers(
-        handleError: (e, st, sink) {
-          if (_isPermissionDenied(e)) {
-            sink.add(null);
-          } else {
-            sink.addError(e, st);
-          }
-        },
-      );
+  static StreamTransformer<T?, T?> _nullOnPermissionDenied<T>() => StreamTransformer<T?, T?>.fromHandlers(
+    handleError: (e, st, sink) {
+      if (_isPermissionDenied(e)) {
+        sink.add(null);
+      } else {
+        sink.addError(e, st);
+      }
+    },
+  );
 
   /// Like [_nullOnPermissionDenied] for list streams.
   static StreamTransformer<List<T>, List<T>> _emptyOnPermissionDenied<T>() =>
@@ -1421,8 +1409,7 @@ class FirebaseBackend implements CloserBackend {
         },
       );
 
-  static String _clip(String s, int max) =>
-      s.length <= max ? s : s.substring(0, max);
+  static String _clip(String s, int max) => s.length <= max ? s : s.substring(0, max);
 
   static String _contentType(String path) {
     final p = path.toLowerCase();

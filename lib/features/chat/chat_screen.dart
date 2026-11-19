@@ -3,10 +3,12 @@ import 'dart:async';
 import 'package:closer_app/app/providers.dart';
 import 'package:closer_app/core/data/closer_backend.dart';
 import 'package:closer_app/core/models/models.dart';
+import 'package:closer_app/core/services/screen_guard.dart';
 import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:closer_app/core/ui/actions.dart';
 import 'package:closer_app/core/ui/components.dart';
 import 'package:closer_app/core/ui/voice.dart';
+import 'package:closer_app/features/chat/snap_widgets.dart';
 import 'package:closer_app/features/love/love_widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -17,8 +19,9 @@ import 'package:intl/intl.dart';
 
 const _chatReactions = ['❤️', '😂', '😍', '🥹', '😮', '👍'];
 
-/// Private chat (F11): text, photos, voice messages, replies, reactions,
-/// "typing…" and "Seen".
+/// Private chat (F11): text, photos, voice messages, disappearing snaps,
+/// replies, reactions, "typing…" and "Seen". Screenshots and saved photos
+/// show up as a line in the chat for both of you.
 class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
 
@@ -39,6 +42,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   DateTime _lastTypingSent = DateTime(0);
   Timer? _typingIdle;
   Timer? _readDebounce;
+  StreamSubscription<void>? _screenshots;
+  DateTime _lastScreenshot = DateTime(0);
 
   /// Kept from initState: timers and dispose must not touch `ref`.
   late final CloserBackend _backend;
@@ -49,12 +54,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _backend = ref.read(backendProvider);
     ChatScreen.isOpen = true;
     _text.addListener(_onTextChanged);
+    _screenshots = ScreenGuard.screenshots.listen((_) => _onScreenshot());
     WidgetsBinding.instance.addPostFrameCallback((_) => _markRead());
+  }
+
+  /// Tells the partner (one line per burst of screenshots).
+  void _onScreenshot() {
+    final now = DateTime.now();
+    if (now.difference(_lastScreenshot) < const Duration(seconds: 3)) return;
+    _lastScreenshot = now;
+    final snap = SnapViewer.showing;
+    final about = snap == null ? null : ReplyRef(id: snap.id, senderId: snap.senderId, preview: snap.preview);
+    unawaited(_backend.sendChatEvent(ChatEvent.screenshot, about: about).catchError((Object e) => debugPrint('screenshot event: $e')));
   }
 
   @override
   void dispose() {
     ChatScreen.isOpen = false;
+    unawaited(_screenshots?.cancel());
     _typingIdle?.cancel();
     _readDebounce?.cancel();
     if (_lastTypingSent.isAfter(DateTime.now().subtract(const Duration(seconds: 6)))) {
@@ -117,8 +134,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(leading: const Icon(Icons.photo_camera_rounded), title: const Text('Camera'), onTap: () => Navigator.pop(ctx, ImageSource.camera)),
-            ListTile(leading: const Icon(Icons.photo_library_rounded), title: const Text('Gallery'), onTap: () => Navigator.pop(ctx, ImageSource.gallery)),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_rounded),
+              title: const Text('Camera'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_rounded),
+              title: const Text('Gallery'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
           ],
         ),
       ),
@@ -129,6 +154,74 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final caption = _text.text.trim();
     _text.clear();
     await _send(ChatDraft(type: MessageType.photo, localPath: x.path, text: caption, replyTo: _replyTo));
+  }
+
+  Future<void> _pickSnap() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text('👻 Disappearing snap', style: ctx.tt.titleMedium),
+              subtitle: const Text('Opens once or twice, then it’s gone'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_rounded),
+              title: const Text('Camera'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_rounded),
+              title: const Text('Gallery'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+    final x = await ImagePicker().pickImage(source: source, maxWidth: 2000, maxHeight: 2000, imageQuality: 90);
+    if (x == null || !mounted) return;
+    final views = await showSnapSendSheet(context, x.path, ref.read(partnerNameProvider));
+    if (views == null || !mounted) return;
+    await _send(ChatDraft(type: MessageType.snap, localPath: x.path, viewLimit: views, replyTo: _replyTo));
+  }
+
+  Future<void> _openSnap(ChatMessage m, String? me, String name) async {
+    if (m.senderId == me) {
+      final seen = switch (m.views) {
+        0 => 'Not opened yet',
+        1 => 'Opened once',
+        _ => 'Opened ${m.views} times',
+      };
+      showToast(context, seen, icon: Icons.visibility_rounded);
+      return;
+    }
+    if (m.snapUsedUp) {
+      showToast(context, 'This snap is gone 👻');
+      return;
+    }
+    hapticSoft();
+    await SnapViewer.open(context, m, name);
+  }
+
+  Future<void> _savePhoto(ChatMessage m, String? me) async {
+    final ok = await runAction(context, () => savePhotoToPhone(_backend, m.mediaPath));
+    if (!ok || !mounted) return;
+    showToast(context, 'Saved to your photos', icon: Icons.download_done_rounded);
+    // Saving their photo tells them, like a screenshot does.
+    if (m.senderId != me) {
+      unawaited(
+        _backend
+            .sendChatEvent(
+              ChatEvent.saved,
+              about: ReplyRef(id: m.id, senderId: m.senderId, preview: m.preview),
+            )
+            .catchError((Object e) => debugPrint('saved event: $e')),
+      );
+    }
   }
 
   Future<void> _startRecording() async {
@@ -164,14 +257,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   void _reply(ChatMessage m) {
-    if (m.isDeleted) return;
+    if (m.isDeleted || m.isEvent) return;
     hapticSoft();
     setState(() => _replyTo = ReplyRef(id: m.id, senderId: m.senderId, preview: m.preview));
     _focus.requestFocus();
   }
 
   Future<void> _actions(ChatMessage m, String? me) async {
-    if (m.isDeleted) return;
+    if (m.isDeleted || m.isEvent) return;
     hapticMedium();
     final mine = m.senderId == me;
     final current = me == null ? null : m.reactions[me];
@@ -202,6 +295,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             ListTile(leading: const Icon(Icons.reply_rounded), title: const Text('Reply'), onTap: () => Navigator.pop(ctx, 'reply')),
             if (m.type == MessageType.text)
               ListTile(leading: const Icon(Icons.copy_rounded), title: const Text('Copy'), onTap: () => Navigator.pop(ctx, 'copy')),
+            if (m.type == MessageType.photo && m.mediaPath != null)
+              ListTile(
+                leading: const Icon(Icons.download_rounded),
+                title: const Text('Save to phone'),
+                subtitle: mine ? null : Text('$_partnerName will see that you saved it'),
+                onTap: () => Navigator.pop(ctx, 'save'),
+              ),
             if (mine)
               ListTile(
                 leading: Icon(Icons.delete_outline_rounded, color: ctx.cs.error),
@@ -222,10 +322,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     } else if (action == 'copy') {
       await Clipboard.setData(ClipboardData(text: m.text));
       if (mounted) showToast(context, 'Copied');
+    } else if (action == 'save') {
+      await _savePhoto(m, me);
     } else if (action == 'delete') {
       await runAction(context, () => backend.deleteMessage(m.id));
     }
   }
+
+  String get _partnerName => ref.read(partnerNameProvider);
 
   @override
   Widget build(BuildContext context) {
@@ -239,7 +343,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final partnerState = partnerUid == null ? null : states[partnerUid];
     final typing = partnerState?.isTyping(DateTime.now()) ?? false;
     final partnerRead = partnerState?.readAt;
-    final lastMine = messages.lastWhere((m) => m.senderId == me, orElse: () => ChatMessage(id: '', senderId: '', createdAt: DateTime(0)));
+    final lastMine = messages.lastWhere(
+      (m) => m.senderId == me && !m.isEvent,
+      orElse: () => ChatMessage(id: '', senderId: '', createdAt: DateTime(0)),
+    );
     ref.listen(messagesProvider, (_, _) => _markRead());
 
     return Scaffold(
@@ -257,10 +364,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   AnimatedSwitcher(
                     duration: 200.ms,
                     child: typing
-                        ? Text('typing…', key: const ValueKey('t'), style: context.tt.bodySmall?.copyWith(color: context.cc.accent))
+                        ? Text(
+                            'typing…',
+                            key: const ValueKey('t'),
+                            style: context.tt.bodySmall?.copyWith(color: context.cc.accent),
+                          )
                         : partner?.mood != null
-                            ? Text('${partner!.mood!.emoji} ${partner.mood!.label}', key: const ValueKey('m'), style: context.tt.bodySmall?.copyWith(color: context.cc.muted))
-                            : const SizedBox.shrink(key: ValueKey('n')),
+                        ? Text(
+                            '${partner!.mood!.emoji} ${partner.mood!.label}',
+                            key: const ValueKey('m'),
+                            style: context.tt.bodySmall?.copyWith(color: context.cc.muted),
+                          )
+                        : const SizedBox.shrink(key: ValueKey('n')),
                   ),
                 ],
               ),
@@ -284,22 +399,30 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       final prev = idx > 0 ? messages[idx - 1] : null;
                       final next = idx < messages.length - 1 ? messages[idx + 1] : null;
                       final newDay = prev == null || !_sameDay(prev.createdAt, m.createdAt);
-                      final groupedWithNext = next != null && next.senderId == m.senderId && next.createdAt.difference(m.createdAt).inMinutes < 3;
+                      final groupedWithNext =
+                          next != null &&
+                          !next.isEvent &&
+                          next.senderId == m.senderId &&
+                          next.createdAt.difference(m.createdAt).inMinutes < 3;
                       final seen = m.id == lastMine.id && partnerRead != null && !partnerRead.isBefore(m.createdAt);
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           if (newDay) _DaySeparator(day: m.createdAt, now: now),
-                          _Bubble(
-                            message: m,
-                            mine: m.senderId == me,
-                            me: me,
-                            name: name,
-                            tail: !groupedWithNext,
-                            seen: seen,
-                            onLongPress: () => _actions(m, me),
-                            onSwipeReply: () => _reply(m),
-                          ),
+                          if (m.isEvent)
+                            _EventLine(message: m, mine: m.senderId == me, name: name)
+                          else
+                            _Bubble(
+                              message: m,
+                              mine: m.senderId == me,
+                              me: me,
+                              name: name,
+                              tail: !groupedWithNext,
+                              seen: seen,
+                              onLongPress: () => _actions(m, me),
+                              onSwipeReply: () => _reply(m),
+                              onOpenSnap: () => _openSnap(m, me, name),
+                            ),
                         ],
                       );
                     },
@@ -317,13 +440,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(_replyTo!.senderId == me ? 'Replying to yourself' : 'Replying to $name',
-                            style: context.tt.labelMedium?.copyWith(color: context.cc.accent)),
+                        Text(
+                          _replyTo!.senderId == me ? 'Replying to yourself' : 'Replying to $name',
+                          style: context.tt.labelMedium?.copyWith(color: context.cc.accent),
+                        ),
                         Text(_replyTo!.preview, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.tt.bodySmall),
                       ],
                     ),
                   ),
-                  IconButton(tooltip: 'Cancel reply', icon: const Icon(Icons.close_rounded), onPressed: () => setState(() => _replyTo = null)),
+                  IconButton(
+                    tooltip: 'Cancel reply',
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () => setState(() => _replyTo = null),
+                  ),
                 ],
               ),
             ),
@@ -338,7 +467,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     : Row(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          IconButton(tooltip: 'Send a photo', icon: const Icon(Icons.add_photo_alternate_rounded), onPressed: _sending ? null : _pickPhoto),
+                          IconButton(
+                            tooltip: 'Send a photo',
+                            icon: const Icon(Icons.add_photo_alternate_rounded),
+                            onPressed: _sending ? null : _pickPhoto,
+                          ),
+                          if (_text.text.trim().isEmpty)
+                            IconButton(
+                              tooltip: 'Send a disappearing snap',
+                              icon: const Text('👻', style: TextStyle(fontSize: 20)),
+                              onPressed: _sending ? null : _pickSnap,
+                            ),
                           Expanded(
                             child: TextField(
                               controller: _text,
@@ -368,7 +507,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             IconButton.filled(
                               tooltip: 'Send',
                               icon: _sending
-                                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                    )
                                   : const Icon(Icons.send_rounded),
                               onPressed: _sending ? null : _sendText,
                             ),
@@ -397,8 +540,8 @@ class _DaySeparator extends StatelessWidget {
     final label = _sameDay(day, now)
         ? 'Today'
         : _sameDay(day, yesterday)
-            ? 'Yesterday'
-            : DateFormat(day.year == now.year ? 'EEEE d MMMM' : 'd MMMM yyyy').format(day);
+        ? 'Yesterday'
+        : DateFormat(day.year == now.year ? 'EEEE d MMMM' : 'd MMMM yyyy').format(day);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: Space.s),
       child: Center(
@@ -407,6 +550,119 @@ class _DaySeparator extends StatelessWidget {
           decoration: BoxDecoration(color: context.cc.card, borderRadius: BorderRadius.circular(999)),
           child: Text(label, style: context.tt.labelSmall?.copyWith(color: context.cc.muted)),
         ),
+      ),
+    );
+  }
+}
+
+/// "📸 Sam took a screenshot" — centred, like a day separator.
+class _EventLine extends StatelessWidget {
+  const _EventLine({required this.message, required this.mine, required this.name});
+
+  final ChatMessage message;
+  final bool mine;
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    final who = mine ? 'You' : name;
+    final about = message.replyTo;
+    // Whose photo it was, from the reader's side.
+    final String owner;
+    if (about == null) {
+      owner = '';
+    } else if (about.senderId == message.senderId) {
+      owner = mine ? 'your own' : 'their own';
+    } else {
+      owner = mine ? '$name’s' : 'your';
+    }
+    final what = (about?.preview.startsWith('👻') ?? false) ? 'snap' : 'photo';
+    final text = switch (message.event) {
+      ChatEvent.screenshot when about != null => '📸 $who took a screenshot of $owner $what',
+      ChatEvent.screenshot => '📸 $who took a screenshot of the chat',
+      ChatEvent.saved when about != null => '⬇️ $who saved $owner photo',
+      ChatEvent.saved => '⬇️ $who saved a photo',
+      null => '',
+    };
+    final time = DateFormat('HH:mm').format(message.createdAt);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: Space.xs),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+          decoration: BoxDecoration(color: context.cc.accentTint, borderRadius: BorderRadius.circular(999)),
+          child: Text(
+            '$text · $time',
+            textAlign: TextAlign.center,
+            style: context.tt.labelSmall?.copyWith(color: context.cc.accent, fontWeight: FontWeight.w600),
+          ),
+        ),
+      ),
+    ).animate().fadeIn(duration: 250.ms);
+  }
+}
+
+/// A snap in the chat: "Tap to view" for the partner, its status for you.
+class _SnapTile extends StatelessWidget {
+  const _SnapTile({required this.message, required this.mine, required this.fg, required this.onTap});
+
+  final ChatMessage message;
+  final bool mine;
+  final Color fg;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final m = message;
+    final gone = m.snapUsedUp;
+    final String title;
+    final String sub;
+    if (mine) {
+      title = 'Snap';
+      sub = switch (m.views) {
+        0 => m.pending ? 'Sending…' : 'Delivered · opens ${m.viewLimit == 1 ? 'once' : 'twice'}',
+        _ when gone => 'Opened',
+        _ => 'Opened once · 1 view left',
+      };
+    } else if (gone) {
+      title = 'Snap';
+      sub = 'Opened';
+    } else {
+      title = 'Tap to view';
+      sub = m.snapViewsLeft == 1 ? '1 view left' : '${m.snapViewsLeft} views left';
+    }
+    final active = !mine && !gone;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: active ? context.cc.accent : fg.withValues(alpha: 0.12),
+              border: gone ? Border.all(color: fg.withValues(alpha: 0.4), width: 1.5) : null,
+            ),
+            child: Text(gone ? '✓' : '👻', style: TextStyle(fontSize: 16, color: fg)),
+          ),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
+                style: context.tt.titleSmall?.copyWith(color: fg, fontWeight: FontWeight.w700),
+              ),
+              Text(sub, style: context.tt.bodySmall?.copyWith(color: fg.withValues(alpha: 0.75))),
+            ],
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
     );
   }
@@ -428,11 +684,11 @@ class _TypingBubble extends StatelessWidget {
           children: [
             for (var i = 0; i < 3; i++)
               Container(
-                width: 7,
-                height: 7,
-                margin: const EdgeInsets.symmetric(horizontal: 2),
-                decoration: BoxDecoration(color: context.cc.muted, shape: BoxShape.circle),
-              )
+                    width: 7,
+                    height: 7,
+                    margin: const EdgeInsets.symmetric(horizontal: 2),
+                    decoration: BoxDecoration(color: context.cc.muted, shape: BoxShape.circle),
+                  )
                   .animate(onPlay: (c) => c.repeat(reverse: true), delay: (i * 150).ms)
                   .moveY(begin: 0, end: -4, duration: 350.ms, curve: Curves.easeInOut),
           ],
@@ -452,6 +708,7 @@ class _Bubble extends StatefulWidget {
     required this.seen,
     required this.onLongPress,
     required this.onSwipeReply,
+    required this.onOpenSnap,
   });
 
   final ChatMessage message;
@@ -462,6 +719,7 @@ class _Bubble extends StatefulWidget {
   final bool seen;
   final VoidCallback onLongPress;
   final VoidCallback onSwipeReply;
+  final VoidCallback onOpenSnap;
 
   @override
   State<_Bubble> createState() => _BubbleState();
@@ -485,30 +743,32 @@ class _BubbleState extends State<_Bubble> {
 
     Widget content;
     if (m.isDeleted) {
-      content = Text('🚫 Message deleted', style: TextStyle(color: fg.withValues(alpha: 0.7), fontStyle: FontStyle.italic));
+      content = Text(
+        '🚫 Message deleted',
+        style: TextStyle(color: fg.withValues(alpha: 0.7), fontStyle: FontStyle.italic),
+      );
     } else {
       content = switch (m.type) {
         MessageType.text => Text(m.text, style: context.tt.bodyLarge?.copyWith(color: fg, height: 1.3)),
         MessageType.voice => VoicePlayer(mediaPath: m.mediaPath, durationMs: m.durationMs, onDark: mine, seed: m.id.hashCode),
+        MessageType.snap => _SnapTile(message: m, mine: mine, fg: fg, onTap: widget.onOpenSnap),
+        MessageType.event => const SizedBox.shrink(),
         MessageType.photo => Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              GestureDetector(
-                onTap: () => _openPhoto(context, m.mediaPath),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 240, maxHeight: 300),
-                    child: m.mediaPath == null ? const SizedBox(width: 200, height: 150) : StoredImage(m.mediaPath),
-                  ),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            GestureDetector(
+              onTap: () => _openPhoto(context, m.mediaPath),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 240, maxHeight: 300),
+                  child: m.mediaPath == null ? const SizedBox(width: 200, height: 150) : StoredImage(m.mediaPath),
                 ),
               ),
-              if (m.text.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                Text(m.text, style: context.tt.bodyLarge?.copyWith(color: fg)),
-              ],
-            ],
-          ),
+            ),
+            if (m.text.isNotEmpty) ...[const SizedBox(height: 6), Text(m.text, style: context.tt.bodyLarge?.copyWith(color: fg))],
+          ],
+        ),
       };
     }
 
@@ -539,9 +799,14 @@ class _BubbleState extends State<_Bubble> {
                 children: [
                   Text(
                     r.senderId == widget.me ? 'You' : widget.name,
-                    style: context.tt.labelSmall?.copyWith(color: mine ? Colors.white : context.cc.accent, fontWeight: FontWeight.w800),
+                    style: context.tt.labelSmall?.copyWith(color: mine ? Colors.white : context.cc.accent, fontWeight: FontWeight.w700),
                   ),
-                  Text(r.preview, maxLines: 2, overflow: TextOverflow.ellipsis, style: context.tt.bodySmall?.copyWith(color: fg.withValues(alpha: 0.85))),
+                  Text(
+                    r.preview,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.tt.bodySmall?.copyWith(color: fg.withValues(alpha: 0.85)),
+                  ),
                 ],
               ),
             ),
@@ -615,14 +880,18 @@ class _BubbleState extends State<_Bubble> {
 
   void _openPhoto(BuildContext context, String? path) {
     if (path == null) return;
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => Scaffold(
-          backgroundColor: Colors.black,
-          appBar: AppBar(backgroundColor: Colors.black, foregroundColor: Colors.white),
-          body: InteractiveViewer(child: Center(child: StoredImage(path, fit: BoxFit.contain))),
-        ),
-      ),
-    ).ignore();
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute<void>(
+            builder: (_) => Scaffold(
+              backgroundColor: Colors.black,
+              appBar: AppBar(backgroundColor: Colors.black, foregroundColor: Colors.white),
+              body: InteractiveViewer(
+                child: Center(child: StoredImage(path, fit: BoxFit.contain)),
+              ),
+            ),
+          ),
+        )
+        .ignore();
   }
 }

@@ -21,15 +21,13 @@ DateTime? _date(Object? v) {
 
 int? _ms(DateTime? d) => d?.millisecondsSinceEpoch;
 
-Map<String, dynamic> _map(Object? v) =>
-    v is Map ? Map<String, dynamic>.from(v) : <String, dynamic>{};
+Map<String, dynamic> _map(Object? v) => v is Map ? Map<String, dynamic>.from(v) : <String, dynamic>{};
 
 enum PairMode {
   couple,
   friends;
 
-  static PairMode parse(Object? v) =>
-      v == 'friends' ? PairMode.friends : PairMode.couple;
+  static PairMode parse(Object? v) => v == 'friends' ? PairMode.friends : PairMode.couple;
 }
 
 /// What one person calls the other ("my girlfriend", "my best friend").
@@ -56,8 +54,7 @@ class RelationLabel {
     RelationLabel('sibling', 'Sibling', '🧡', PairMode.friends),
   ];
 
-  static List<RelationLabel> forMode(PairMode mode) =>
-      all.where((l) => l.mode == mode).toList();
+  static List<RelationLabel> forMode(PairMode mode) => all.where((l) => l.mode == mode).toList();
 
   static RelationLabel? byId(String? id) {
     for (final l in all) {
@@ -82,8 +79,7 @@ enum ItemType {
   /// Camera photo stamped with where it was taken (see [GeoTag]).
   location;
 
-  static ItemType parse(Object? v) =>
-      ItemType.values.firstWhere((t) => t.name == v, orElse: () => photo);
+  static ItemType parse(Object? v) => ItemType.values.firstWhere((t) => t.name == v, orElse: () => photo);
 }
 
 @immutable
@@ -91,27 +87,24 @@ class Mood {
   const Mood({required this.emoji, required this.label, required this.updatedAt});
 
   factory Mood.fromJson(Map<String, dynamic> j) => Mood(
-        emoji: j['emoji'] as String? ?? '🙂',
-        label: j['label'] as String? ?? '',
-        updatedAt: _date(j['updatedAt']) ?? DateTime.now(),
-      );
+    emoji: j['emoji'] as String? ?? '🙂',
+    label: j['label'] as String? ?? '',
+    updatedAt: _date(j['updatedAt']) ?? DateTime.now(),
+  );
 
   final String emoji;
   final String label;
   final DateTime updatedAt;
 
-  Map<String, dynamic> toJson() =>
-      {'emoji': emoji, 'label': label, 'updatedAt': _ms(updatedAt)};
+  Map<String, dynamic> toJson() => {'emoji': emoji, 'label': label, 'updatedAt': _ms(updatedAt)};
 }
 
 @immutable
 class StatusText {
   const StatusText({required this.text, required this.updatedAt});
 
-  factory StatusText.fromJson(Map<String, dynamic> j) => StatusText(
-        text: j['text'] as String? ?? '',
-        updatedAt: _date(j['updatedAt']) ?? DateTime.now(),
-      );
+  factory StatusText.fromJson(Map<String, dynamic> j) =>
+      StatusText(text: j['text'] as String? ?? '', updatedAt: _date(j['updatedAt']) ?? DateTime.now());
 
   final String text;
   final DateTime updatedAt;
@@ -160,23 +153,22 @@ class NotificationPrefs {
     bool? chat,
     int? Function()? quietStart,
     int? Function()? quietEnd,
-  }) =>
-      NotificationPrefs(
-        taps: taps ?? this.taps,
-        questions: questions ?? this.questions,
-        reminders: reminders ?? this.reminders,
-        chat: chat ?? this.chat,
-        quietStart: quietStart != null ? quietStart() : this.quietStart,
-        quietEnd: quietEnd != null ? quietEnd() : this.quietEnd,
-      );
+  }) => NotificationPrefs(
+    taps: taps ?? this.taps,
+    questions: questions ?? this.questions,
+    reminders: reminders ?? this.reminders,
+    chat: chat ?? this.chat,
+    quietStart: quietStart != null ? quietStart() : this.quietStart,
+    quietEnd: quietEnd != null ? quietEnd() : this.quietEnd,
+  );
 
   Map<String, dynamic> toJson() => {
-        'taps': taps,
-        'questions': questions,
-        'reminders': reminders,
-        'chat': chat,
-        'quietHours': {'start': quietStart, 'end': quietEnd},
-      };
+    'taps': taps,
+    'questions': questions,
+    'reminders': reminders,
+    'chat': chat,
+    'quietHours': {'start': quietStart, 'end': quietEnd},
+  };
 }
 
 @immutable
@@ -198,23 +190,20 @@ class AppUser {
   });
 
   factory AppUser.fromJson(String uid, Map<String, dynamic> j) => AppUser(
-        uid: uid,
-        displayName: j['displayName'] as String? ?? '',
-        photoUrl: j['photoUrl'] as String?,
-        pairId: j['pairId'] as String?,
-        mood: j['mood'] == null ? null : Mood.fromJson(_map(j['mood'])),
-        status:
-            j['status'] == null ? null : StatusText.fromJson(_map(j['status'])),
-        ageConfirmed18: j['ageConfirmed18'] as bool? ?? false,
-        notificationPrefs:
-            NotificationPrefs.fromJson(_map(j['notificationPrefs'])),
-        locale: j['locale'] as String? ?? 'en',
-        timezone: j['timezone'] as String? ?? 'UTC',
-        pendingMode:
-            j['pendingMode'] == null ? null : PairMode.parse(j['pendingMode']),
-        pendingLabel: j['pendingLabel'] as String?,
-        createdAt: _date(j['createdAt']) ?? DateTime.now(),
-      );
+    uid: uid,
+    displayName: j['displayName'] as String? ?? '',
+    photoUrl: j['photoUrl'] as String?,
+    pairId: j['pairId'] as String?,
+    mood: j['mood'] == null ? null : Mood.fromJson(_map(j['mood'])),
+    status: j['status'] == null ? null : StatusText.fromJson(_map(j['status'])),
+    ageConfirmed18: j['ageConfirmed18'] as bool? ?? false,
+    notificationPrefs: NotificationPrefs.fromJson(_map(j['notificationPrefs'])),
+    locale: j['locale'] as String? ?? 'en',
+    timezone: j['timezone'] as String? ?? 'UTC',
+    pendingMode: j['pendingMode'] == null ? null : PairMode.parse(j['pendingMode']),
+    pendingLabel: j['pendingLabel'] as String?,
+    createdAt: _date(j['createdAt']) ?? DateTime.now(),
+  );
 
   final String uid;
   final String displayName;
@@ -241,19 +230,19 @@ class AppUser {
   bool get isPaired => pairId != null;
 
   Map<String, dynamic> toJson() => {
-        'displayName': displayName,
-        'photoUrl': photoUrl,
-        'pairId': pairId,
-        'mood': mood?.toJson(),
-        'status': status?.toJson(),
-        'ageConfirmed18': ageConfirmed18,
-        'notificationPrefs': notificationPrefs.toJson(),
-        'locale': locale,
-        'timezone': timezone,
-        'pendingMode': pendingMode?.name,
-        'pendingLabel': pendingLabel,
-        'createdAt': _ms(createdAt),
-      };
+    'displayName': displayName,
+    'photoUrl': photoUrl,
+    'pairId': pairId,
+    'mood': mood?.toJson(),
+    'status': status?.toJson(),
+    'ageConfirmed18': ageConfirmed18,
+    'notificationPrefs': notificationPrefs.toJson(),
+    'locale': locale,
+    'timezone': timezone,
+    'pendingMode': pendingMode?.name,
+    'pendingLabel': pendingLabel,
+    'createdAt': _ms(createdAt),
+  };
 }
 
 @immutable
@@ -267,12 +256,12 @@ class Invite {
   });
 
   factory Invite.fromJson(String code, Map<String, dynamic> j) => Invite(
-        code: code,
-        inviterUid: j['inviterUid'] as String? ?? '',
-        mode: PairMode.parse(j['mode']),
-        expiresAt: _date(j['expiresAt']) ?? DateTime.now(),
-        usedBy: j['usedBy'] as String?,
-      );
+    code: code,
+    inviterUid: j['inviterUid'] as String? ?? '',
+    mode: PairMode.parse(j['mode']),
+    expiresAt: _date(j['expiresAt']) ?? DateTime.now(),
+    usedBy: j['usedBy'] as String?,
+  );
 
   final String code;
   final String inviterUid;
@@ -284,11 +273,11 @@ class Invite {
   String get link => 'https://closer.app/i/$code';
 
   Map<String, dynamic> toJson() => {
-        'inviterUid': inviterUid,
-        'mode': mode.name,
-        'expiresAt': _ms(expiresAt),
-        'usedBy': usedBy,
-      };
+    'inviterUid': inviterUid,
+    'mode': mode.name,
+    'expiresAt': _ms(expiresAt),
+    'usedBy': usedBy,
+  };
 }
 
 @immutable
@@ -303,13 +292,13 @@ class LatestItem {
   });
 
   factory LatestItem.fromJson(Map<String, dynamic> j) => LatestItem(
-        itemId: j['itemId'] as String? ?? '',
-        type: ItemType.parse(j['type']),
-        thumbPath: j['thumbPath'] as String?,
-        caption: j['caption'] as String? ?? '',
-        secret: j['secret'] as bool? ?? false,
-        sentAt: _date(j['sentAt']) ?? DateTime.now(),
-      );
+    itemId: j['itemId'] as String? ?? '',
+    type: ItemType.parse(j['type']),
+    thumbPath: j['thumbPath'] as String?,
+    caption: j['caption'] as String? ?? '',
+    secret: j['secret'] as bool? ?? false,
+    sentAt: _date(j['sentAt']) ?? DateTime.now(),
+  );
 
   final String itemId;
   final ItemType type;
@@ -321,13 +310,13 @@ class LatestItem {
   final DateTime sentAt;
 
   Map<String, dynamic> toJson() => {
-        'itemId': itemId,
-        'type': type.name,
-        'thumbPath': thumbPath,
-        'caption': caption,
-        'secret': secret,
-        'sentAt': _ms(sentAt),
-      };
+    'itemId': itemId,
+    'type': type.name,
+    'thumbPath': thumbPath,
+    'caption': caption,
+    'secret': secret,
+    'sentAt': _ms(sentAt),
+  };
 }
 
 @immutable
@@ -347,18 +336,18 @@ class Streak {
   });
 
   factory Streak.fromJson(Map<String, dynamic> j) => Streak(
-        count: j['count'] as int? ?? 0,
-        best: j['best'] as int? ?? 0,
-        lastBothActiveDate: j['lastBothActiveDate'] as String?,
-        freezesLeft: j['freezesLeft'] as int? ?? 1,
-        freezesMonth: j['freezesMonth'] as String?,
-        activeToday: (j['activeToday'] as List?)?.cast<String>() ?? const [],
-        activeDate: j['activeDate'] as String?,
-        checkedThrough: j['checkedThrough'] as String?,
-        lastFrozeDate: j['lastFrozeDate'] as String?,
-        lostCount: j['lostCount'] as int? ?? 0,
-        brokeDate: j['brokeDate'] as String?,
-      );
+    count: j['count'] as int? ?? 0,
+    best: j['best'] as int? ?? 0,
+    lastBothActiveDate: j['lastBothActiveDate'] as String?,
+    freezesLeft: j['freezesLeft'] as int? ?? 1,
+    freezesMonth: j['freezesMonth'] as String?,
+    activeToday: (j['activeToday'] as List?)?.cast<String>() ?? const [],
+    activeDate: j['activeDate'] as String?,
+    checkedThrough: j['checkedThrough'] as String?,
+    lastFrozeDate: j['lastFrozeDate'] as String?,
+    lostCount: j['lostCount'] as int? ?? 0,
+    brokeDate: j['brokeDate'] as String?,
+  );
 
   /// Freezes granted each month (they don't carry over).
   static int monthlyFreezes({required bool plus}) => plus ? 3 : 1;
@@ -409,64 +398,57 @@ class Streak {
     String? lastFrozeDate,
     int? lostCount,
     String? brokeDate,
-  }) =>
-      Streak(
-        count: count ?? this.count,
-        best: best ?? this.best,
-        lastBothActiveDate: lastBothActiveDate ?? this.lastBothActiveDate,
-        freezesLeft: freezesLeft ?? this.freezesLeft,
-        freezesMonth: freezesMonth ?? this.freezesMonth,
-        activeToday: activeToday ?? this.activeToday,
-        activeDate: activeDate ?? this.activeDate,
-        checkedThrough: checkedThrough ?? this.checkedThrough,
-        lastFrozeDate: lastFrozeDate ?? this.lastFrozeDate,
-        lostCount: lostCount ?? this.lostCount,
-        brokeDate: brokeDate ?? this.brokeDate,
-      );
+  }) => Streak(
+    count: count ?? this.count,
+    best: best ?? this.best,
+    lastBothActiveDate: lastBothActiveDate ?? this.lastBothActiveDate,
+    freezesLeft: freezesLeft ?? this.freezesLeft,
+    freezesMonth: freezesMonth ?? this.freezesMonth,
+    activeToday: activeToday ?? this.activeToday,
+    activeDate: activeDate ?? this.activeDate,
+    checkedThrough: checkedThrough ?? this.checkedThrough,
+    lastFrozeDate: lastFrozeDate ?? this.lastFrozeDate,
+    lostCount: lostCount ?? this.lostCount,
+    brokeDate: brokeDate ?? this.brokeDate,
+  );
 
   Map<String, dynamic> toJson() => {
-        'count': count,
-        'best': best,
-        'lastBothActiveDate': lastBothActiveDate,
-        'freezesLeft': freezesLeft,
-        'freezesMonth': freezesMonth,
-        'activeToday': activeToday,
-        'activeDate': activeDate,
-        'checkedThrough': checkedThrough,
-        'lastFrozeDate': lastFrozeDate,
-        'lostCount': lostCount,
-        'brokeDate': brokeDate,
-      };
+    'count': count,
+    'best': best,
+    'lastBothActiveDate': lastBothActiveDate,
+    'freezesLeft': freezesLeft,
+    'freezesMonth': freezesMonth,
+    'activeToday': activeToday,
+    'activeDate': activeDate,
+    'checkedThrough': checkedThrough,
+    'lastFrozeDate': lastFrozeDate,
+    'lostCount': lostCount,
+    'brokeDate': brokeDate,
+  };
 }
 
 enum PlantHealth {
   healthy,
   wilted;
 
-  static PlantHealth parse(Object? v) =>
-      v == 'wilted' ? PlantHealth.wilted : PlantHealth.healthy;
+  static PlantHealth parse(Object? v) => v == 'wilted' ? PlantHealth.wilted : PlantHealth.healthy;
 }
 
 @immutable
 class Plant {
-  const Plant({
-    this.stage = 0,
-    this.health = PlantHealth.healthy,
-    this.species = 'sprout',
-  });
+  const Plant({this.stage = 0, this.health = PlantHealth.healthy, this.species = 'sprout'});
 
   factory Plant.fromJson(Map<String, dynamic> j) => Plant(
-        stage: j['stage'] as int? ?? 0,
-        health: PlantHealth.parse(j['health']),
-        species: j['species'] as String? ?? 'sprout',
-      );
+    stage: j['stage'] as int? ?? 0,
+    health: PlantHealth.parse(j['health']),
+    species: j['species'] as String? ?? 'sprout',
+  );
 
   /// Streak milestones at which the plant grows one stage (plan F8).
   static const milestones = [1, 3, 7, 14, 30, 60, 100, 365];
   static const maxStage = 8;
 
-  static int stageForStreak(int streak) =>
-      milestones.where((m) => streak >= m).length;
+  static int stageForStreak(int streak) => milestones.where((m) => streak >= m).length;
 
   /// Stage names shown under the plant.
   static const stageNames = [
@@ -492,8 +474,7 @@ class Plant {
   /// of its current stage. Null when fully grown.
   int? get nextGrowthAt => fullyGrown ? null : milestones[stage];
 
-  Map<String, dynamic> toJson() =>
-      {'stage': stage, 'health': health.name, 'species': species};
+  Map<String, dynamic> toJson() => {'stage': stage, 'health': health.name, 'species': species};
 }
 
 @immutable
@@ -501,46 +482,42 @@ class Premium {
   const Premium({this.active = false, this.ownerUid, this.expiresAt});
 
   factory Premium.fromJson(Map<String, dynamic> j) => Premium(
-        active: j['active'] as bool? ?? false,
-        ownerUid: j['ownerUid'] as String?,
-        expiresAt: _date(j['expiresAt']),
-      );
+    active: j['active'] as bool? ?? false,
+    ownerUid: j['ownerUid'] as String?,
+    expiresAt: _date(j['expiresAt']),
+  );
 
   final bool active;
   final String? ownerUid;
   final DateTime? expiresAt;
 
   Map<String, dynamic> toJson() => {
-        'active': active,
-        'source': 'subscription',
-        'ownerUid': ownerUid,
-        'expiresAt': _ms(expiresAt),
-      };
+    'active': active,
+    'source': 'subscription',
+    'ownerUid': ownerUid,
+    'expiresAt': _ms(expiresAt),
+  };
 }
 
 @immutable
 class PairStats {
-  const PairStats({
-    this.itemsSent = 0,
-    this.questionsAnswered = 0,
-    this.tapsSent = 0,
-  });
+  const PairStats({this.itemsSent = 0, this.questionsAnswered = 0, this.tapsSent = 0});
 
   factory PairStats.fromJson(Map<String, dynamic> j) => PairStats(
-        itemsSent: j['itemsSent'] as int? ?? 0,
-        questionsAnswered: j['questionsAnswered'] as int? ?? 0,
-        tapsSent: j['tapsSent'] as int? ?? 0,
-      );
+    itemsSent: j['itemsSent'] as int? ?? 0,
+    questionsAnswered: j['questionsAnswered'] as int? ?? 0,
+    tapsSent: j['tapsSent'] as int? ?? 0,
+  );
 
   final int itemsSent;
   final int questionsAnswered;
   final int tapsSent;
 
   Map<String, dynamic> toJson() => {
-        'itemsSent': itemsSent,
-        'questionsAnswered': questionsAnswered,
-        'tapsSent': tapsSent,
-      };
+    'itemsSent': itemsSent,
+    'questionsAnswered': questionsAnswered,
+    'tapsSent': tapsSent,
+  };
 }
 
 @immutable
@@ -567,27 +544,25 @@ class Pair {
   });
 
   factory Pair.fromJson(String id, Map<String, dynamic> j) => Pair(
-        id: id,
-        memberIds: (j['memberIds'] as List?)?.cast<String>() ?? const [],
-        mode: PairMode.parse(j['mode']),
-        pairedAt: _date(j['pairedAt']) ?? DateTime.now(),
-        latestItemByUser: _map(j['latestItemByUser']).map(
-          (k, v) => MapEntry(k, LatestItem.fromJson(_map(v))),
-        ),
-        streak: Streak.fromJson(_map(j['streak'])),
-        plant: Plant.fromJson(_map(j['plant'])),
-        premium: Premium.fromJson(_map(j['premium'])),
-        widgetTheme: _map(j['widgetTheme']).cast<String, String>(),
-        stats: PairStats.fromJson(_map(j['stats'])),
-        timezone: j['timezone'] as String? ?? 'UTC',
-        anniversary: _date(j['anniversary']),
-        relationLabels: _map(j['relationLabels']).cast<String, String>(),
-        nicknames: _map(j['nicknames']).cast<String, String>(),
-        lastMetAt: _date(j['lastMetAt']),
-        dateGoal: j['dateGoal'] == null ? null : DateGoal.fromJson(_map(j['dateGoal'])),
-        pet: j['pet'] == null ? null : Pet.fromJson(_map(j['pet'])),
-        home: PetHome.fromJson(_map(j['home'])),
-      );
+    id: id,
+    memberIds: (j['memberIds'] as List?)?.cast<String>() ?? const [],
+    mode: PairMode.parse(j['mode']),
+    pairedAt: _date(j['pairedAt']) ?? DateTime.now(),
+    latestItemByUser: _map(j['latestItemByUser']).map((k, v) => MapEntry(k, LatestItem.fromJson(_map(v)))),
+    streak: Streak.fromJson(_map(j['streak'])),
+    plant: Plant.fromJson(_map(j['plant'])),
+    premium: Premium.fromJson(_map(j['premium'])),
+    widgetTheme: _map(j['widgetTheme']).cast<String, String>(),
+    stats: PairStats.fromJson(_map(j['stats'])),
+    timezone: j['timezone'] as String? ?? 'UTC',
+    anniversary: _date(j['anniversary']),
+    relationLabels: _map(j['relationLabels']).cast<String, String>(),
+    nicknames: _map(j['nicknames']).cast<String, String>(),
+    lastMetAt: _date(j['lastMetAt']),
+    dateGoal: j['dateGoal'] == null ? null : DateGoal.fromJson(_map(j['dateGoal'])),
+    pet: j['pet'] == null ? null : Pet.fromJson(_map(j['pet'])),
+    home: PetHome.fromJson(_map(j['home'])),
+  );
 
   final String id;
   final List<String> memberIds;
@@ -630,12 +605,10 @@ class Pair {
 
   int get lovePoints => (lovePointsEarned - home.spent).clamp(0, 1 << 30);
 
-  String partnerOf(String uid) =>
-      memberIds.firstWhere((m) => m != uid, orElse: () => '');
+  String partnerOf(String uid) => memberIds.firstWhere((m) => m != uid, orElse: () => '');
 
   /// What [uid] calls their partner, valid for the current mode.
-  RelationLabel? labelBy(String uid) =>
-      RelationLabel.byId(RelationLabel.validFor(relationLabels[uid], mode));
+  RelationLabel? labelBy(String uid) => RelationLabel.byId(RelationLabel.validFor(relationLabels[uid], mode));
 
   /// Whole days since [anniversary] (null when not set).
   int? daysTogether(DateTime now) {
@@ -647,25 +620,24 @@ class Pair {
   }
 
   Map<String, dynamic> toJson() => {
-        'memberIds': memberIds,
-        'mode': mode.name,
-        'pairedAt': _ms(pairedAt),
-        'latestItemByUser':
-            latestItemByUser.map((k, v) => MapEntry(k, v.toJson())),
-        'streak': streak.toJson(),
-        'plant': plant.toJson(),
-        'premium': premium.toJson(),
-        'widgetTheme': widgetTheme,
-        'stats': stats.toJson(),
-        'timezone': timezone,
-        'anniversary': _ms(anniversary),
-        'relationLabels': relationLabels,
-        'nicknames': nicknames,
-        'lastMetAt': _ms(lastMetAt),
-        'dateGoal': dateGoal?.toJson(),
-        'pet': pet?.toJson(),
-        'home': home.toJson(),
-      };
+    'memberIds': memberIds,
+    'mode': mode.name,
+    'pairedAt': _ms(pairedAt),
+    'latestItemByUser': latestItemByUser.map((k, v) => MapEntry(k, v.toJson())),
+    'streak': streak.toJson(),
+    'plant': plant.toJson(),
+    'premium': premium.toJson(),
+    'widgetTheme': widgetTheme,
+    'stats': stats.toJson(),
+    'timezone': timezone,
+    'anniversary': _ms(anniversary),
+    'relationLabels': relationLabels,
+    'nicknames': nicknames,
+    'lastMetAt': _ms(lastMetAt),
+    'dateGoal': dateGoal?.toJson(),
+    'pet': pet?.toJson(),
+    'home': home.toJson(),
+  };
 }
 
 /// Where a location item was taken. [place] is a human-readable name from
@@ -675,10 +647,10 @@ class GeoTag {
   const GeoTag({required this.lat, required this.lng, this.place = ''});
 
   factory GeoTag.fromJson(Map<String, dynamic> j) => GeoTag(
-        lat: (j['lat'] as num?)?.toDouble() ?? 0,
-        lng: (j['lng'] as num?)?.toDouble() ?? 0,
-        place: j['place'] as String? ?? '',
-      );
+    lat: (j['lat'] as num?)?.toDouble() ?? 0,
+    lng: (j['lng'] as num?)?.toDouble() ?? 0,
+    place: j['place'] as String? ?? '',
+  );
 
   static const maxPlace = 80;
 
@@ -700,10 +672,8 @@ class GeoTag {
 class NoteStyle {
   const NoteStyle({required this.bg, required this.font});
 
-  factory NoteStyle.fromJson(Map<String, dynamic> j) => NoteStyle(
-        bg: j['bg'] as String? ?? 'blush',
-        font: j['font'] as String? ?? 'rounded',
-      );
+  factory NoteStyle.fromJson(Map<String, dynamic> j) =>
+      NoteStyle(bg: j['bg'] as String? ?? 'blush', font: j['font'] as String? ?? 'rounded');
 
   final String bg;
   final String font;
@@ -731,23 +701,21 @@ class Item {
   });
 
   factory Item.fromJson(String id, Map<String, dynamic> j) => Item(
-        id: id,
-        type: ItemType.parse(j['type']),
-        senderId: j['senderId'] as String? ?? '',
-        storagePath: j['storagePath'] as String?,
-        thumbPath: j['thumbPath'] as String?,
-        caption: j['caption'] as String? ?? '',
-        text: j['text'] as String?,
-        noteStyle: j['noteStyle'] == null
-            ? null
-            : NoteStyle.fromJson(_map(j['noteStyle'])),
-        geo: j['geo'] == null ? null : GeoTag.fromJson(_map(j['geo'])),
-        saveToMemories: j['saveToMemories'] as bool? ?? true,
-        reactions: _map(j['reactions']).map((k, v) => MapEntry(k, '$v')),
-        secret: j['secret'] as bool? ?? false,
-        revealedAt: _date(j['revealedAt']),
-        createdAt: _date(j['createdAt']) ?? DateTime.now(),
-      );
+    id: id,
+    type: ItemType.parse(j['type']),
+    senderId: j['senderId'] as String? ?? '',
+    storagePath: j['storagePath'] as String?,
+    thumbPath: j['thumbPath'] as String?,
+    caption: j['caption'] as String? ?? '',
+    text: j['text'] as String?,
+    noteStyle: j['noteStyle'] == null ? null : NoteStyle.fromJson(_map(j['noteStyle'])),
+    geo: j['geo'] == null ? null : GeoTag.fromJson(_map(j['geo'])),
+    saveToMemories: j['saveToMemories'] as bool? ?? true,
+    reactions: _map(j['reactions']).map((k, v) => MapEntry(k, '$v')),
+    secret: j['secret'] as bool? ?? false,
+    revealedAt: _date(j['revealedAt']),
+    createdAt: _date(j['createdAt']) ?? DateTime.now(),
+  );
 
   static const maxCaption = 40;
 
@@ -781,41 +749,40 @@ class Item {
   final DateTime createdAt;
 
   /// Whether the sender should be hidden from [viewerUid].
-  bool hidesSenderFrom(String? viewerUid) =>
-      secret && revealedAt == null && senderId != viewerUid;
+  bool hidesSenderFrom(String? viewerUid) => secret && revealedAt == null && senderId != viewerUid;
 
   Item copyWith({Map<String, String>? reactions, DateTime? revealedAt}) => Item(
-        id: id,
-        type: type,
-        senderId: senderId,
-        storagePath: storagePath,
-        thumbPath: thumbPath,
-        caption: caption,
-        text: text,
-        noteStyle: noteStyle,
-        geo: geo,
-        saveToMemories: saveToMemories,
-        reactions: reactions ?? this.reactions,
-        secret: secret,
-        revealedAt: revealedAt ?? this.revealedAt,
-        createdAt: createdAt,
-      );
+    id: id,
+    type: type,
+    senderId: senderId,
+    storagePath: storagePath,
+    thumbPath: thumbPath,
+    caption: caption,
+    text: text,
+    noteStyle: noteStyle,
+    geo: geo,
+    saveToMemories: saveToMemories,
+    reactions: reactions ?? this.reactions,
+    secret: secret,
+    revealedAt: revealedAt ?? this.revealedAt,
+    createdAt: createdAt,
+  );
 
   Map<String, dynamic> toJson() => {
-        'type': type.name,
-        'senderId': senderId,
-        'storagePath': storagePath,
-        'thumbPath': thumbPath,
-        'caption': caption,
-        'text': text,
-        'noteStyle': noteStyle?.toJson(),
-        'geo': geo?.toJson(),
-        'saveToMemories': saveToMemories,
-        'reactions': reactions,
-        'secret': secret,
-        'revealedAt': _ms(revealedAt),
-        'createdAt': _ms(createdAt),
-      };
+    'type': type.name,
+    'senderId': senderId,
+    'storagePath': storagePath,
+    'thumbPath': thumbPath,
+    'caption': caption,
+    'text': text,
+    'noteStyle': noteStyle?.toJson(),
+    'geo': geo?.toJson(),
+    'saveToMemories': saveToMemories,
+    'reactions': reactions,
+    'secret': secret,
+    'revealedAt': _ms(revealedAt),
+    'createdAt': _ms(createdAt),
+  };
 }
 
 /// One-tap affectionate messages ("I can't stop thinking about you").
@@ -846,8 +813,7 @@ class TapKind {
     TapKind('love', '❤️', 'Love you', 'loves you'),
   ];
 
-  static TapKind byId(String? id) =>
-      all.firstWhere((k) => k.id == id, orElse: () => heart);
+  static TapKind byId(String? id) => all.firstWhere((k) => k.id == id, orElse: () => heart);
 }
 
 /// Emoji people can react to photos, notes and doodles with.
@@ -855,19 +821,14 @@ const reactionEmojis = ['❤️', '😍', '🥹', '😂', '😘', '🔥', '👏'
 
 @immutable
 class Tap {
-  const Tap({
-    required this.id,
-    required this.senderId,
-    required this.createdAt,
-    this.kind = 'heart',
-  });
+  const Tap({required this.id, required this.senderId, required this.createdAt, this.kind = 'heart'});
 
   factory Tap.fromJson(String id, Map<String, dynamic> j) => Tap(
-        id: id,
-        senderId: j['senderId'] as String? ?? '',
-        kind: j['kind'] as String? ?? 'heart',
-        createdAt: _date(j['createdAt']) ?? DateTime.now(),
-      );
+    id: id,
+    senderId: j['senderId'] as String? ?? '',
+    kind: j['kind'] as String? ?? 'heart',
+    createdAt: _date(j['createdAt']) ?? DateTime.now(),
+  );
 
   final String id;
   final String senderId;
@@ -876,8 +837,7 @@ class Tap {
 
   TapKind get info => TapKind.byId(kind);
 
-  Map<String, dynamic> toJson() =>
-      {'senderId': senderId, 'kind': kind, 'createdAt': _ms(createdAt)};
+  Map<String, dynamic> toJson() => {'senderId': senderId, 'kind': kind, 'createdAt': _ms(createdAt)};
 }
 
 /// "How much do you miss me?" for one day: each person picks 0..100 in
@@ -893,11 +853,11 @@ class MissMeter {
   });
 
   factory MissMeter.fromJson(String date, Map<String, dynamic> j) => MissMeter(
-        date: date,
-        answeredBy: (j['answeredBy'] as List?)?.cast<String>() ?? const [],
-        revealed: j['revealed'] as bool? ?? false,
-        values: _map(j['values']).map((k, v) => MapEntry(k, (v as num).toInt())),
-      );
+    date: date,
+    answeredBy: (j['answeredBy'] as List?)?.cast<String>() ?? const [],
+    revealed: j['revealed'] as bool? ?? false,
+    values: _map(j['values']).map((k, v) => MapEntry(k, (v as num).toInt())),
+  );
 
   static const max = 100;
 
@@ -912,28 +872,19 @@ class MissMeter {
   /// The current user's private value (from `private/{uid}`).
   final int? myValue;
 
-  MissMeter withMyValue(int? v) => MissMeter(
-        date: date,
-        answeredBy: answeredBy,
-        revealed: revealed,
-        values: values,
-        myValue: v,
-      );
+  MissMeter withMyValue(int? v) =>
+      MissMeter(date: date, answeredBy: answeredBy, revealed: revealed, values: values, myValue: v);
 
   /// Word for a value, used on the slider and in the reveal.
   static String describe(int v) => switch (v) {
-        < 15 => 'A tiny bit 🙂',
-        < 35 => 'Quite a lot 🥲',
-        < 60 => 'So much 🥺',
-        < 85 => 'Like crazy 😭',
-        _ => 'To the moon and back 🚀',
-      };
+    < 15 => 'A tiny bit 🙂',
+    < 35 => 'Quite a lot 🥲',
+    < 60 => 'So much 🥺',
+    < 85 => 'Like crazy 😭',
+    _ => 'To the moon and back 🚀',
+  };
 
-  Map<String, dynamic> toJson() => {
-        'answeredBy': answeredBy,
-        'revealed': revealed,
-        'values': values,
-      };
+  Map<String, dynamic> toJson() => {'answeredBy': answeredBy, 'revealed': revealed, 'values': values};
 }
 
 @immutable
@@ -949,16 +900,15 @@ class DailyQuestion {
     this.myAnswer,
   });
 
-  factory DailyQuestion.fromJson(String date, Map<String, dynamic> j) =>
-      DailyQuestion(
-        date: date,
-        questionId: j['questionId'] as String? ?? '',
-        text: j['text'] as String? ?? '',
-        packId: j['packId'] as String? ?? 'everyday',
-        answeredBy: (j['answeredBy'] as List?)?.cast<String>() ?? const [],
-        revealed: j['revealed'] as bool? ?? false,
-        answers: _map(j['answers']).cast<String, String>(),
-      );
+  factory DailyQuestion.fromJson(String date, Map<String, dynamic> j) => DailyQuestion(
+    date: date,
+    questionId: j['questionId'] as String? ?? '',
+    text: j['text'] as String? ?? '',
+    packId: j['packId'] as String? ?? 'everyday',
+    answeredBy: (j['answeredBy'] as List?)?.cast<String>() ?? const [],
+    revealed: j['revealed'] as bool? ?? false,
+    answers: _map(j['answers']).cast<String, String>(),
+  );
 
   /// yyyy-mm-dd
   final String date;
@@ -975,24 +925,24 @@ class DailyQuestion {
   final String? myAnswer;
 
   DailyQuestion withMyAnswer(String? a) => DailyQuestion(
-        date: date,
-        questionId: questionId,
-        text: text,
-        packId: packId,
-        answeredBy: answeredBy,
-        revealed: revealed,
-        answers: answers,
-        myAnswer: a,
-      );
+    date: date,
+    questionId: questionId,
+    text: text,
+    packId: packId,
+    answeredBy: answeredBy,
+    revealed: revealed,
+    answers: answers,
+    myAnswer: a,
+  );
 
   Map<String, dynamic> toJson() => {
-        'questionId': questionId,
-        'text': text,
-        'packId': packId,
-        'answeredBy': answeredBy,
-        'revealed': revealed,
-        'answers': answers,
-      };
+    'questionId': questionId,
+    'text': text,
+    'packId': packId,
+    'answeredBy': answeredBy,
+    'revealed': revealed,
+    'answers': answers,
+  };
 }
 
 /// What a calendar event is about. Picks the default emoji and colour.
@@ -1010,8 +960,7 @@ enum EventCategory {
   final String emoji;
   final String label;
 
-  static EventCategory parse(Object? v) =>
-      EventCategory.values.firstWhere((c) => c.name == v, orElse: () => other);
+  static EventCategory parse(Object? v) => EventCategory.values.firstWhere((c) => c.name == v, orElse: () => other);
 }
 
 /// A shared calendar event. Countdowns are events with [showAsCountdown]
@@ -1043,25 +992,25 @@ class Countdown {
   }) : remindMinutesBefore = remindMinutesBefore ?? remindDaysBefore * minutesPerDay;
 
   factory Countdown.fromJson(String id, Map<String, dynamic> j) => Countdown(
-        id: id,
-        title: j['title'] as String? ?? '',
-        date: _date(j['date']) ?? DateTime.now(),
-        emoji: j['emoji'] as String? ?? '📅',
-        repeatsYearly: j['repeatsYearly'] as bool? ?? false,
-        hasTime: j['hasTime'] as bool? ?? false,
-        remindMinutesBefore: j['remindMinutesBefore'] as int?,
-        remindDaysBefore: j['remindDaysBefore'] as int? ?? 1,
-        createdBy: j['createdBy'] as String? ?? '',
-        category: EventCategory.parse(j['category']),
-        endDate: _date(j['endDate']),
-        note: j['note'] as String? ?? '',
-        place: j['place'] as String? ?? '',
-        isVirtual: j['isVirtual'] as bool? ?? false,
-        // Everything made before the calendar existed was a countdown.
-        showAsCountdown: j['showAsCountdown'] as bool? ?? true,
-        done: j['done'] as bool? ?? false,
-        ratings: _map(j['ratings']).map((k, v) => MapEntry(k, (v as num).toInt())),
-      );
+    id: id,
+    title: j['title'] as String? ?? '',
+    date: _date(j['date']) ?? DateTime.now(),
+    emoji: j['emoji'] as String? ?? '📅',
+    repeatsYearly: j['repeatsYearly'] as bool? ?? false,
+    hasTime: j['hasTime'] as bool? ?? false,
+    remindMinutesBefore: j['remindMinutesBefore'] as int?,
+    remindDaysBefore: j['remindDaysBefore'] as int? ?? 1,
+    createdBy: j['createdBy'] as String? ?? '',
+    category: EventCategory.parse(j['category']),
+    endDate: _date(j['endDate']),
+    note: j['note'] as String? ?? '',
+    place: j['place'] as String? ?? '',
+    isVirtual: j['isVirtual'] as bool? ?? false,
+    // Everything made before the calendar existed was a countdown.
+    showAsCountdown: j['showAsCountdown'] as bool? ?? true,
+    done: j['done'] as bool? ?? false,
+    ratings: _map(j['ratings']).map((k, v) => MapEntry(k, (v as num).toInt())),
+  );
 
   static const maxTitle = 60;
   static const maxNote = 500;
@@ -1134,23 +1083,23 @@ class Countdown {
   }
 
   Countdown copyWith({bool? done, Map<String, int>? ratings, bool? showAsCountdown}) => Countdown(
-        id: id,
-        title: title,
-        date: date,
-        createdBy: createdBy,
-        emoji: emoji,
-        repeatsYearly: repeatsYearly,
-        hasTime: hasTime,
-        remindMinutesBefore: remindMinutesBefore,
-        category: category,
-        endDate: endDate,
-        note: note,
-        place: place,
-        isVirtual: isVirtual,
-        showAsCountdown: showAsCountdown ?? this.showAsCountdown,
-        done: done ?? this.done,
-        ratings: ratings ?? this.ratings,
-      );
+    id: id,
+    title: title,
+    date: date,
+    createdBy: createdBy,
+    emoji: emoji,
+    repeatsYearly: repeatsYearly,
+    hasTime: hasTime,
+    remindMinutesBefore: remindMinutesBefore,
+    category: category,
+    endDate: endDate,
+    note: note,
+    place: place,
+    isVirtual: isVirtual,
+    showAsCountdown: showAsCountdown ?? this.showAsCountdown,
+    done: done ?? this.done,
+    ratings: ratings ?? this.ratings,
+  );
 
   /// Whole days, kept in sync for older app versions and the daily job.
   int get remindDaysBefore => remindMinutesBefore ~/ minutesPerDay;
@@ -1206,33 +1155,31 @@ class Countdown {
   }
 
   Map<String, dynamic> toJson() => {
-        'title': title,
-        'date': _ms(date),
-        'emoji': emoji,
-        'repeatsYearly': repeatsYearly,
-        'hasTime': hasTime,
-        'remindMinutesBefore': remindMinutesBefore,
-        'remindDaysBefore': remindDaysBefore,
-        'createdBy': createdBy,
-        'category': category.name,
-        'endDate': _ms(endDate),
-        'note': note,
-        'place': place,
-        'isVirtual': isVirtual,
-        'showAsCountdown': showAsCountdown,
-        'done': done,
-        'ratings': ratings,
-      };
+    'title': title,
+    'date': _ms(date),
+    'emoji': emoji,
+    'repeatsYearly': repeatsYearly,
+    'hasTime': hasTime,
+    'remindMinutesBefore': remindMinutesBefore,
+    'remindDaysBefore': remindDaysBefore,
+    'createdBy': createdBy,
+    'category': category.name,
+    'endDate': _ms(endDate),
+    'note': note,
+    'place': place,
+    'isVirtual': isVirtual,
+    'showAsCountdown': showAsCountdown,
+    'done': done,
+    'ratings': ratings,
+  };
 }
 
 @immutable
 class GameQuestion {
   const GameQuestion({required this.text, required this.options});
 
-  factory GameQuestion.fromJson(Map<String, dynamic> j) => GameQuestion(
-        text: j['text'] as String? ?? '',
-        options: (j['options'] as List?)?.cast<String>() ?? const [],
-      );
+  factory GameQuestion.fromJson(Map<String, dynamic> j) =>
+      GameQuestion(text: j['text'] as String? ?? '', options: (j['options'] as List?)?.cast<String>() ?? const []);
 
   final String text;
   final List<String> options;
@@ -1248,8 +1195,7 @@ enum GameStatus {
   guesserTurn,
   done;
 
-  static GameStatus parse(Object? v) => GameStatus.values
-      .firstWhere((s) => s.name == v, orElse: () => subjectTurn);
+  static GameStatus parse(Object? v) => GameStatus.values.firstWhere((s) => s.name == v, orElse: () => subjectTurn);
 }
 
 /// "How well do you know me?" — one answers about themselves, the other
@@ -1277,9 +1223,7 @@ class Game {
       packId: j['packId'] as String? ?? 'starter',
       subjectUid: j['subjectUid'] as String? ?? '',
       guesserUid: j['guesserUid'] as String? ?? '',
-      questions: ((j['questions'] as List?) ?? const [])
-          .map((q) => GameQuestion.fromJson(_map(q)))
-          .toList(),
+      questions: ((j['questions'] as List?) ?? const []).map((q) => GameQuestion.fromJson(_map(q))).toList(),
       subjectAnswers: (answers['subject'] as List?)?.cast<int>() ?? const [],
       guesses: (answers['guesser'] as List?)?.cast<int>() ?? const [],
       status: GameStatus.parse(j['status']),
@@ -1307,16 +1251,16 @@ class Game {
   }
 
   Map<String, dynamic> toJson() => {
-        'type': type,
-        'packId': packId,
-        'subjectUid': subjectUid,
-        'guesserUid': guesserUid,
-        'questions': questions.map((q) => q.toJson()).toList(),
-        'answers': {'subject': subjectAnswers, 'guesser': guesses},
-        'score': score,
-        'status': status.name,
-        'createdAt': _ms(createdAt),
-      };
+    'type': type,
+    'packId': packId,
+    'subjectUid': subjectUid,
+    'guesserUid': guesserUid,
+    'questions': questions.map((q) => q.toJson()).toList(),
+    'answers': {'subject': subjectAnswers, 'guesser': guesses},
+    'score': score,
+    'status': status.name,
+    'createdAt': _ms(createdAt),
+  };
 }
 
 /// Request to send a photo / note / doodle. All three are sent as an image
@@ -1377,8 +1321,7 @@ enum CapsuleKind {
   letter,
   surprise;
 
-  static CapsuleKind parse(Object? v) =>
-      CapsuleKind.values.firstWhere((k) => k.name == v, orElse: () => letter);
+  static CapsuleKind parse(Object? v) => CapsuleKind.values.firstWhere((k) => k.name == v, orElse: () => letter);
 }
 
 /// Kinds of [CapsuleKind.surprise].
@@ -1388,8 +1331,7 @@ enum SurpriseType {
   compliment,
   gift;
 
-  static SurpriseType? parse(Object? v) =>
-      SurpriseType.values.where((t) => t.name == v).firstOrNull;
+  static SurpriseType? parse(Object? v) => SurpriseType.values.where((t) => t.name == v).firstOrNull;
 }
 
 /// A sealed envelope: who wrote it, for whom, and when it opens. Everyone in
@@ -1412,16 +1354,16 @@ class Capsule {
   });
 
   factory Capsule.fromJson(String id, Map<String, dynamic> j) => Capsule(
-        id: id,
-        kind: CapsuleKind.parse(j['kind']),
-        authorId: j['authorId'] as String? ?? '',
-        forUid: j['forUid'] as String? ?? '',
-        title: j['title'] as String? ?? '',
-        surpriseType: SurpriseType.parse(j['surpriseType']),
-        createdAt: _date(j['createdAt']) ?? DateTime.now(),
-        unlockAt: _date(j['unlockAt']) ?? DateTime.now(),
-        openedAt: _date(j['openedAt']),
-      );
+    id: id,
+    kind: CapsuleKind.parse(j['kind']),
+    authorId: j['authorId'] as String? ?? '',
+    forUid: j['forUid'] as String? ?? '',
+    title: j['title'] as String? ?? '',
+    surpriseType: SurpriseType.parse(j['surpriseType']),
+    createdAt: _date(j['createdAt']) ?? DateTime.now(),
+    unlockAt: _date(j['unlockAt']) ?? DateTime.now(),
+    openedAt: _date(j['openedAt']),
+  );
 
   static const maxTitle = 80;
   static const maxReasons = 100;
@@ -1452,15 +1394,15 @@ class Capsule {
   bool isNewFor(String? uid, DateTime now) => forUid == uid && isUnlocked(now) && openedAt == null;
 
   Map<String, dynamic> toJson() => {
-        'kind': kind.name,
-        'authorId': authorId,
-        'forUid': forUid,
-        'title': title,
-        'surpriseType': surpriseType?.name,
-        'createdAt': _ms(createdAt),
-        'unlockAt': _ms(unlockAt),
-        'openedAt': _ms(openedAt),
-      };
+    'kind': kind.name,
+    'authorId': authorId,
+    'forUid': forUid,
+    'title': title,
+    'surpriseType': surpriseType?.name,
+    'createdAt': _ms(createdAt),
+    'unlockAt': _ms(unlockAt),
+    'openedAt': _ms(openedAt),
+  };
 
   /// When the next reason should unlock, given the author's existing
   /// capsules: one reason a day at 08:00. The first one (or the first after
@@ -1486,10 +1428,10 @@ class CapsuleContent {
   const CapsuleContent({this.text = '', this.photoPath, this.giftId});
 
   factory CapsuleContent.fromJson(Map<String, dynamic> j) => CapsuleContent(
-        text: j['text'] as String? ?? '',
-        photoPath: j['photoPath'] as String?,
-        giftId: j['giftId'] as String?,
-      );
+    text: j['text'] as String? ?? '',
+    photoPath: j['photoPath'] as String?,
+    giftId: j['giftId'] as String?,
+  );
 
   static const maxText = 2000;
   static const maxReason = 200;
@@ -1562,14 +1504,14 @@ class TimelineEntry {
   });
 
   factory TimelineEntry.fromJson(String id, Map<String, dynamic> j) => TimelineEntry(
-        id: id,
-        date: _date(j['date']) ?? DateTime.now(),
-        title: j['title'] as String? ?? '',
-        emoji: j['emoji'] as String? ?? '💞',
-        note: j['note'] as String? ?? '',
-        photoPath: j['photoPath'] as String?,
-        createdBy: j['createdBy'] as String? ?? '',
-      );
+    id: id,
+    date: _date(j['date']) ?? DateTime.now(),
+    title: j['title'] as String? ?? '',
+    emoji: j['emoji'] as String? ?? '💞',
+    note: j['note'] as String? ?? '',
+    photoPath: j['photoPath'] as String?,
+    createdBy: j['createdBy'] as String? ?? '',
+  );
 
   static const maxTitle = 60;
   static const maxNote = 500;
@@ -1598,13 +1540,13 @@ class TimelineEntry {
   final bool auto;
 
   Map<String, dynamic> toJson() => {
-        'date': _ms(date),
-        'title': title,
-        'emoji': emoji,
-        'note': note,
-        'photoPath': photoPath,
-        'createdBy': createdBy,
-      };
+    'date': _ms(date),
+    'title': title,
+    'emoji': emoji,
+    'note': note,
+    'photoPath': photoPath,
+    'createdBy': createdBy,
+  };
 }
 
 // ------------------------------------------------------------------- shrine
@@ -1639,16 +1581,16 @@ class Shrine {
   });
 
   factory Shrine.fromJson(String ownerUid, Map<String, dynamic> j) => Shrine(
-        ownerUid: ownerUid,
-        title: j['title'] as String? ?? '',
-        theme: j['theme'] as String? ?? 'rose',
-        coverPath: j['coverPath'] as String?,
-        photos: (j['photos'] as List?)?.cast<String>() ?? const [],
-        favorites: (j['favorites'] as List?)?.map((f) => ShrineFavorite.fromJson(_map(f))).toList() ?? const [],
-        messages: (j['messages'] as List?)?.cast<String>() ?? const [],
-        pinnedItemIds: (j['pinnedItemIds'] as List?)?.cast<String>() ?? const [],
-        updatedAt: _date(j['updatedAt']),
-      );
+    ownerUid: ownerUid,
+    title: j['title'] as String? ?? '',
+    theme: j['theme'] as String? ?? 'rose',
+    coverPath: j['coverPath'] as String?,
+    photos: (j['photos'] as List?)?.cast<String>() ?? const [],
+    favorites: (j['favorites'] as List?)?.map((f) => ShrineFavorite.fromJson(_map(f))).toList() ?? const [],
+    messages: (j['messages'] as List?)?.cast<String>() ?? const [],
+    pinnedItemIds: (j['pinnedItemIds'] as List?)?.cast<String>() ?? const [],
+    updatedAt: _date(j['updatedAt']),
+  );
 
   static const maxPhotos = 9;
   static const maxFavorites = 12;
@@ -1693,29 +1635,28 @@ class Shrine {
     List<ShrineFavorite>? favorites,
     List<String>? messages,
     List<String>? pinnedItemIds,
-  }) =>
-      Shrine(
-        ownerUid: ownerUid,
-        title: title ?? this.title,
-        theme: theme ?? this.theme,
-        coverPath: coverPath == null ? this.coverPath : coverPath(),
-        photos: photos ?? this.photos,
-        favorites: favorites ?? this.favorites,
-        messages: messages ?? this.messages,
-        pinnedItemIds: pinnedItemIds ?? this.pinnedItemIds,
-        updatedAt: updatedAt,
-      );
+  }) => Shrine(
+    ownerUid: ownerUid,
+    title: title ?? this.title,
+    theme: theme ?? this.theme,
+    coverPath: coverPath == null ? this.coverPath : coverPath(),
+    photos: photos ?? this.photos,
+    favorites: favorites ?? this.favorites,
+    messages: messages ?? this.messages,
+    pinnedItemIds: pinnedItemIds ?? this.pinnedItemIds,
+    updatedAt: updatedAt,
+  );
 
   Map<String, dynamic> toJson() => {
-        'title': title,
-        'theme': theme,
-        'coverPath': coverPath,
-        'photos': photos,
-        'favorites': favorites.map((f) => f.toJson()).toList(),
-        'messages': messages,
-        'pinnedItemIds': pinnedItemIds,
-        'updatedAt': _ms(updatedAt),
-      };
+    'title': title,
+    'theme': theme,
+    'coverPath': coverPath,
+    'photos': photos,
+    'favorites': favorites.map((f) => f.toJson()).toList(),
+    'messages': messages,
+    'pinnedItemIds': pinnedItemIds,
+    'updatedAt': _ms(updatedAt),
+  };
 }
 
 // ------------------------------------------------------------- date planner
@@ -1725,10 +1666,8 @@ class Shrine {
 class DateGoal {
   const DateGoal({required this.count, this.perMonth = false});
 
-  factory DateGoal.fromJson(Map<String, dynamic> j) => DateGoal(
-        count: (j['count'] as num?)?.toInt().clamp(1, maxCount) ?? 1,
-        perMonth: j['per'] == 'month',
-      );
+  factory DateGoal.fromJson(Map<String, dynamic> j) =>
+      DateGoal(count: (j['count'] as num?)?.toInt().clamp(1, maxCount) ?? 1, perMonth: j['per'] == 'month');
 
   static const maxCount = 14;
 
@@ -1802,12 +1741,12 @@ class TodoList {
   const TodoList({required this.id, required this.title, required this.createdBy, this.emoji = '📝', this.createdAt});
 
   factory TodoList.fromJson(String id, Map<String, dynamic> j) => TodoList(
-        id: id,
-        title: j['title'] as String? ?? '',
-        emoji: j['emoji'] as String? ?? '📝',
-        createdBy: j['createdBy'] as String? ?? '',
-        createdAt: _date(j['createdAt']),
-      );
+    id: id,
+    title: j['title'] as String? ?? '',
+    emoji: j['emoji'] as String? ?? '📝',
+    createdBy: j['createdBy'] as String? ?? '',
+    createdAt: _date(j['createdAt']),
+  );
 
   static const maxTitle = 40;
 
@@ -1817,7 +1756,12 @@ class TodoList {
   final String createdBy;
   final DateTime? createdAt;
 
-  Map<String, dynamic> toJson() => {'title': title, 'emoji': emoji, 'createdBy': createdBy, 'createdAt': _ms(createdAt)};
+  Map<String, dynamic> toJson() => {
+    'title': title,
+    'emoji': emoji,
+    'createdBy': createdBy,
+    'createdAt': _ms(createdAt),
+  };
 }
 
 /// A shared task. `pairs/{pairId}/todos/{id}`.
@@ -1836,16 +1780,16 @@ class Todo {
   });
 
   factory Todo.fromJson(String id, Map<String, dynamic> j) => Todo(
-        id: id,
-        listId: j['listId'] as String? ?? '',
-        text: j['text'] as String? ?? '',
-        assignee: j['assignee'] as String?,
-        due: _date(j['due']),
-        doneBy: j['doneBy'] as String?,
-        doneAt: _date(j['doneAt']),
-        createdBy: j['createdBy'] as String? ?? '',
-        createdAt: _date(j['createdAt']),
-      );
+    id: id,
+    listId: j['listId'] as String? ?? '',
+    text: j['text'] as String? ?? '',
+    assignee: j['assignee'] as String?,
+    due: _date(j['due']),
+    doneBy: j['doneBy'] as String?,
+    doneAt: _date(j['doneAt']),
+    createdBy: j['createdBy'] as String? ?? '',
+    createdAt: _date(j['createdAt']),
+  );
 
   static const maxText = 200;
 
@@ -1872,15 +1816,15 @@ class Todo {
   }
 
   Map<String, dynamic> toJson() => {
-        'listId': listId,
-        'text': text,
-        'assignee': assignee,
-        'due': _ms(due),
-        'doneBy': doneBy,
-        'doneAt': _ms(doneAt),
-        'createdBy': createdBy,
-        'createdAt': _ms(createdAt),
-      };
+    'listId': listId,
+    'text': text,
+    'assignee': assignee,
+    'due': _ms(due),
+    'doneBy': doneBy,
+    'doneAt': _ms(doneAt),
+    'createdBy': createdBy,
+    'createdAt': _ms(createdAt),
+  };
 }
 
 // ------------------------------------------------------------------ wishlist
@@ -1898,8 +1842,7 @@ enum WishCategory {
   final String emoji;
   final String label;
 
-  static WishCategory parse(Object? v) =>
-      WishCategory.values.firstWhere((c) => c.name == v, orElse: () => other);
+  static WishCategory parse(Object? v) => WishCategory.values.firstWhere((c) => c.name == v, orElse: () => other);
 }
 
 /// Something one of you wants, or something you want to do together.
@@ -1925,18 +1868,18 @@ class Wish {
   });
 
   factory Wish.fromJson(String id, Map<String, dynamic> j) => Wish(
-        id: id,
-        title: j['title'] as String? ?? '',
-        category: WishCategory.parse(j['category']),
-        note: j['note'] as String? ?? '',
-        url: j['url'] as String? ?? '',
-        price: j['price'] as String? ?? '',
-        photoPath: j['photoPath'] as String?,
-        ownerUid: j['ownerUid'] as String?,
-        createdBy: j['createdBy'] as String? ?? '',
-        doneAt: _date(j['doneAt']),
-        createdAt: _date(j['createdAt']),
-      );
+    id: id,
+    title: j['title'] as String? ?? '',
+    category: WishCategory.parse(j['category']),
+    note: j['note'] as String? ?? '',
+    url: j['url'] as String? ?? '',
+    price: j['price'] as String? ?? '',
+    photoPath: j['photoPath'] as String?,
+    ownerUid: j['ownerUid'] as String?,
+    createdBy: j['createdBy'] as String? ?? '',
+    doneAt: _date(j['doneAt']),
+    createdAt: _date(j['createdAt']),
+  );
 
   static const maxTitle = 80;
   static const maxNote = 300;
@@ -1962,17 +1905,17 @@ class Wish {
   bool get isGift => category == WishCategory.gift;
 
   Map<String, dynamic> toJson() => {
-        'title': title,
-        'category': category.name,
-        'note': note,
-        'url': url,
-        'price': price,
-        'photoPath': photoPath,
-        'ownerUid': ownerUid,
-        'createdBy': createdBy,
-        'doneAt': _ms(doneAt),
-        'createdAt': _ms(createdAt),
-      };
+    'title': title,
+    'category': category.name,
+    'note': note,
+    'url': url,
+    'price': price,
+    'photoPath': photoPath,
+    'ownerUid': ownerUid,
+    'createdBy': createdBy,
+    'doneAt': _ms(doneAt),
+    'createdAt': _ms(createdAt),
+  };
 }
 
 // --------------------------------------------------------------------- chat
@@ -1980,9 +1923,27 @@ class Wish {
 enum MessageType {
   text,
   photo,
-  voice;
+  voice,
+
+  /// A disappearing photo: opens [ChatMessage.viewLimit] times, then the
+  /// file is deleted. Can't be saved.
+  snap,
+
+  /// A system line ("📸 Sam took a screenshot"), see [ChatEvent].
+  event;
 
   static MessageType parse(Object? v) => MessageType.values.firstWhere((t) => t.name == v, orElse: () => text);
+}
+
+/// What a [MessageType.event] message reports.
+enum ChatEvent {
+  /// Someone took a screenshot while the chat or a snap was open.
+  screenshot,
+
+  /// Someone saved a chat photo to their phone.
+  saved;
+
+  static ChatEvent? parse(Object? v) => ChatEvent.values.where((e) => e.name == v).firstOrNull;
 }
 
 /// What a reply points at, copied into the reply so it still shows if the
@@ -1992,10 +1953,10 @@ class ReplyRef {
   const ReplyRef({required this.id, required this.senderId, required this.preview});
 
   factory ReplyRef.fromJson(Map<String, dynamic> j) => ReplyRef(
-        id: j['id'] as String? ?? '',
-        senderId: j['senderId'] as String? ?? '',
-        preview: j['preview'] as String? ?? '',
-      );
+    id: j['id'] as String? ?? '',
+    senderId: j['senderId'] as String? ?? '',
+    preview: j['preview'] as String? ?? '',
+  );
 
   final String id;
   final String senderId;
@@ -2020,28 +1981,40 @@ class ChatMessage {
     this.replyTo,
     this.reactions = const {},
     this.deletedAt,
+    this.viewLimit = 0,
+    this.views = 0,
+    this.event,
     this.pending = false,
   });
 
   factory ChatMessage.fromJson(String id, Map<String, dynamic> j, {bool pending = false}) => ChatMessage(
-        id: id,
-        senderId: j['senderId'] as String? ?? '',
-        type: MessageType.parse(j['type']),
-        text: j['text'] as String? ?? '',
-        mediaPath: j['mediaPath'] as String?,
-        durationMs: (j['durationMs'] as num?)?.toInt() ?? 0,
-        replyTo: j['replyTo'] == null ? null : ReplyRef.fromJson(_map(j['replyTo'])),
-        reactions: _map(j['reactions']).map((k, v) => MapEntry(k, '$v')),
-        deletedAt: _date(j['deletedAt']),
-        // Server timestamps are null until written; show those as "now".
-        createdAt: _date(j['createdAt']) ?? DateTime.now(),
-        pending: pending,
-      );
+    id: id,
+    senderId: j['senderId'] as String? ?? '',
+    type: MessageType.parse(j['type']),
+    text: j['text'] as String? ?? '',
+    mediaPath: j['mediaPath'] as String?,
+    durationMs: (j['durationMs'] as num?)?.toInt() ?? 0,
+    replyTo: j['replyTo'] == null ? null : ReplyRef.fromJson(_map(j['replyTo'])),
+    reactions: _map(j['reactions']).map((k, v) => MapEntry(k, '$v')),
+    deletedAt: _date(j['deletedAt']),
+    viewLimit: (j['viewLimit'] as num?)?.toInt() ?? 0,
+    views: (j['views'] as num?)?.toInt() ?? 0,
+    event: ChatEvent.parse(j['event']),
+    // Server timestamps are null until written; show those as "now".
+    createdAt: _date(j['createdAt']) ?? DateTime.now(),
+    pending: pending,
+  );
 
   static const maxText = 2000;
 
   /// Longest voice message (5 minutes).
   static const maxVoiceMs = 5 * 60 * 1000;
+
+  /// A snap opens at most this many times.
+  static const maxSnapViews = 2;
+
+  /// How long a snap stays on screen each time it's opened.
+  static const snapSeconds = 10;
 
   final String id;
   final String senderId;
@@ -2056,45 +2029,86 @@ class ChatMessage {
   /// uid → emoji.
   final Map<String, String> reactions;
   final DateTime? deletedAt;
+
+  /// Snaps: how many times the partner may open it (1 or 2).
+  final int viewLimit;
+
+  /// Snaps: how many times the partner has opened it.
+  final int views;
+
+  /// Events: what happened (sent by the person who did it).
+  final ChatEvent? event;
   final DateTime createdAt;
 
   /// Not yet confirmed by the server (sent offline).
   final bool pending;
 
   bool get isDeleted => deletedAt != null;
+  bool get isSnap => type == MessageType.snap;
+  bool get isEvent => type == MessageType.event;
+
+  /// Snap opened as many times as allowed (or its file is gone).
+  bool get snapUsedUp => isSnap && (views >= viewLimit || mediaPath == null);
+  int get snapViewsLeft => isSnap ? (viewLimit - views).clamp(0, maxSnapViews) : 0;
 
   /// One-line summary for replies and notifications.
   String get preview => switch (type) {
-        _ when isDeleted => 'Deleted message',
-        MessageType.photo => text.isEmpty ? '📷 Photo' : '📷 $text',
-        MessageType.voice => '🎤 Voice message',
-        MessageType.text => text.length > 80 ? '${text.substring(0, 79)}…' : text,
-      };
+    _ when isDeleted => 'Deleted message',
+    MessageType.photo => text.isEmpty ? '📷 Photo' : '📷 $text',
+    MessageType.voice => '🎤 Voice message',
+    MessageType.snap => '👻 Snap',
+    MessageType.event => switch (event) {
+      ChatEvent.screenshot => '📸 Took a screenshot',
+      ChatEvent.saved => '⬇️ Saved a photo',
+      null => '',
+    },
+    MessageType.text => text.length > 80 ? '${text.substring(0, 79)}…' : text,
+  };
 
   Map<String, dynamic> toJson() => {
-        'senderId': senderId,
-        'type': type.name,
-        'text': text,
-        'mediaPath': mediaPath,
-        'durationMs': durationMs,
-        'replyTo': replyTo?.toJson(),
-        'reactions': reactions,
-        'deletedAt': _ms(deletedAt),
-        'createdAt': _ms(createdAt),
-      };
+    'senderId': senderId,
+    'type': type.name,
+    'text': text,
+    'mediaPath': mediaPath,
+    'durationMs': durationMs,
+    'replyTo': replyTo?.toJson(),
+    'reactions': reactions,
+    'deletedAt': _ms(deletedAt),
+    'viewLimit': viewLimit,
+    'views': views,
+    'event': event?.name,
+    'createdAt': _ms(createdAt),
+  };
 }
 
 /// What the app needs to send a message. [localPath] is a picked photo or
 /// a recorded voice file, uploaded by the backend.
 @immutable
 class ChatDraft {
-  const ChatDraft({this.type = MessageType.text, this.text = '', this.localPath, this.durationMs = 0, this.replyTo});
+  const ChatDraft({
+    this.type = MessageType.text,
+    this.text = '',
+    this.localPath,
+    this.durationMs = 0,
+    this.replyTo,
+    this.viewLimit = 0,
+    this.event,
+  });
 
   final MessageType type;
   final String text;
   final String? localPath;
   final int durationMs;
   final ReplyRef? replyTo;
+
+  /// Snaps: 1 or 2 views.
+  final int viewLimit;
+
+  /// Events only.
+  final ChatEvent? event;
+
+  /// Photos and snaps both upload as a jpg.
+  bool get isImage => type == MessageType.photo || type == MessageType.snap;
 }
 
 /// Per-member chat state: last read time and "typing…".
@@ -2131,14 +2145,14 @@ class GoodnightEntry {
   });
 
   factory GoodnightEntry.fromJson(Map<String, dynamic> j) => GoodnightEntry(
-        message: j['message'] as String? ?? '',
-        moment: j['moment'] as String? ?? '',
-        momentPhotoPath: j['momentPhotoPath'] as String?,
-        voicePath: j['voicePath'] as String?,
-        voiceMs: (j['voiceMs'] as num?)?.toInt() ?? 0,
-        kiss: j['kiss'] as bool? ?? false,
-        sentAt: _date(j['sentAt']),
-      );
+    message: j['message'] as String? ?? '',
+    moment: j['moment'] as String? ?? '',
+    momentPhotoPath: j['momentPhotoPath'] as String?,
+    voicePath: j['voicePath'] as String?,
+    voiceMs: (j['voiceMs'] as num?)?.toInt() ?? 0,
+    kiss: j['kiss'] as bool? ?? false,
+    sentAt: _date(j['sentAt']),
+  );
 
   static const maxText = 500;
 
@@ -2155,14 +2169,14 @@ class GoodnightEntry {
   bool get isEmpty => message.trim().isEmpty && moment.trim().isEmpty && voicePath == null && !kiss;
 
   Map<String, dynamic> toJson() => {
-        'message': message,
-        'moment': moment,
-        'momentPhotoPath': momentPhotoPath,
-        'voicePath': voicePath,
-        'voiceMs': voiceMs,
-        'kiss': kiss,
-        'sentAt': _ms(sentAt),
-      };
+    'message': message,
+    'moment': moment,
+    'momentPhotoPath': momentPhotoPath,
+    'voicePath': voicePath,
+    'voiceMs': voiceMs,
+    'kiss': kiss,
+    'sentAt': _ms(sentAt),
+  };
 }
 
 /// The goodnight ritual for one night. `pairs/{pairId}/goodnights/{night}`
@@ -2172,10 +2186,8 @@ class GoodnightEntry {
 class Goodnight {
   const Goodnight({required this.night, this.entries = const {}});
 
-  factory Goodnight.fromJson(String night, Map<String, dynamic> j) => Goodnight(
-        night: night,
-        entries: _map(j['entries']).map((k, v) => MapEntry(k, GoodnightEntry.fromJson(_map(v)))),
-      );
+  factory Goodnight.fromJson(String night, Map<String, dynamic> j) =>
+      Goodnight(night: night, entries: _map(j['entries']).map((k, v) => MapEntry(k, GoodnightEntry.fromJson(_map(v)))));
 
   /// The ritual opens at 18:00; until 05:00 it still belongs to that night.
   static const opensAtHour = 18;
@@ -2253,12 +2265,12 @@ class Pet {
   });
 
   factory Pet.fromJson(Map<String, dynamic> j) => Pet(
-        species: j['species'] as String? ?? 'bunny',
-        name: j['name'] as String? ?? '',
-        hatchedAt: _date(j['hatchedAt']) ?? DateTime.now(),
-        lastFed: _map(j['lastFed']).map((k, v) => MapEntry(k, _date(v) ?? DateTime(0))),
-        lastPlayed: _map(j['lastPlayed']).map((k, v) => MapEntry(k, _date(v) ?? DateTime(0))),
-      );
+    species: j['species'] as String? ?? 'bunny',
+    name: j['name'] as String? ?? '',
+    hatchedAt: _date(j['hatchedAt']) ?? DateTime.now(),
+    lastFed: _map(j['lastFed']).map((k, v) => MapEntry(k, _date(v) ?? DateTime(0))),
+    lastPlayed: _map(j['lastPlayed']).map((k, v) => MapEntry(k, _date(v) ?? DateTime(0))),
+  );
 
   /// The plant grows an egg at this stage (a 7-day streak).
   static const hatchStage = 3;
@@ -2276,11 +2288,11 @@ class Pet {
 
   /// 0 baby · 1 little · 2 grown · 3 legendary, from the plant's stage.
   static int lifeStage(int plantStage) => switch (plantStage) {
-        < 5 => 0,
-        < 7 => 1,
-        < 8 => 2,
-        _ => 3,
-      };
+    < 5 => 0,
+    < 7 => 1,
+    < 8 => 2,
+    _ => 3,
+  };
 
   static const lifeStageNames = ['Baby', 'Little', 'Grown', 'Legendary'];
 
@@ -2296,26 +2308,25 @@ class Pet {
     if (plant == PlantHealth.wilted) return PetMood.sleepy;
     if (!fedToday(now)) return PetMood.hungry;
     if (!playedToday(now)) return PetMood.bored;
-    final both = members.isNotEmpty &&
-        members.every((m) => _today(lastFed[m], now) || _today(lastPlayed[m], now));
+    final both = members.isNotEmpty && members.every((m) => _today(lastFed[m], now) || _today(lastPlayed[m], now));
     return both ? PetMood.overjoyed : PetMood.happy;
   }
 
   Pet copyWith({String? name, Map<String, DateTime>? lastFed, Map<String, DateTime>? lastPlayed}) => Pet(
-        species: species,
-        name: name ?? this.name,
-        hatchedAt: hatchedAt,
-        lastFed: lastFed ?? this.lastFed,
-        lastPlayed: lastPlayed ?? this.lastPlayed,
-      );
+    species: species,
+    name: name ?? this.name,
+    hatchedAt: hatchedAt,
+    lastFed: lastFed ?? this.lastFed,
+    lastPlayed: lastPlayed ?? this.lastPlayed,
+  );
 
   Map<String, dynamic> toJson() => {
-        'species': species,
-        'name': name,
-        'hatchedAt': _ms(hatchedAt),
-        'lastFed': lastFed.map((k, v) => MapEntry(k, _ms(v))),
-        'lastPlayed': lastPlayed.map((k, v) => MapEntry(k, _ms(v))),
-      };
+    'species': species,
+    'name': name,
+    'hatchedAt': _ms(hatchedAt),
+    'lastFed': lastFed.map((k, v) => MapEntry(k, _ms(v))),
+    'lastPlayed': lastPlayed.map((k, v) => MapEntry(k, _ms(v))),
+  };
 }
 
 /// A decoration for the pet's home. [unlockStage] > 0 means it's a reward:
@@ -2386,10 +2397,10 @@ class PlacedDecor {
   const PlacedDecor(this.id, this.x, this.y);
 
   factory PlacedDecor.fromJson(Map<String, dynamic> j) => PlacedDecor(
-        j['id'] as String? ?? '',
-        ((j['x'] as num?)?.toDouble() ?? 0.5).clamp(0.0, 1.0),
-        ((j['y'] as num?)?.toDouble() ?? 0.5).clamp(0.0, 1.0),
-      );
+    j['id'] as String? ?? '',
+    ((j['x'] as num?)?.toDouble() ?? 0.5).clamp(0.0, 1.0),
+    ((j['y'] as num?)?.toDouble() ?? 0.5).clamp(0.0, 1.0),
+  );
 
   final String id;
 
@@ -2406,11 +2417,11 @@ class PetHome {
   const PetHome({this.wallpaper = 'peach', this.owned = const [], this.placed = const [], this.spent = 0});
 
   factory PetHome.fromJson(Map<String, dynamic> j) => PetHome(
-        wallpaper: j['wallpaper'] as String? ?? 'peach',
-        owned: (j['owned'] as List?)?.cast<String>() ?? const [],
-        placed: (j['placed'] as List?)?.map((p) => PlacedDecor.fromJson(_map(p))).toList() ?? const [],
-        spent: (j['spent'] as num?)?.toInt() ?? 0,
-      );
+    wallpaper: j['wallpaper'] as String? ?? 'peach',
+    owned: (j['owned'] as List?)?.cast<String>() ?? const [],
+    placed: (j['placed'] as List?)?.map((p) => PlacedDecor.fromJson(_map(p))).toList() ?? const [],
+    spent: (j['spent'] as num?)?.toInt() ?? 0,
+  );
 
   static const maxPlaced = 30;
 
@@ -2423,24 +2434,23 @@ class PetHome {
   /// Love points spent so far (only ever goes up).
   final int spent;
 
-  bool ownsDecor(Decor d, int plantStage) =>
-      owned.contains(d.id) || (d.isReward && plantStage >= d.unlockStage);
+  bool ownsDecor(Decor d, int plantStage) => owned.contains(d.id) || (d.isReward && plantStage >= d.unlockStage);
 
   bool ownsWallpaper(Wallpaper w) => w.cost == 0 || owned.contains(w.id);
 
   PetHome copyWith({String? wallpaper, List<String>? owned, List<PlacedDecor>? placed, int? spent}) => PetHome(
-        wallpaper: wallpaper ?? this.wallpaper,
-        owned: owned ?? this.owned,
-        placed: placed ?? this.placed,
-        spent: spent ?? this.spent,
-      );
+    wallpaper: wallpaper ?? this.wallpaper,
+    owned: owned ?? this.owned,
+    placed: placed ?? this.placed,
+    spent: spent ?? this.spent,
+  );
 
   Map<String, dynamic> toJson() => {
-        'wallpaper': wallpaper,
-        'owned': owned,
-        'placed': placed.map((p) => p.toJson()).toList(),
-        'spent': spent,
-      };
+    'wallpaper': wallpaper,
+    'owned': owned,
+    'placed': placed.map((p) => p.toJson()).toList(),
+    'spent': spent,
+  };
 }
 
 // --------------------------------------------------------------- mood log
@@ -2452,11 +2462,11 @@ class MoodEntry {
   const MoodEntry({required this.uid, required this.date, required this.emoji, required this.label});
 
   factory MoodEntry.fromJson(Map<String, dynamic> j) => MoodEntry(
-        uid: j['uid'] as String? ?? '',
-        date: j['date'] as String? ?? '',
-        emoji: j['emoji'] as String? ?? '🙂',
-        label: j['label'] as String? ?? '',
-      );
+    uid: j['uid'] as String? ?? '',
+    date: j['date'] as String? ?? '',
+    emoji: j['emoji'] as String? ?? '🙂',
+    label: j['label'] as String? ?? '',
+  );
 
   final String uid;
 
@@ -2469,13 +2479,13 @@ class MoodEntry {
   int get score => scoreFor(label);
 
   static int scoreFor(String label) => switch (label.toLowerCase()) {
-        'loved' || 'excited' => 5,
-        'happy' || 'calm' => 4,
-        'sleepy' || 'hungry' || 'cold' => 3,
-        'stressed' || 'busy' || 'tired' => 2,
-        'sad' || 'sick' => 1,
-        _ => 3,
-      };
+    'loved' || 'excited' => 5,
+    'happy' || 'calm' => 4,
+    'sleepy' || 'hungry' || 'cold' => 3,
+    'stressed' || 'busy' || 'tired' => 2,
+    'sad' || 'sick' => 1,
+    _ => 3,
+  };
 
   Map<String, dynamic> toJson() => {'uid': uid, 'date': date, 'emoji': emoji, 'label': label};
 }

@@ -484,19 +484,27 @@ service cloud.firestore {
       match /messages/{messageId} {
         function validMedia(d) {
           return d.mediaPath == null
-            || (d.type == 'photo' && d.mediaPath is string
+            || (d.type in ['photo', 'snap'] && d.mediaPath is string
                 && d.mediaPath.matches('^pairs/' + pairId + '/media/' + request.auth.uid + '/[A-Za-z0-9_-]+[.]jpg$'))
             || (d.type == 'voice' && d.mediaPath is string
                 && d.mediaPath.matches('^pairs/' + pairId + '/audio/' + request.auth.uid + '/[A-Za-z0-9_-]+[.]m4a$'));
         }
         function validMessage(d) {
           return d.keys().hasOnly(['senderId', 'type', 'text', 'mediaPath', 'durationMs', 'replyTo',
-                                   'reactions', 'deletedAt', 'createdAt'])
+                                   'reactions', 'deletedAt', 'viewLimit', 'views', 'event', 'createdAt'])
             && d.senderId == request.auth.uid
-            && d.type in ['text', 'photo', 'voice']
+            && d.type in ['text', 'photo', 'voice', 'snap', 'event']
             && d.text is string && d.text.size() <= 2000
             && (d.type != 'text' || d.text.size() > 0)
-            && (d.type == 'text' || d.mediaPath != null)
+            && (d.type in ['text', 'event'] || d.mediaPath != null)
+            // Snaps open once or twice; nothing else has a view limit.
+            && (d.type == 'snap'
+                  ? (d.viewLimit in [1, 2] && d.views == 0)
+                  : (d.get('viewLimit', 0) == 0 && d.get('views', 0) == 0))
+            // Events ("took a screenshot", "saved a photo") carry no content.
+            && (d.type == 'event'
+                  ? (d.event in ['screenshot', 'saved'] && d.mediaPath == null && d.text == '')
+                  : d.get('event', null) == null)
             && validMedia(d)
             && d.durationMs is int && d.durationMs >= 0 && d.durationMs <= 300000
             && (d.replyTo == null || (d.replyTo is map && d.replyTo.keys().hasOnly(['id', 'senderId', 'preview'])
@@ -514,6 +522,12 @@ service cloud.firestore {
             && (!(request.auth.uid in request.resource.data.reactions)
                 || (request.resource.data.reactions[request.auth.uid] is string
                     && request.resource.data.reactions[request.auth.uid].size() <= 16)))
+          // The partner opens a snap: one view at a time, up to the limit.
+          || (resource.data.type == 'snap'
+            && resource.data.senderId != request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views'])
+            && request.resource.data.views == resource.data.get('views', 0) + 1
+            && request.resource.data.views <= resource.data.viewLimit)
           // The sender deletes it for both (content cleared, row kept).
           || (resource.data.senderId == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['text', 'mediaPath', 'deletedAt'])

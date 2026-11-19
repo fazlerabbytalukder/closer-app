@@ -30,7 +30,7 @@ String dayKey(DateTime d) =>
 /// streak logic are enforced here exactly where Cloud Functions would do it.
 class LocalBackend implements CloserBackend {
   LocalBackend({Duration simulatorScale = const Duration(seconds: 1), this.dbFileName = 'closer_local_db.json'})
-      : _scale = simulatorScale;
+    : _scale = simulatorScale;
 
   final Duration _scale;
 
@@ -63,9 +63,7 @@ class LocalBackend implements CloserBackend {
     await mediaDir.create(recursive: true);
     if (_dbFile.existsSync()) {
       try {
-        _db = Map<String, dynamic>.from(
-          jsonDecode(await _dbFile.readAsString()) as Map,
-        );
+        _db = Map<String, dynamic>.from(jsonDecode(await _dbFile.readAsString()) as Map);
       } on Object catch (e) {
         debugPrint('Local DB corrupt, starting fresh: $e');
         _db = {};
@@ -96,7 +94,13 @@ class LocalBackend implements CloserBackend {
               path: path,
             );
             if (item.thumbPath != null && item.thumbPath != path) {
-              await FlutterImageCompress.compressAndGetFile(path, item.thumbPath!, minWidth: 600, minHeight: 600, quality: 80);
+              await FlutterImageCompress.compressAndGetFile(
+                path,
+                item.thumbPath!,
+                minWidth: 600,
+                minHeight: 600,
+                quality: 80,
+              );
             }
           }
         }
@@ -112,8 +116,7 @@ class LocalBackend implements CloserBackend {
     _commit();
   }
 
-  Map<String, dynamic> _col(String name) =>
-      (_db[name] ??= <String, dynamic>{}) as Map<String, dynamic>;
+  Map<String, dynamic> _col(String name) => (_db[name] ??= <String, dynamic>{}) as Map<String, dynamic>;
 
   Map<String, dynamic> _sub(String name, String key) =>
       (_col(name)[key] ??= <String, dynamic>{}) as Map<String, dynamic>;
@@ -144,8 +147,7 @@ class LocalBackend implements CloserBackend {
     return uid;
   }
 
-  Map<String, dynamic>? userDoc(String uid) =>
-      _col('users')[uid] as Map<String, dynamic>?;
+  Map<String, dynamic>? userDoc(String uid) => _col('users')[uid] as Map<String, dynamic>?;
 
   String? get myPairId => userDoc(_me)?['pairId'] as String?;
 
@@ -155,8 +157,7 @@ class LocalBackend implements CloserBackend {
     return id;
   }
 
-  Map<String, dynamic>? pairDoc(String pairId) =>
-      _col('pairs')[pairId] as Map<String, dynamic>?;
+  Map<String, dynamic>? pairDoc(String pairId) => _col('pairs')[pairId] as Map<String, dynamic>?;
 
   Pair? pairOf(String pairId) {
     final d = pairDoc(pairId);
@@ -164,8 +165,7 @@ class LocalBackend implements CloserBackend {
   }
 
   bool _isPlus(String pairId) =>
-      !AppConfig.monetizationEnabled ||
-      (pairDoc(pairId)?['premium'] as Map?)?['active'] == true;
+      !AppConfig.monetizationEnabled || (pairDoc(pairId)?['premium'] as Map?)?['active'] == true;
 
   String partnerUidOf(String uid) {
     final pair = pairOf(userDoc(uid)?['pairId'] as String? ?? '');
@@ -189,12 +189,8 @@ class LocalBackend implements CloserBackend {
     _db['deviceUid'] = uid;
     _col('users').putIfAbsent(
       uid,
-      () => AppUser(
-        uid: uid,
-        displayName: '',
-        createdAt: DateTime.now(),
-        timezone: DateTime.now().timeZoneName,
-      ).toJson(),
+      () =>
+          AppUser(uid: uid, displayName: '', createdAt: DateTime.now(), timezone: DateTime.now().timeZoneName).toJson(),
     );
     _db['currentUid'] = uid;
     _commit();
@@ -209,9 +205,9 @@ class LocalBackend implements CloserBackend {
   // --------------------------------------------------------------- users
   @override
   Stream<AppUser?> watchUser(String uid) => _watch(() {
-        final d = userDoc(uid);
-        return d == null ? null : AppUser.fromJson(uid, d);
-      });
+    final d = userDoc(uid);
+    return d == null ? null : AppUser.fromJson(uid, d);
+  });
 
   @override
   Future<void> updateProfile({String? displayName, String? photoFilePath}) async {
@@ -250,8 +246,12 @@ class LocalBackend implements CloserBackend {
 
   /// Mood history for insights: one entry per member per day.
   void logMood(String pairId, String uid, Mood mood, String date) {
-    _sub('moodLog', pairId)['${uid}_$date'] =
-        MoodEntry(uid: uid, date: date, emoji: mood.emoji, label: mood.label).toJson();
+    _sub('moodLog', pairId)['${uid}_$date'] = MoodEntry(
+      uid: uid,
+      date: date,
+      emoji: mood.emoji,
+      label: mood.label,
+    ).toJson();
     _commit();
   }
 
@@ -276,8 +276,7 @@ class LocalBackend implements CloserBackend {
   // ------------------------------------------------------------- pairing
   static const _codeChars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
-  String _newCode() =>
-      List.generate(6, (_) => _codeChars[_rand.nextInt(_codeChars.length)]).join();
+  String _newCode() => List.generate(6, (_) => _codeChars[_rand.nextInt(_codeChars.length)]).join();
 
   @override
   Future<Invite> createInvite(PairMode mode) async {
@@ -285,10 +284,7 @@ class LocalBackend implements CloserBackend {
     // Reuse a still-valid invite so the code doesn't change on every visit.
     for (final e in _col('invites').entries) {
       final inv = Invite.fromJson(e.key, Map<String, dynamic>.from(e.value as Map));
-      if (inv.inviterUid == _me &&
-          inv.usedBy == null &&
-          inv.mode == mode &&
-          inv.expiresAt.isAfter(DateTime.now())) {
+      if (inv.inviterUid == _me && inv.usedBy == null && inv.mode == mode && inv.expiresAt.isAfter(DateTime.now())) {
         _sim.onInviteCreated(inv);
         return inv;
       }
@@ -339,8 +335,7 @@ class LocalBackend implements CloserBackend {
     // Each member's onboarding choice ("they are my girlfriend") carries
     // over if it fits the invite's mode.
     final labels = <String, String>{
-      for (final uid in [inviter, joiner])
-        uid: ?RelationLabel.validFor(userDoc(uid)?['pendingLabel'] as String?, mode),
+      for (final uid in [inviter, joiner]) uid: ?RelationLabel.validFor(userDoc(uid)?['pendingLabel'] as String?, mode),
     };
     final pair = Pair(
       id: id,
@@ -369,10 +364,30 @@ class LocalBackend implements CloserBackend {
       userDoc(m)?['pairId'] = null;
     }
     // Plan: data deleted after the export window — locally, immediately.
-    for (final c in ['pairs', 'items', 'taps', 'questions', 'privateAnswers', 'countdowns', 'games', 'questionPack', 'missMeters', 'missPrivate',
-                    'capsules', 'capsuleContent', 'timeline', 'shrines',
-                    'todoLists', 'todos', 'wishes', 'wishClaims',
-                    'messages', 'chatState', 'goodnights', 'moodLog']) {
+    for (final c in [
+      'pairs',
+      'items',
+      'taps',
+      'questions',
+      'privateAnswers',
+      'countdowns',
+      'games',
+      'questionPack',
+      'missMeters',
+      'missPrivate',
+      'capsules',
+      'capsuleContent',
+      'timeline',
+      'shrines',
+      'todoLists',
+      'todos',
+      'wishes',
+      'wishClaims',
+      'messages',
+      'chatState',
+      'goodnights',
+      'moodLog',
+    ]) {
       _col(c).remove(pairId);
     }
     _sim.onUnpaired();
@@ -413,8 +428,7 @@ class LocalBackend implements CloserBackend {
       }
       list.add({...item.toJson(), 'id': item.id, 'file': copied?.split(Platform.pathSeparator).last});
     }
-    await File('${out.path}/memories.json')
-        .writeAsString(const JsonEncoder.withIndent('  ').convert(list));
+    await File('${out.path}/memories.json').writeAsString(const JsonEncoder.withIndent('  ').convert(list));
     return out.path;
   }
 
@@ -477,16 +491,15 @@ class LocalBackend implements CloserBackend {
   String _usageKey(String uid) => '${uid}_$_today';
 
   Map<String, dynamic> _usage(String uid) =>
-      (_col('usage')[_usageKey(uid)] ??= <String, dynamic>{'sends': 0, 'bonus': 0})
-          as Map<String, dynamic>;
+      (_col('usage')[_usageKey(uid)] ??= <String, dynamic>{'sends': 0, 'bonus': 0}) as Map<String, dynamic>;
 
   @override
   Stream<int> watchSendsToday() => _watch(() {
-        final uid = currentUid;
-        if (uid == null) return 0;
-        final u = _col('usage')[_usageKey(uid)] as Map?;
-        return (u?['sends'] as int? ?? 0) - (u?['bonus'] as int? ?? 0);
-      });
+    final uid = currentUid;
+    if (uid == null) return 0;
+    final u = _col('usage')[_usageKey(uid)] as Map?;
+    return (u?['sends'] as int? ?? 0) - (u?['bonus'] as int? ?? 0);
+  });
 
   @override
   Future<void> grantRewardedSends() async {
@@ -589,13 +602,14 @@ class LocalBackend implements CloserBackend {
 
   @override
   Stream<List<Item>> watchItems(String pairId, {int limit = 200}) => _watch(() {
-        final items = _sub('items', pairId)
-            .entries
-            .map((e) => Item.fromJson(e.key, Map<String, dynamic>.from(e.value as Map)))
-            .toList()
+    final items =
+        _sub(
+            'items',
+            pairId,
+          ).entries.map((e) => Item.fromJson(e.key, Map<String, dynamic>.from(e.value as Map))).toList()
           ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        return items.take(limit).toList();
-      });
+    return items.take(limit).toList();
+  });
 
   @override
   Future<String?> resolveImage(String? ref) async => ref;
@@ -661,7 +675,11 @@ class LocalBackend implements CloserBackend {
     final p = pairDoc(pairId);
     if (p != null) {
       final s = PairStats.fromJson(Map<String, dynamic>.from(p['stats'] as Map? ?? {}));
-      p['stats'] = PairStats(itemsSent: s.itemsSent, questionsAnswered: s.questionsAnswered, tapsSent: s.tapsSent + 1).toJson();
+      p['stats'] = PairStats(
+        itemsSent: s.itemsSent,
+        questionsAnswered: s.questionsAnswered,
+        tapsSent: s.tapsSent + 1,
+      ).toJson();
     }
     markActive(pairId, senderId);
     _commit();
@@ -669,27 +687,31 @@ class LocalBackend implements CloserBackend {
 
   @override
   Stream<Tap?> watchLatestTap(String pairId) => _watch(() {
-        Tap? latest;
-        for (final e in _sub('taps', pairId).entries) {
-          final t = Tap.fromJson(e.key, Map<String, dynamic>.from(e.value as Map));
-          if (latest == null || t.createdAt.isAfter(latest.createdAt)) latest = t;
-        }
-        return latest;
-      });
+    Tap? latest;
+    for (final e in _sub('taps', pairId).entries) {
+      final t = Tap.fromJson(e.key, Map<String, dynamic>.from(e.value as Map));
+      if (latest == null || t.createdAt.isAfter(latest.createdAt)) latest = t;
+    }
+    return latest;
+  });
 
   // -------------------------------------------------------- miss meter
   @override
   Stream<List<MissMeter>> watchMissMeters(String pairId) => _watch(() {
-        final uid = currentUid;
-        final priv = _sub('missPrivate', pairId);
-        final list = _sub('missMeters', pairId)
-            .entries
-            .map((e) => MissMeter.fromJson(e.key, Map<String, dynamic>.from(e.value as Map))
-                .withMyValue((priv[e.key] as Map?)?[uid] as int?))
+    final uid = currentUid;
+    final priv = _sub('missPrivate', pairId);
+    final list =
+        _sub('missMeters', pairId).entries
+            .map(
+              (e) => MissMeter.fromJson(
+                e.key,
+                Map<String, dynamic>.from(e.value as Map),
+              ).withMyValue((priv[e.key] as Map?)?[uid] as int?),
+            )
             .toList()
           ..sort((a, b) => b.date.compareTo(a.date));
-        return list.take(30).toList();
-      });
+    return list.take(30).toList();
+  });
 
   @override
   Future<void> submitMissMeter(int value) async {
@@ -732,9 +754,7 @@ class LocalBackend implements CloserBackend {
       for (var i = 0; i < pack.questions.length; i++)
         if (!asked.contains('${pack.id}_$i')) i,
     ];
-    final idx = remaining.isEmpty
-        ? _rand.nextInt(pack.questions.length)
-        : remaining[_rand.nextInt(remaining.length)];
+    final idx = remaining.isEmpty ? _rand.nextInt(pack.questions.length) : remaining[_rand.nextInt(remaining.length)];
     qs[_today] = DailyQuestion(
       date: _today,
       questionId: '${pack.id}_$idx',
@@ -753,20 +773,19 @@ class LocalBackend implements CloserBackend {
   }
 
   @override
-  Stream<DailyQuestion?> watchTodayQuestion(String pairId) =>
-      _watch(() => readTodayQuestion(pairId));
+  Stream<DailyQuestion?> watchTodayQuestion(String pairId) => _watch(() => readTodayQuestion(pairId));
 
   @override
   Stream<List<DailyQuestion>> watchPastQuestions(String pairId) => _watch(() {
-        final list = _sub('questions', pairId)
-            .entries
+    final list =
+        _sub('questions', pairId).entries
             .where((e) => e.key != _today)
             .map((e) => DailyQuestion.fromJson(e.key, Map<String, dynamic>.from(e.value as Map)))
             .where((q) => q.revealed)
             .toList()
           ..sort((a, b) => b.date.compareTo(a.date));
-        return list;
-      });
+    return list;
+  });
 
   @override
   Future<void> submitAnswer(String text) async {
@@ -789,7 +808,11 @@ class LocalBackend implements CloserBackend {
         ..['answers'] = Map<String, dynamic>.from(priv);
       final p = pairDoc(pairId)!;
       final s = PairStats.fromJson(Map<String, dynamic>.from(p['stats'] as Map? ?? {}));
-      p['stats'] = PairStats(itemsSent: s.itemsSent, questionsAnswered: s.questionsAnswered + 1, tapsSent: s.tapsSent).toJson();
+      p['stats'] = PairStats(
+        itemsSent: s.itemsSent,
+        questionsAnswered: s.questionsAnswered + 1,
+        tapsSent: s.tapsSent,
+      ).toJson();
     }
     markActive(pairId, uid);
     _commit();
@@ -814,13 +837,14 @@ class LocalBackend implements CloserBackend {
   // ----------------------------------------------------------- countdowns
   @override
   Stream<List<Countdown>> watchCountdowns(String pairId) => _watch(() {
-        final list = _sub('countdowns', pairId)
-            .entries
-            .map((e) => Countdown.fromJson(e.key, Map<String, dynamic>.from(e.value as Map)))
-            .toList()
+    final list =
+        _sub(
+            'countdowns',
+            pairId,
+          ).entries.map((e) => Countdown.fromJson(e.key, Map<String, dynamic>.from(e.value as Map))).toList()
           ..sort((a, b) => a.date.compareTo(b.date));
-        return list;
-      });
+    return list;
+  });
 
   @override
   Future<void> saveCountdown(Countdown countdown) async {
@@ -888,13 +912,14 @@ class LocalBackend implements CloserBackend {
   // --------------------------------------------------------------- to-dos
   @override
   Stream<List<TodoList>> watchTodoLists(String pairId) => _watch(() {
-        final list = _sub('todoLists', pairId)
-            .entries
-            .map((e) => TodoList.fromJson(e.key, Map<String, dynamic>.from(e.value as Map)))
-            .toList()
+    final list =
+        _sub(
+            'todoLists',
+            pairId,
+          ).entries.map((e) => TodoList.fromJson(e.key, Map<String, dynamic>.from(e.value as Map))).toList()
           ..sort((a, b) => (a.createdAt ?? DateTime(0)).compareTo(b.createdAt ?? DateTime(0)));
-        return list;
-      });
+    return list;
+  });
 
   @override
   Future<String> saveTodoList(TodoList list) async => putTodoList(_pairId, _me, list);
@@ -925,13 +950,14 @@ class LocalBackend implements CloserBackend {
 
   @override
   Stream<List<Todo>> watchTodos(String pairId) => _watch(() {
-        final list = _sub('todos', pairId)
-            .entries
-            .map((e) => Todo.fromJson(e.key, Map<String, dynamic>.from(e.value as Map)))
-            .toList()
+    final list =
+        _sub(
+            'todos',
+            pairId,
+          ).entries.map((e) => Todo.fromJson(e.key, Map<String, dynamic>.from(e.value as Map))).toList()
           ..sort((a, b) => (a.createdAt ?? DateTime(0)).compareTo(b.createdAt ?? DateTime(0)));
-        return list;
-      });
+    return list;
+  });
 
   @override
   Future<void> saveTodo(Todo todo) async {
@@ -982,13 +1008,14 @@ class LocalBackend implements CloserBackend {
   // ------------------------------------------------------------- wishlist
   @override
   Stream<List<Wish>> watchWishes(String pairId) => _watch(() {
-        final list = _sub('wishes', pairId)
-            .entries
-            .map((e) => Wish.fromJson(e.key, Map<String, dynamic>.from(e.value as Map)))
-            .toList()
+    final list =
+        _sub(
+            'wishes',
+            pairId,
+          ).entries.map((e) => Wish.fromJson(e.key, Map<String, dynamic>.from(e.value as Map))).toList()
           ..sort((a, b) => (b.createdAt ?? DateTime(0)).compareTo(a.createdAt ?? DateTime(0)));
-        return list;
-      });
+    return list;
+  });
 
   @override
   Future<void> saveWish(Wish wish) async => putWish(_pairId, _me, wish);
@@ -1032,12 +1059,12 @@ class LocalBackend implements CloserBackend {
 
   @override
   Stream<Set<String>> watchMyWishClaims(String pairId) => _watch(() {
-        final uid = currentUid;
-        return {
-          for (final e in _sub('wishClaims', pairId).entries)
-            if ((e.value as Map)['claimedBy'] == uid) e.key,
-        };
-      });
+    final uid = currentUid;
+    return {
+      for (final e in _sub('wishClaims', pairId).entries)
+        if ((e.value as Map)['claimedBy'] == uid) e.key,
+    };
+  });
 
   @override
   Future<void> claimWish(String wishId, {required bool claim}) async {
@@ -1080,13 +1107,14 @@ class LocalBackend implements CloserBackend {
   // ------------------------------------------------------------ capsules
   @override
   Stream<List<Capsule>> watchCapsules(String pairId) => _watch(() {
-        final list = _sub('capsules', pairId)
-            .entries
-            .map((e) => Capsule.fromJson(e.key, Map<String, dynamic>.from(e.value as Map)))
-            .toList()
+    final list =
+        _sub(
+            'capsules',
+            pairId,
+          ).entries.map((e) => Capsule.fromJson(e.key, Map<String, dynamic>.from(e.value as Map))).toList()
           ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        return list;
-      });
+    return list;
+  });
 
   @override
   Future<void> sendCapsule(Capsule envelope, CapsuleContent content) async {
@@ -1160,13 +1188,14 @@ class LocalBackend implements CloserBackend {
   // ------------------------------------------------------------ timeline
   @override
   Stream<List<TimelineEntry>> watchTimeline(String pairId) => _watch(() {
-        final list = _sub('timeline', pairId)
-            .entries
-            .map((e) => TimelineEntry.fromJson(e.key, Map<String, dynamic>.from(e.value as Map)))
-            .toList()
+    final list =
+        _sub(
+            'timeline',
+            pairId,
+          ).entries.map((e) => TimelineEntry.fromJson(e.key, Map<String, dynamic>.from(e.value as Map))).toList()
           ..sort((a, b) => a.date.compareTo(b.date));
-        return list;
-      });
+    return list;
+  });
 
   @override
   Future<void> saveTimelineEntry(TimelineEntry entry) async {
@@ -1195,11 +1224,11 @@ class LocalBackend implements CloserBackend {
   // -------------------------------------------------------------- shrine
   @override
   Stream<Map<String, Shrine>> watchShrines(String pairId) => _watch(
-        () => {
-          for (final e in _sub('shrines', pairId).entries)
-            e.key: Shrine.fromJson(e.key, Map<String, dynamic>.from(e.value as Map)),
-        },
-      );
+    () => {
+      for (final e in _sub('shrines', pairId).entries)
+        e.key: Shrine.fromJson(e.key, Map<String, dynamic>.from(e.value as Map)),
+    },
+  );
 
   @override
   Future<void> saveShrine(Shrine shrine) async => putShrine(_pairId, _me, shrine);
@@ -1213,13 +1242,14 @@ class LocalBackend implements CloserBackend {
   // ----------------------------------------------------------------- chat
   @override
   Stream<List<ChatMessage>> watchMessages(String pairId, {int limit = 300}) => _watch(() {
-        final list = _sub('messages', pairId)
-            .entries
-            .map((e) => ChatMessage.fromJson(e.key, Map<String, dynamic>.from(e.value as Map)))
-            .toList()
+    final list =
+        _sub(
+            'messages',
+            pairId,
+          ).entries.map((e) => ChatMessage.fromJson(e.key, Map<String, dynamic>.from(e.value as Map))).toList()
           ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
-        return list.length > limit ? list.sublist(list.length - limit) : list;
-      });
+    return list.length > limit ? list.sublist(list.length - limit) : list;
+  });
 
   @override
   Future<void> sendMessage(ChatDraft draft) async {
@@ -1227,7 +1257,7 @@ class LocalBackend implements CloserBackend {
     final pairId = _pairId;
     String? media;
     final path = draft.localPath;
-    if (path != null) media = draft.type == MessageType.photo ? await uploadPhoto(path) : await uploadAudio(path);
+    if (path != null) media = draft.isImage ? await uploadPhoto(path) : await uploadAudio(path);
     final m = writeMessage(pairId, _me, draft, mediaPath: media);
     _sim.onMyMessage(m);
   }
@@ -1241,6 +1271,8 @@ class LocalBackend implements CloserBackend {
       mediaPath: mediaPath,
       durationMs: draft.durationMs,
       replyTo: draft.replyTo,
+      viewLimit: draft.type == MessageType.snap ? draft.viewLimit : 0,
+      event: draft.event,
       createdAt: DateTime.now(),
     );
     _sub('messages', pairId)[m.id] = m.toJson();
@@ -1254,7 +1286,8 @@ class LocalBackend implements CloserBackend {
   }
 
   @override
-  Future<void> reactToMessage(String messageId, String? emoji) async => setMessageReaction(_pairId, _me, messageId, emoji);
+  Future<void> reactToMessage(String messageId, String? emoji) async =>
+      setMessageReaction(_pairId, _me, messageId, emoji);
 
   void setMessageReaction(String pairId, String uid, String messageId, String? emoji) {
     final raw = _sub('messages', pairId)[messageId] as Map<String, dynamic>?;
@@ -1282,12 +1315,37 @@ class LocalBackend implements CloserBackend {
   }
 
   @override
+  Future<void> openSnap(String messageId) async => openSnapFor(_pairId, _me, messageId);
+
+  /// Counts one opening; deletes the photo once it's used up.
+  void openSnapFor(String pairId, String uid, String messageId) {
+    final raw = _sub('messages', pairId)[messageId] as Map<String, dynamic>?;
+    if (raw == null) return;
+    final m = ChatMessage.fromJson(messageId, raw);
+    if (!m.isSnap || m.senderId == uid) return;
+    if (m.snapUsedUp) throw const CloserException('This snap has already been opened');
+    raw['views'] = m.views + 1;
+    if (m.views + 1 >= m.viewLimit) {
+      final file = m.mediaPath == null ? null : File(m.mediaPath!);
+      if (file != null && file.existsSync()) file.deleteSync();
+      raw['mediaPath'] = null;
+    }
+    _commit();
+  }
+
+  @override
+  Future<void> sendChatEvent(ChatEvent event, {ReplyRef? about}) async {
+    if (myPairId == null || currentUid == null) return;
+    writeMessage(_pairId, _me, ChatDraft(type: MessageType.event, event: event, replyTo: about));
+  }
+
+  @override
   Stream<Map<String, ChatState>> watchChatState(String pairId) => _watch(
-        () => {
-          for (final e in _sub('chatState', pairId).entries)
-            e.key: ChatState.fromJson(Map<String, dynamic>.from(e.value as Map)),
-        },
-      );
+    () => {
+      for (final e in _sub('chatState', pairId).entries)
+        e.key: ChatState.fromJson(Map<String, dynamic>.from(e.value as Map)),
+    },
+  );
 
   @override
   Future<void> markChatRead() async {
@@ -1325,13 +1383,14 @@ class LocalBackend implements CloserBackend {
   // ------------------------------------------------------------ goodnight
   @override
   Stream<List<Goodnight>> watchGoodnights(String pairId) => _watch(() {
-        final list = _sub('goodnights', pairId)
-            .entries
-            .map((e) => Goodnight.fromJson(e.key, Map<String, dynamic>.from(e.value as Map)))
-            .toList()
+    final list =
+        _sub(
+            'goodnights',
+            pairId,
+          ).entries.map((e) => Goodnight.fromJson(e.key, Map<String, dynamic>.from(e.value as Map))).toList()
           ..sort((a, b) => b.night.compareTo(a.night));
-        return list.take(30).toList();
-      });
+    return list.take(30).toList();
+  });
 
   @override
   Future<void> sendGoodnight(GoodnightEntry entry) async {
@@ -1356,7 +1415,9 @@ class LocalBackend implements CloserBackend {
 
   void writeGoodnight(String pairId, String uid, GoodnightEntry entry) {
     final night = Goodnight.keyFor(DateTime.now());
-    final doc = (_sub('goodnights', pairId)[night] ??= <String, dynamic>{'entries': <String, dynamic>{}}) as Map<String, dynamic>;
+    final doc =
+        (_sub('goodnights', pairId)[night] ??= <String, dynamic>{'entries': <String, dynamic>{}})
+            as Map<String, dynamic>;
     final entries = Map<String, dynamic>.from(doc['entries'] as Map? ?? const {});
     entries[uid] = {...entry.toJson(), 'sentAt': _now};
     doc['entries'] = entries;
@@ -1375,7 +1436,16 @@ class LocalBackend implements CloserBackend {
   Future<void> savePet(Pet pet) async {
     final pairId = _pairId;
     checkPet(pet, pairOf(pairId)!);
-    putPet(pairId, Pet(species: pet.species, name: pet.name.trim(), hatchedAt: pet.hatchedAt, lastFed: pet.lastFed, lastPlayed: pet.lastPlayed));
+    putPet(
+      pairId,
+      Pet(
+        species: pet.species,
+        name: pet.name.trim(),
+        hatchedAt: pet.hatchedAt,
+        lastFed: pet.lastFed,
+        lastPlayed: pet.lastPlayed,
+      ),
+    );
     _sim.onPetChanged(pairId);
   }
 
@@ -1411,21 +1481,23 @@ class LocalBackend implements CloserBackend {
   // -------------------------------------------------------------- insights
   @override
   Stream<List<MoodEntry>> watchMoodLog(String pairId) => _watch(() {
-        final list = _sub('moodLog', pairId).values.map((v) => MoodEntry.fromJson(Map<String, dynamic>.from(v as Map))).toList()
+    final list =
+        _sub('moodLog', pairId).values.map((v) => MoodEntry.fromJson(Map<String, dynamic>.from(v as Map))).toList()
           ..sort((a, b) => b.date.compareTo(a.date));
-        return list.take(200).toList();
-      });
+    return list.take(200).toList();
+  });
 
   // ---------------------------------------------------------------- games
   @override
   Stream<List<Game>> watchGames(String pairId) => _watch(() {
-        final list = _sub('games', pairId)
-            .entries
-            .map((e) => Game.fromJson(e.key, Map<String, dynamic>.from(e.value as Map)))
-            .toList()
+    final list =
+        _sub(
+            'games',
+            pairId,
+          ).entries.map((e) => Game.fromJson(e.key, Map<String, dynamic>.from(e.value as Map))).toList()
           ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        return list;
-      });
+    return list;
+  });
 
   Game? readGame(String pairId, String gameId) {
     final raw = _sub('games', pairId)[gameId];
@@ -1433,8 +1505,7 @@ class LocalBackend implements CloserBackend {
   }
 
   @override
-  Future<Game> startGame({String packId = 'starter'}) async =>
-      createGame(_pairId, _me, packId: packId);
+  Future<Game> startGame({String packId = 'starter'}) async => createGame(_pairId, _me, packId: packId);
 
   Game createGame(String pairId, String subjectUid, {String packId = 'starter'}) {
     final pool = [...knowMeQuestions]..shuffle(_rand);
@@ -1565,4 +1636,3 @@ class LocalBackend implements CloserBackend {
     unawaited(_changes.close());
   }
 }
-

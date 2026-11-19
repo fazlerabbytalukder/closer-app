@@ -8,7 +8,8 @@
  * These functions notify the partner, count chat and goodnights as streak
  * activity, and send the evening goodnight reminder.
  */
-import {onDocumentCreated, onDocumentWritten} from "firebase-functions/v2/firestore";
+import {onDocumentCreated, onDocumentUpdated, onDocumentWritten} from "firebase-functions/v2/firestore";
+import {getStorage} from "firebase-admin/storage";
 import {onSchedule} from "firebase-functions/v2/scheduler";
 import {db, REGION, PairDoc, getUser, firstName, notify, localDateKey, localHour, logger} from "./common";
 import {markActivity} from "./streaks";
@@ -22,6 +23,13 @@ function preview(d: FirebaseFirestore.DocumentData): string {
       return d.text ? `📷 ${String(d.text).slice(0, 80)}` : "📷 Photo";
     case "voice":
       return "🎤 Voice message";
+    case "snap":
+      return "👻 Sent you a snap";
+    case "event": {
+      const snap = String(d.replyTo?.preview ?? "").startsWith("👻");
+      if (d.event === "saved") return "⬇️ Saved your photo";
+      return d.replyTo ? `📸 Took a screenshot of your ${snap ? "snap" : "photo"}` : "📸 Took a screenshot of the chat";
+    }
     default: {
       const t = String(d.text ?? "");
       return t.length > 120 ? `${t.slice(0, 119)}…` : t;
@@ -39,10 +47,13 @@ export const onMessageCreated = onDocumentCreated(
     const pair = (await db.doc(`pairs/${pairId}`).get()).data() as PairDoc | undefined;
     if (!pair || pair.status !== "active") return;
     const to = pair.memberIds.find((m) => m !== sender);
-    try {
-      await markActivity(pairId, sender);
-    } catch (e) {
-      logger.warn("markActivity failed for chat", {pairId, e});
+    // Screenshot / save notices aren't "talking" for the streak.
+    if (d.type !== "event") {
+      try {
+        await markActivity(pairId, sender);
+      } catch (e) {
+        logger.warn("markActivity failed for chat", {pairId, e});
+      }
     }
     if (!to) return;
     const user = await getUser(sender);
@@ -55,6 +66,25 @@ export const onMessageCreated = onDocumentCreated(
       data: {route: "/chat", pairId, messageId: event.params.messageId},
       prefKey: "chat",
     });
+  },
+);
+
+/**
+ * A snap that has been opened as many times as allowed: delete the photo
+ * and clear its ref, so it can't be opened again.
+ */
+export const onSnapOpened = onDocumentUpdated(
+  {document: "pairs/{pairId}/messages/{messageId}", region: REGION},
+  async (event) => {
+    const after = event.data?.after.data();
+    if (!after || after.type !== "snap" || !after.mediaPath) return;
+    if (Number(after.views ?? 0) < Number(after.viewLimit ?? 1)) return;
+    try {
+      await getStorage().bucket().file(String(after.mediaPath)).delete({ignoreNotFound: true});
+    } catch (e) {
+      logger.warn("snap media delete failed", {path: after.mediaPath, e});
+    }
+    await event.data!.after.ref.update({mediaPath: null});
   },
 );
 

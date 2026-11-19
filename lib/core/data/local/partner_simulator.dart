@@ -18,17 +18,18 @@ class PartnerSimulator {
 
   static const partnerUid = 'sim_partner';
 
-  Duration _s(num seconds) =>
-      Duration(milliseconds: (_scale.inMilliseconds * seconds).round());
+  Duration _s(num seconds) => Duration(milliseconds: (_scale.inMilliseconds * seconds).round());
 
   void _later(num seconds, void Function() fn) {
-    _timers.add(Timer(_s(seconds), () {
-      try {
-        fn();
-      } on Object {
-        // The simulated partner must never crash the app.
-      }
-    }));
+    _timers.add(
+      Timer(_s(seconds), () {
+        try {
+          fn();
+        } on Object {
+          // The simulated partner must never crash the app.
+        }
+      }),
+    );
   }
 
   String? get _pairId => _b.currentUid == null ? null : _b.myPairId;
@@ -179,7 +180,8 @@ class PartnerSimulator {
           unlockAt: now.add(_s(180)),
         ),
         const CapsuleContent(
-          text: 'Hey you,\n\nIf you’re reading this, you probably miss me a little. I miss you too — '
+          text:
+              'Hey you,\n\nIf you’re reading this, you probably miss me a little. I miss you too — '
               'way more than a little.\n\nClose your eyes for a second and imagine the biggest hug. '
               'That one’s from me. Talk soon? 💗',
         ),
@@ -225,19 +227,16 @@ class PartnerSimulator {
             ShrineFavorite('Thing about you', 'How you laugh at your own jokes'),
             ShrineFavorite('Place', 'Anywhere next to you'),
           ],
-          messages: [
-            'You make the hard days easier.',
-            'I’m so lucky I found you ✨',
-          ],
+          messages: ['You make the hard days easier.', 'I’m so lucky I found you ✨'],
         ),
       );
   }
 
   List<Capsule> _partnerCapsules(String pairId) => [
-        for (final e in _b.simStateCapsules(pairId).entries)
-          if ((e.value as Map)['authorId'] == partnerUid)
-            Capsule.fromJson(e.key, Map<String, dynamic>.from(e.value as Map)),
-      ];
+    for (final e in _b.simStateCapsules(pairId).entries)
+      if ((e.value as Map)['authorId'] == partnerUid)
+        Capsule.fromJson(e.key, Map<String, dynamic>.from(e.value as Map)),
+  ];
 
   void onMyCapsule(Capsule c) {
     final id = _pairId;
@@ -317,22 +316,62 @@ class PartnerSimulator {
         createdBy: partnerUid,
       ),
     );
-    final list = _b.putTodoList(pairId, partnerUid, const TodoList(id: '', title: 'This weekend', emoji: '🧺', createdBy: partnerUid));
+    final list = _b.putTodoList(
+      pairId,
+      partnerUid,
+      const TodoList(id: '', title: 'This weekend', emoji: '🧺', createdBy: partnerUid),
+    );
     _b
       ..putTodo(
         pairId,
         partnerUid,
-        Todo(id: '', listId: list, text: 'Book the restaurant for Saturday', assignee: me, due: now.add(const Duration(days: 2)), createdBy: partnerUid),
+        Todo(
+          id: '',
+          listId: list,
+          text: 'Book the restaurant for Saturday',
+          assignee: me,
+          due: now.add(const Duration(days: 2)),
+          createdBy: partnerUid,
+        ),
       )
-      ..putTodo(pairId, partnerUid, Todo(id: '', listId: list, text: 'Pick a movie for movie night', createdBy: partnerUid))
-      ..putTodo(pairId, partnerUid, Todo(id: '', listId: list, text: 'Buy snacks 🍿', assignee: partnerUid, createdBy: partnerUid))
+      ..putTodo(
+        pairId,
+        partnerUid,
+        Todo(id: '', listId: list, text: 'Pick a movie for movie night', createdBy: partnerUid),
+      )
+      ..putTodo(
+        pairId,
+        partnerUid,
+        Todo(id: '', listId: list, text: 'Buy snacks 🍿', assignee: partnerUid, createdBy: partnerUid),
+      )
       ..putWish(
         pairId,
         partnerUid,
-        const Wish(id: '', title: 'Fluffy winter socks', category: WishCategory.gift, note: 'The really soft ones 🧦', price: '€12', createdBy: partnerUid),
+        const Wish(
+          id: '',
+          title: 'Fluffy winter socks',
+          category: WishCategory.gift,
+          note: 'The really soft ones 🧦',
+          price: '€12',
+          createdBy: partnerUid,
+        ),
       )
-      ..putWish(pairId, partnerUid, const Wish(id: '', title: 'Sunset picnic by the lake', category: WishCategory.date, createdBy: partnerUid))
-      ..putWish(pairId, partnerUid, const Wish(id: '', title: 'Weekend in Lisbon', category: WishCategory.travel, note: 'Pastéis de nata tour!', createdBy: partnerUid));
+      ..putWish(
+        pairId,
+        partnerUid,
+        const Wish(id: '', title: 'Sunset picnic by the lake', category: WishCategory.date, createdBy: partnerUid),
+      )
+      ..putWish(
+        pairId,
+        partnerUid,
+        const Wish(
+          id: '',
+          title: 'Weekend in Lisbon',
+          category: WishCategory.travel,
+          note: 'Pastéis de nata tour!',
+          createdBy: partnerUid,
+        ),
+      );
   }
 
   void onMyEvent(Countdown c) {
@@ -353,8 +392,17 @@ class PartnerSimulator {
     final id = _pairId;
     if (id == null || !_partnerInPair) return;
     _later(2, () => _b.markChatReadFor(id, partnerUid));
-    if (m.type == MessageType.photo || _rand.nextDouble() < 0.3) {
-      _later(3, () => _b.setMessageReaction(id, m.id, partnerUid, _pick(const ['❤️', '😍', '😂', '🥹'])));
+    if (m.isEvent) return;
+    if (m.isSnap) {
+      // They open it (each allowed time), and sometimes screenshot it.
+      for (var i = 0; i < m.viewLimit; i++) {
+        _later(3 + i * 6, () => _b.openSnapFor(id, partnerUid, m.id));
+      }
+      if (_rand.nextDouble() < 0.4) {
+        _later(5, () => _b.writeMessage(id, partnerUid, ChatDraft(type: MessageType.event, event: ChatEvent.screenshot, replyTo: ReplyRef(id: m.id, senderId: m.senderId, preview: m.preview))));
+      }
+    } else if (m.type == MessageType.photo || _rand.nextDouble() < 0.3) {
+      _later(3, () => _b.setMessageReaction(id, partnerUid, m.id, _pick(const ['❤️', '😍', '😂', '🥹'])));
     }
     // Answer a burst of messages once, not each one.
     final last = _b.simState['lastChatReply'] as int? ?? 0;
@@ -366,7 +414,8 @@ class PartnerSimulator {
       final text = switch (m.type) {
         MessageType.photo => _pick(const ['Omg this is so cute 😍', 'Where is this?? 👀', 'Saving this one 📌']),
         MessageType.voice => _pick(const ['I love hearing your voice 🥹', 'Haha, play it again 😂', 'Aww, miss you']),
-        MessageType.text => _pick(_chatReplies),
+        MessageType.snap => _pick(const ['Snap back incoming 👻', 'Hahaha that face 😂', 'Cutie 🥹']),
+        MessageType.text || MessageType.event => _pick(_chatReplies),
       };
       _b.writeMessage(
         id,
@@ -388,7 +437,11 @@ class PartnerSimulator {
         pairId,
         partnerUid,
         GoodnightEntry(
-          message: _pick(const ['Goodnight, sleep tight 🌙', 'Sweet dreams! Talk tomorrow 💤', 'Night night, love you ✨']),
+          message: _pick(const [
+            'Goodnight, sleep tight 🌙',
+            'Sweet dreams! Talk tomorrow 💤',
+            'Night night, love you ✨',
+          ]),
           moment: _pick(const [
             'Getting your message this morning ☀️',
             'The sunset on my way home 🌇',
@@ -404,11 +457,24 @@ class PartnerSimulator {
   void _seedMoods(String pairId) {
     if (!_partnerInPair || _b.simState['seededMoods'] == true) return;
     _b.simState['seededMoods'] = true;
-    const pool = [('😊', 'Happy'), ('🥰', 'Loved'), ('😌', 'Calm'), ('🤯', 'Busy'), ('😴', 'Sleepy'), ('🥳', 'Excited'), ('🫠', 'Tired')];
+    const pool = [
+      ('😊', 'Happy'),
+      ('🥰', 'Loved'),
+      ('😌', 'Calm'),
+      ('🤯', 'Busy'),
+      ('😴', 'Sleepy'),
+      ('🥳', 'Excited'),
+      ('🫠', 'Tired'),
+    ];
     final now = DateTime.now();
     for (var i = 13; i >= 0; i--) {
       final (emoji, label) = pool[_rand.nextInt(pool.length)];
-      _b.logMood(pairId, partnerUid, Mood(emoji: emoji, label: label, updatedAt: now), dayKey(now.subtract(Duration(days: i))));
+      _b.logMood(
+        pairId,
+        partnerUid,
+        Mood(emoji: emoji, label: label, updatedAt: now),
+        dayKey(now.subtract(Duration(days: i))),
+      );
     }
   }
 
@@ -462,7 +528,6 @@ class PartnerSimulator {
     _b.answerQuestion(pairId, partnerUid, _pick(_answers));
   }
 
-
   void onMyGameMove(String pairId, String gameId) {
     if (!_partnerInPair) return;
     _later(7, () {
@@ -479,10 +544,7 @@ class PartnerSimulator {
 
   Future<Item?> _sendNote(String pairId, String text, {bool secret = false}) async {
     if (!_partnerInPair) return null;
-    final style = NoteStyle(
-      bg: noteBackgrounds[_rand.nextInt(noteBackgrounds.length)].id,
-      font: 'rounded',
-    );
+    final style = NoteStyle(bg: noteBackgrounds[_rand.nextInt(noteBackgrounds.length)].id, font: 'rounded');
     final path = '${_b.mediaDir.path}/sim_${DateTime.now().millisecondsSinceEpoch}.png';
     await NoteRenderer.renderToFile(text: text, style: style, path: path);
     return await _b.storeItem(
@@ -549,5 +611,3 @@ class PartnerSimulator {
     'That time we got completely lost and it turned out great.',
   ];
 }
-
-
