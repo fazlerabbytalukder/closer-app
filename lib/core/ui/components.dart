@@ -164,6 +164,7 @@ class AvatarPair extends StatelessWidget {
     this.mePhoto,
     this.partnerPhoto,
     this.size = 56,
+    this.ring,
   });
 
   final String me;
@@ -172,9 +173,12 @@ class AvatarPair extends StatelessWidget {
   final String? partnerPhoto;
   final double size;
 
+  /// Ring around each photo (defaults to the page background).
+  final Color? ring;
+
   @override
   Widget build(BuildContext context) {
-    final bg = Theme.of(context).scaffoldBackgroundColor;
+    final bg = ring ?? Theme.of(context).scaffoldBackgroundColor;
     return SizedBox(
       width: size * 1.75,
       height: size,

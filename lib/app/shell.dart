@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui' show ImageFilter;
 
 import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:closer_app/core/ui/soft_ui.dart';
@@ -7,8 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
-/// Soft gradient backdrop + floating notched bottom navigation bar, with the
-/// Send action in the centre (plan 9.3).
+/// Soft gradient backdrop + a floating frosted-glass dock, with the raised
+/// Send button in the centre (plan 9.3).
 class AppShell extends StatelessWidget {
   const AppShell({required this.shell, super.key});
 
@@ -26,12 +27,18 @@ class AppShell extends StatelessWidget {
       extendBody: true,
       backgroundColor: Colors.transparent,
       body: SoftBackground(child: shell),
-      bottomNavigationBar: _BottomBar(
-        selectedSlot: shell.currentIndex >= 2 ? shell.currentIndex + 1 : shell.currentIndex,
+      bottomNavigationBar: _Dock(
         children: [
-          _NavItem(icon: Icons.home_outlined, label: 'Home', selected: shell.currentIndex == 0, onTap: () => go(0)),
           _NavItem(
-            icon: Icons.wb_sunny_outlined,
+            icon: Icons.home_outlined,
+            selectedIcon: Icons.home_rounded,
+            label: 'Home',
+            selected: shell.currentIndex == 0,
+            onTap: () => go(0),
+          ),
+          _NavItem(
+            icon: Icons.favorite_border_rounded,
+            selectedIcon: Icons.favorite_rounded,
             label: 'Together',
             selected: shell.currentIndex == 1,
             onTap: () => go(1),
@@ -39,12 +46,14 @@ class AppShell extends StatelessWidget {
           const _SendButton(),
           _NavItem(
             icon: Icons.photo_library_outlined,
+            selectedIcon: Icons.photo_library_rounded,
             label: 'Memories',
             selected: shell.currentIndex == 2,
             onTap: () => go(2),
           ),
           _NavItem(
             icon: Icons.person_outline_rounded,
+            selectedIcon: Icons.person_rounded,
             label: 'Me',
             selected: shell.currentIndex == 3,
             onTap: () => go(3),
@@ -55,128 +64,98 @@ class AppShell extends StatelessWidget {
   }
 }
 
-/// Floating rounded bar with a smooth notch cut into its top edge above the
-/// selected tab; a small dot rides in the notch and slides between tabs.
-class _BottomBar extends StatelessWidget {
-  const _BottomBar({required this.children, required this.selectedSlot});
+/// Floating frosted-glass dock. Total height matches the old bar so the
+/// screens' bottom padding still fits; the Send button rises above it.
+class _Dock extends StatelessWidget {
+  const _Dock({required this.children});
 
   final List<Widget> children;
 
-  /// Index into [children] the notch sits above.
-  final int selectedSlot;
-
-  static const _barHeight = 77.0;
-  static const _notchDepth = 11.0;
+  static const _height = 77.0;
+  static const _dockHeight = 64.0;
 
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final radius = BorderRadius.circular(26);
     return Padding(
       padding: EdgeInsets.fromLTRB(Space.m, 0, Space.m, math.max(bottomInset, Space.m)),
       child: SizedBox(
-        height: _barHeight,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final slotWidth = constraints.maxWidth / children.length;
-            return TweenAnimationBuilder<double>(
-              tween: Tween(end: slotWidth * (selectedSlot + 0.5)),
-              duration: const Duration(milliseconds: 320),
-              curve: Curves.easeOutCubic,
-              builder: (context, notchX, child) => CustomPaint(
-                painter: _NotchedBarPainter(
-                  notchX: notchX,
-                  depth: _notchDepth,
-                  dark: dark,
-                  dotColor: context.cs.primary,
+        height: _height,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // Glass slab.
+            Positioned.fill(
+              top: _height - _dockHeight,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: radius,
+                  boxShadow: [
+                    BoxShadow(
+                      color: (dark ? Colors.black : Brand.royal).withValues(alpha: dark ? 0.4 : 0.14),
+                      blurRadius: 28,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
                 ),
-                child: child,
+                child: ClipRRect(
+                  borderRadius: radius,
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: radius,
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: dark
+                              ? [Brand.darkSurface.withValues(alpha: 0.82), Brand.darkSurface.withValues(alpha: 0.94)]
+                              : [Colors.white.withValues(alpha: 0.8), Colors.white.withValues(alpha: 0.94)],
+                        ),
+                        border: Border.all(
+                          color: dark ? Colors.white.withValues(alpha: 0.08) : Colors.white.withValues(alpha: 0.9),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
-              child: Padding(
-                padding: const EdgeInsets.only(top: _notchDepth - 2, bottom: _NotchedBarPainter._thickness),
-                child: Row(children: [for (final c in children) Expanded(child: c)]),
+            ),
+            Positioned.fill(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [for (final c in children) Expanded(child: c)],
               ),
-            );
-          },
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-/// Paints the bar as a raised 3D slab: soft drop shadow, a darker "side"
-/// edge beneath the face, a top-lit gradient face with a glossy rim, and a
-/// spherical indicator dot resting in the notch.
-class _NotchedBarPainter extends CustomPainter {
-  _NotchedBarPainter({required this.notchX, required this.depth, required this.dark, required this.dotColor});
-
-  final double notchX;
-  final double depth;
-  final bool dark;
-  final Color dotColor;
-
-  static const _radius = 24.0;
-  static const _halfWidth = 22.0;
-
-  /// Bottom inset kept for the row padding (flat bar: no visible side edge).
-  static const _thickness = 0.0;
-
-  Path _shape(Size size) {
-    final x = notchX;
-    final bar = Path()..addRRect(RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(_radius)));
-    // Dip carved out of the top edge, centred exactly on the tab (works even
-    // over the rounded corners, so no clamping is needed).
-    final notch = Path()
-      ..moveTo(x - _halfWidth, -1)
-      ..cubicTo(x - _halfWidth * 0.45, -1, x - _halfWidth * 0.6, depth, x, depth)
-      ..cubicTo(x + _halfWidth * 0.6, depth, x + _halfWidth * 0.45, -1, x + _halfWidth, -1)
-      ..close();
-    return Path.combine(PathOperation.difference, bar, notch);
-  }
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final face = _shape(size);
-
-    // 1. Soft, blue-tinted drop shadow (flat card elevation).
-    canvas
-      ..drawPath(
-        face.shift(const Offset(0, 6)),
-        Paint()
-          ..color = (dark ? Colors.black : const Color(0xFF1737E2)).withValues(alpha: dark ? 0.45 : 0.12)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14),
-      )
-      // 2. Flat face.
-      ..drawPath(face, Paint()..color = dark ? Brand.darkSurface : Colors.white)
-      // 3. Hairline border.
-      ..drawPath(
-        face,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1
-          ..color = dark ? const Color(0xFF283048) : const Color(0xFFE6EBF5),
-      );
-
-    // 4. Solid indicator dot resting in the notch.
-    canvas.drawCircle(Offset(notchX, depth / 2 - 1), 5, Paint()..color = dotColor);
-  }
-
-  @override
-  bool shouldRepaint(_NotchedBarPainter old) =>
-      old.notchX != notchX || old.dark != dark || old.dotColor != dotColor || old.depth != depth;
-}
-
+/// A tab: soft tinted pill behind a filled icon when selected.
 class _NavItem extends StatelessWidget {
-  const _NavItem({required this.icon, required this.label, required this.selected, required this.onTap});
+  const _NavItem({
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   final IconData icon;
+  final IconData selectedIcon;
   final String label;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final fg = selected ? context.cs.primary : context.cc.muted;
+    final primary = context.cs.primary;
+    final fg = selected ? primary : context.cc.muted;
     return Semantics(
       button: true,
       selected: selected,
@@ -185,13 +164,39 @@ class _NavItem extends StatelessWidget {
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: ExcludeSemantics(
-          child: _NavLabel(
-            label: label,
-            color: fg,
-            bold: selected,
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 180),
-              child: Icon(icon, key: ValueKey(selected), color: fg, size: 25),
+          child: SizedBox(
+            height: _Dock._dockHeight,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 260),
+                  curve: Curves.easeOutCubic,
+                  width: selected ? 52 : 36,
+                  height: 30,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(15),
+                    color: selected ? primary.withValues(alpha: 0.13) : primary.withValues(alpha: 0),
+                  ),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    transitionBuilder: (child, a) => ScaleTransition(scale: a, child: child),
+                    child: Icon(selected ? selectedIcon : icon, key: ValueKey(selected), color: fg, size: 23),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label,
+                    style: context.tt.labelSmall?.copyWith(
+                      color: fg,
+                      fontSize: 11.5,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -200,72 +205,58 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-/// Icon (or button) stacked over a small caption — shared by tabs and Send.
-class _NavLabel extends StatelessWidget {
-  const _NavLabel({required this.child, required this.label, required this.color, this.bold = false});
-
-  final Widget child;
-  final String label;
-  final Color color;
-  final bool bold;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        child,
-        const SizedBox(height: 3),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            label,
-            style: context.tt.labelSmall?.copyWith(
-              color: color,
-              fontSize: 12,
-              fontWeight: bold ? FontWeight.w600 : FontWeight.w500,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SendButton extends StatelessWidget {
+/// Raised round gradient button in the middle of the dock.
+class _SendButton extends StatefulWidget {
   const _SendButton();
 
   @override
+  State<_SendButton> createState() => _SendButtonState();
+}
+
+class _SendButtonState extends State<_SendButton> {
+  bool _down = false;
+
+  @override
   Widget build(BuildContext context) {
+    final g = context.cc.gradient;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Semantics(
       button: true,
       label: 'Send to their widget',
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => setState(() => _down = true),
+        onTapCancel: () => setState(() => _down = false),
+        onTapUp: (_) => setState(() => _down = false),
         onTap: () {
-          unawaited(HapticFeedback.selectionClick());
+          unawaited(HapticFeedback.mediumImpact());
           unawaited(context.push('/send'));
         },
         child: ExcludeSemantics(
-          child: _NavLabel(
-            label: 'Send',
-            color: context.cc.muted,
-            // Gradient "plus" tile, like the design's primary action.
-            child: Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                gradient: const LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Brand.royalLight, Brand.royal],
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: AnimatedScale(
+              scale: _down ? 0.9 : 1,
+              duration: const Duration(milliseconds: 120),
+              child: Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Brand.royalLight, Brand.royal, g.last],
+                    stops: const [0, 0.55, 1],
+                  ),
+                  border: Border.all(color: dark ? Brand.darkSurface : Colors.white, width: 4),
+                  boxShadow: [
+                    BoxShadow(color: Brand.royal.withValues(alpha: 0.4), blurRadius: 18, offset: const Offset(0, 8)),
+                    BoxShadow(color: g.last.withValues(alpha: 0.3), blurRadius: 26, spreadRadius: -6),
+                  ],
                 ),
-                boxShadow: [
-                  BoxShadow(color: Brand.royal.withValues(alpha: 0.35), blurRadius: 8, offset: const Offset(0, 3)),
-                ],
+                child: const Icon(Icons.add_rounded, color: Colors.white, size: 30),
               ),
-              child: const Icon(Icons.add_rounded, color: Colors.white, size: 22),
             ),
           ),
         ),

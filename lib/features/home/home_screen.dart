@@ -10,6 +10,7 @@ import 'package:closer_app/core/ui/actions.dart';
 import 'package:closer_app/core/ui/components.dart';
 import 'package:closer_app/core/ui/soft_ui.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -118,40 +119,50 @@ class _Hero extends ConsumerWidget {
             children: [
               Row(
                 children: [
-                  GlassPill(
-                    padding: const EdgeInsets.all(4),
-                    child: AvatarPair(
-                      me: me.displayName,
-                      partner: partner?.displayName ?? '',
-                      mePhoto: me.photoUrl,
-                      partnerPhoto: partner?.photoUrl,
-                      size: 32,
+                  Flexible(
+                    child: _Glass(
+                      onTap: () => context.push('/relationship'),
+                      padding: const EdgeInsets.fromLTRB(4, 4, 14, 4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          AvatarPair(
+                            me: me.displayName,
+                            partner: partner?.displayName ?? '',
+                            mePhoto: me.photoUrl,
+                            partnerPhoto: partner?.photoUrl,
+                            size: 32,
+                            ring: Colors.white,
+                          ),
+                          const SizedBox(width: Space.s),
+                          Flexible(
+                            child: Text(
+                              'You & $name',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: context.tt.labelLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(width: Space.s),
-                  GlassPill(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          tooltip: 'Set your mood',
-                          visualDensity: VisualDensity.compact,
-                          icon: const Icon(Icons.mood_rounded, color: Brand.indigo),
-                          onPressed: () => context.push('/mood'),
-                        ),
-                        IconButton(
-                          tooltip: 'Widgets',
-                          visualDensity: VisualDensity.compact,
-                          icon: const Icon(Icons.widgets_outlined, color: Brand.indigo),
-                          onPressed: () => context.push('/widgets'),
-                        ),
-                        const _ChatButton(),
-                      ],
-                    ),
+                  _Glass(
+                    tooltip: 'Set your mood',
+                    onTap: () => context.push('/mood'),
+                    child: me.mood == null
+                        ? const Icon(Icons.mood_rounded, color: Colors.white, size: 22)
+                        : Text(me.mood!.emoji, style: const TextStyle(fontSize: 19, height: 1.1)),
                   ),
-                  const Spacer(),
-                  const Flexible(child: SpeechBubble('Let’s feel closer!')),
+                  const SizedBox(width: Space.s),
+                  _Glass(
+                    tooltip: 'Widgets',
+                    onTap: () => context.push('/widgets'),
+                    child: const Icon(Icons.widgets_rounded, color: Colors.white, size: 21),
+                  ),
+                  const SizedBox(width: Space.s),
+                  const _ChatButton(),
                 ],
               ),
               SizedBox(
@@ -184,7 +195,7 @@ class _Hero extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    Buddy(size: 104, mood: wilted ? BuddyMood.sleepy : BuddyMood.happy)
+                    Buddy(size: 104, mood: wilted ? BuddyMood.sad : BuddyMood.fromEmoji(mood?.emoji))
                         .animate(onPlay: (c) => c.repeat(reverse: true))
                         .moveY(begin: 0, end: -6, duration: 1600.ms, curve: Curves.easeInOut),
                   ],
@@ -923,16 +934,58 @@ class _ChatButton extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final unread = ref.watch(unreadChatProvider);
-    return IconButton(
-      tooltip: unread > 0 ? 'Chat, $unread unread' : 'Chat',
-      visualDensity: VisualDensity.compact,
-      icon: Badge(
-        isLabelVisible: unread > 0,
-        label: Text(unread > 9 ? '9+' : '$unread'),
-        child: const Icon(Icons.chat_bubble_outline_rounded, color: Brand.indigo),
+    return Badge(
+      isLabelVisible: unread > 0,
+      backgroundColor: Brand.pink,
+      offset: const Offset(-2, 2),
+      label: Text(unread > 9 ? '9+' : '$unread'),
+      child: _Glass(
+        tooltip: unread > 0 ? 'Chat, $unread unread' : 'Chat',
+        onTap: () => context.push('/chat'),
+        child: const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 20),
       ),
-      onPressed: () => context.push('/chat'),
     );
+  }
+}
+
+/// Frosted-glass control on the gradient header: a 42 px circle, or a pill
+/// when [padding] is given.
+class _Glass extends StatelessWidget {
+  const _Glass({required this.child, required this.onTap, this.padding, this.tooltip});
+
+  final Widget child;
+  final VoidCallback onTap;
+  final EdgeInsets? padding;
+  final String? tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    final round = padding == null;
+    final shape = round
+        ? const CircleBorder(side: BorderSide(color: Color(0x4DFFFFFF)))
+        : const StadiumBorder(side: BorderSide(color: Color(0x4DFFFFFF)));
+    Widget body = ClipPath(
+      clipper: ShapeBorderClipper(shape: shape),
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Material(
+          color: Colors.white.withValues(alpha: 0.18),
+          shape: shape,
+          child: InkWell(
+            customBorder: shape,
+            onTap: () {
+              HapticFeedback.selectionClick().ignore();
+              onTap();
+            },
+            child: round
+                ? SizedBox.square(dimension: 42, child: Center(child: child))
+                : Padding(padding: padding!, child: child),
+          ),
+        ),
+      ),
+    );
+    if (tooltip != null) body = Tooltip(message: tooltip, child: body);
+    return body;
   }
 }
 
