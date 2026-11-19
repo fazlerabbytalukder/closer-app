@@ -392,6 +392,8 @@ class PartnerSimulator {
     final id = _pairId;
     if (id == null || !_partnerInPair) return;
     _later(2, () => _b.markChatReadFor(id, partnerUid));
+    // "After viewing" messages go once they've read it and closed the chat.
+    if (m.ttl == ChatTtl.viewed) _later(15, () => _b.clearViewedFor(id, partnerUid));
     if (m.isEvent) return;
     if (m.isSnap) {
       // They open it (each allowed time), and sometimes screenshot it.
@@ -399,7 +401,18 @@ class PartnerSimulator {
         _later(3 + i * 6, () => _b.openSnapFor(id, partnerUid, m.id));
       }
       if (_rand.nextDouble() < 0.4) {
-        _later(5, () => _b.writeMessage(id, partnerUid, ChatDraft(type: MessageType.event, event: ChatEvent.screenshot, replyTo: ReplyRef(id: m.id, senderId: m.senderId, preview: m.preview))));
+        _later(
+          5,
+          () => _b.writeMessage(
+            id,
+            partnerUid,
+            ChatDraft(
+              type: MessageType.event,
+              event: ChatEvent.screenshot,
+              replyTo: ReplyRef(id: m.id, senderId: m.senderId, preview: m.preview),
+            ),
+          ),
+        );
       }
     } else if (m.type == MessageType.photo || _rand.nextDouble() < 0.3) {
       _later(3, () => _b.setMessageReaction(id, partnerUid, m.id, _pick(const ['❤️', '😍', '😂', '🥹'])));

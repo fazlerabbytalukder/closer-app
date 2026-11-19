@@ -7,6 +7,9 @@
 //     {type, pairId, itemId, itemType, thumbUrl, caption, senderName, sentAt, silent}
 // * type=tap    data-only, high priority:
 //     {type, pairId, tapId, kind, message, senderName, sentAt, silent}
+// * type=chat   data-only on Android, high priority:
+//     {type, title, body, route, pairId, messageId, senderPhoto, silent}
+//     shown here as a chat head (bubble) or a plain chat notification.
 // * type=unpaired  data-only: clear the widgets.
 // * everything else (question, game_turn, countdown, streak_reminder, ...) is
 //   a regular notification message with an Android channel id, which Android
@@ -20,12 +23,14 @@ import 'dart:io';
 
 import 'package:closer_app/core/models/models.dart';
 import 'package:closer_app/core/services/widget_contract.dart';
+import 'package:closer_app/features/chat/chat_heads.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:home_widget/home_widget.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Android notification channels (plan section 13). The server sends to
 /// these ids; the app should create them on first launch with the same ids.
@@ -105,6 +110,8 @@ Future<void> handleCloserMessage(RemoteMessage message, {bool foreground = false
         await _handleItem(data, notify: notify);
       case 'tap':
         await _handleTap(data, notify: notify);
+      case 'chat':
+        if (notify) await _handleChat(data);
       case 'unpaired':
         await _handleUnpaired();
       default:
@@ -200,6 +207,28 @@ Future<void> _handleTap(Map<String, dynamic> data, {required bool notify}) async
   }
 }
 
+Future<void> _handleChat(Map<String, dynamic> data) async {
+  final title = '${data['title'] ?? 'Your person'}';
+  final body = '${data['body'] ?? ''}';
+  final prefs = await SharedPreferences.getInstance();
+  final bubbled = await ChatHeads.notify(
+    prefs,
+    name: title,
+    photo: '${data['senderPhoto'] ?? ''}',
+    message: body,
+    messageId: '${data['messageId'] ?? ''}',
+  );
+  if (bubbled) return;
+  await _show(
+    id: 1007, // same slot as the in-app chat notification
+    channelId: CloserChannels.chat,
+    title: title,
+    body: body,
+    importance: Importance.high,
+    payload: '/chat',
+  );
+}
+
 Future<void> _handleUnpaired() async {
   final previousPath = await _read(WidgetKeys.latestPath);
   await HomeWidget.saveWidgetData<bool>(WidgetKeys.paired, false);
@@ -268,6 +297,7 @@ Future<void> _show({
   bool vibrate = true,
   Int64List? vibrationPattern,
   bool playSound = true,
+  String payload = _replyPayload,
 }) async {
   try {
     if (!_pluginReady) {
@@ -297,7 +327,7 @@ Future<void> _show({
       title: title,
       body: body,
       notificationDetails: NotificationDetails(android: details),
-      payload: _replyPayload,
+      payload: payload,
     );
   } on Object catch (e) {
     debugPrint('Closer FCM: local notification failed: $e');

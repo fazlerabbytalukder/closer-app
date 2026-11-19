@@ -541,6 +541,7 @@ class Pair {
     this.dateGoal,
     this.pet,
     this.home = const PetHome(),
+    this.chatTtl = ChatTtl.fallback,
   });
 
   factory Pair.fromJson(String id, Map<String, dynamic> j) => Pair(
@@ -562,6 +563,7 @@ class Pair {
     dateGoal: j['dateGoal'] == null ? null : DateGoal.fromJson(_map(j['dateGoal'])),
     pet: j['pet'] == null ? null : Pet.fromJson(_map(j['pet'])),
     home: PetHome.fromJson(_map(j['home'])),
+    chatTtl: ChatTtl.parse(j['chatTtl']),
   );
 
   final String id;
@@ -597,6 +599,9 @@ class Pair {
 
   /// The pet's shared home: wallpaper, decorations, love points spent.
   final PetHome home;
+
+  /// Disappearing messages for new chat messages (default: 24 hours).
+  final ChatTtl chatTtl;
 
   /// Love points earned so far, from the server-written stats, the best
   /// streak and the plant (so they can't be made up on the device).
@@ -637,6 +642,7 @@ class Pair {
     'dateGoal': dateGoal?.toJson(),
     'pet': pet?.toJson(),
     'home': home.toJson(),
+    'chatTtl': chatTtl.name,
   };
 }
 
@@ -1935,13 +1941,77 @@ enum MessageType {
   static MessageType parse(Object? v) => MessageType.values.firstWhere((t) => t.name == v, orElse: () => text);
 }
 
+/// Disappearing messages: how long new chat messages are kept. A pair
+/// setting (either member changes it); each message keeps the setting it
+/// was sent with.
+enum ChatTtl {
+  /// Deleted once the partner has seen it and left the chat.
+  viewed,
+  day,
+  week,
+  month,
+  year,
+  never;
+
+  /// New pairs (and pairs that never chose) delete chats after a day.
+  static const fallback = ChatTtl.day;
+
+  static ChatTtl parse(Object? v) => values.firstWhere((t) => t.name == v, orElse: () => fallback);
+
+  /// For messages: those sent before this setting existed have none (kept).
+  static ChatTtl? tryParse(Object? v) => values.where((t) => t.name == v).firstOrNull;
+
+  Duration? get duration => switch (this) {
+    day => const Duration(days: 1),
+    week => const Duration(days: 7),
+    month => const Duration(days: 30),
+    year => const Duration(days: 365),
+    viewed || never => null,
+  };
+
+  String get label => switch (this) {
+    viewed => 'After viewing',
+    day => '24 hours',
+    week => '7 days',
+    month => '1 month',
+    year => '1 year',
+    never => 'Never',
+  };
+
+  /// Fits on the app bar chip.
+  String get short => switch (this) {
+    viewed => 'Seen',
+    day => '24h',
+    week => '7d',
+    month => '1mo',
+    year => '1y',
+    never => 'Off',
+  };
+
+  String get description => switch (this) {
+    viewed => 'Deleted as soon as they’ve been seen and the chat is closed',
+    never => 'Messages are kept until you delete them',
+    _ => 'Messages are deleted $label after they’re sent',
+  };
+
+  /// "messages disappear after 7 days" / "turned off disappearing messages".
+  String get sentence => switch (this) {
+    viewed => 'set messages to disappear after they’re seen',
+    never => 'turned off disappearing messages',
+    _ => 'set messages to disappear after $label',
+  };
+}
+
 /// What a [MessageType.event] message reports.
 enum ChatEvent {
   /// Someone took a screenshot while the chat or a snap was open.
   screenshot,
 
   /// Someone saved a chat photo to their phone.
-  saved;
+  saved,
+
+  /// Someone changed disappearing messages (the new [ChatTtl] is the text).
+  ttl;
 
   static ChatEvent? parse(Object? v) => ChatEvent.values.where((e) => e.name == v).firstOrNull;
 }
@@ -1984,6 +2054,7 @@ class ChatMessage {
     this.viewLimit = 0,
     this.views = 0,
     this.event,
+    this.ttl,
     this.pending = false,
   });
 
@@ -2000,6 +2071,7 @@ class ChatMessage {
     viewLimit: (j['viewLimit'] as num?)?.toInt() ?? 0,
     views: (j['views'] as num?)?.toInt() ?? 0,
     event: ChatEvent.parse(j['event']),
+    ttl: ChatTtl.tryParse(j['ttl']),
     // Server timestamps are null until written; show those as "now".
     createdAt: _date(j['createdAt']) ?? DateTime.now(),
     pending: pending,
@@ -2038,6 +2110,9 @@ class ChatMessage {
 
   /// Events: what happened (sent by the person who did it).
   final ChatEvent? event;
+
+  /// Disappearing setting it was sent with (null: older message, kept).
+  final ChatTtl? ttl;
   final DateTime createdAt;
 
   /// Not yet confirmed by the server (sent offline).
@@ -2046,6 +2121,14 @@ class ChatMessage {
   bool get isDeleted => deletedAt != null;
   bool get isSnap => type == MessageType.snap;
   bool get isEvent => type == MessageType.event;
+
+  /// When a timed message disappears (null: kept, or "after viewing").
+  DateTime? get expiresAt => switch (ttl?.duration) {
+    final d? => createdAt.add(d),
+    null => null,
+  };
+
+  bool isExpired(DateTime now) => expiresAt?.isBefore(now) ?? false;
 
   /// Snap opened as many times as allowed (or its file is gone).
   bool get snapUsedUp => isSnap && (views >= viewLimit || mediaPath == null);
@@ -2060,6 +2143,7 @@ class ChatMessage {
     MessageType.event => switch (event) {
       ChatEvent.screenshot => '📸 Took a screenshot',
       ChatEvent.saved => '⬇️ Saved a photo',
+      ChatEvent.ttl => '⏱️ Changed disappearing messages',
       null => '',
     },
     MessageType.text => text.length > 80 ? '${text.substring(0, 79)}…' : text,
@@ -2077,6 +2161,7 @@ class ChatMessage {
     'viewLimit': viewLimit,
     'views': views,
     'event': event?.name,
+    'ttl': ttl?.name,
     'createdAt': _ms(createdAt),
   };
 }
@@ -2093,6 +2178,7 @@ class ChatDraft {
     this.replyTo,
     this.viewLimit = 0,
     this.event,
+    this.ttl,
   });
 
   final MessageType type;
@@ -2106,6 +2192,20 @@ class ChatDraft {
 
   /// Events only.
   final ChatEvent? event;
+
+  /// Disappearing setting; null = the pair's current one (backend fills it).
+  final ChatTtl? ttl;
+
+  ChatDraft withTtl(ChatTtl t) => ChatDraft(
+    type: type,
+    text: text,
+    localPath: localPath,
+    durationMs: durationMs,
+    replyTo: replyTo,
+    viewLimit: viewLimit,
+    event: event,
+    ttl: t,
+  );
 
   /// Photos and snaps both upload as a jpg.
   bool get isImage => type == MessageType.photo || type == MessageType.snap;

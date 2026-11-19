@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:closer_app/app/providers.dart';
 import 'package:closer_app/core/data/closer_backend.dart';
@@ -8,14 +9,17 @@ import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:closer_app/core/ui/actions.dart';
 import 'package:closer_app/core/ui/components.dart';
 import 'package:closer_app/core/ui/voice.dart';
+import 'package:closer_app/features/chat/chat_heads.dart';
 import 'package:closer_app/features/chat/snap_widgets.dart';
 import 'package:closer_app/features/love/love_widgets.dart';
+import 'package:closer_bubbles/closer_bubbles.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 const _chatReactions = ['❤️', '😂', '😍', '🥹', '😮', '👍'];
 
@@ -23,7 +27,10 @@ const _chatReactions = ['❤️', '😂', '😍', '🥹', '😮', '👍'];
 /// replies, reactions, "typing…" and "Seen". Screenshots and saved photos
 /// show up as a line in the chat for both of you.
 class ChatScreen extends ConsumerStatefulWidget {
-  const ChatScreen({super.key});
+  const ChatScreen({super.key, this.inBubble = false});
+
+  /// Running inside the chat head (Android bubble).
+  final bool inBubble;
 
   /// True while the chat is on screen (no in-app notifications then).
   static bool isOpen = false;
@@ -32,11 +39,12 @@ class ChatScreen extends ConsumerStatefulWidget {
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends ConsumerState<ChatScreen> {
+class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObserver {
   final _text = TextEditingController();
   final _focus = FocusNode();
   final _recorder = VoiceRecorder();
   ReplyRef? _replyTo;
+  bool _canPopOut = false;
   bool _recording = false;
   bool _sending = false;
   DateTime _lastTypingSent = DateTime(0);
@@ -44,6 +52,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   Timer? _readDebounce;
   StreamSubscription<void>? _screenshots;
   DateTime _lastScreenshot = DateTime(0);
+
+  /// The pair's disappearing setting, kept from the last build.
+  ChatTtl _ttl = ChatTtl.fallback;
 
   /// Kept from initState: timers and dispose must not touch `ref`.
   late final CloserBackend _backend;
@@ -53,8 +64,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     super.initState();
     _backend = ref.read(backendProvider);
     ChatScreen.isOpen = true;
+    WidgetsBinding.instance.addObserver(this);
     _text.addListener(_onTextChanged);
     _screenshots = ScreenGuard.screenshots.listen((_) => _onScreenshot());
+    if (!widget.inBubble && Platform.isAndroid) {
+      unawaited(ChatBubbles.isSupported().then((v) => mounted ? setState(() => _canPopOut = v) : null));
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) => _markRead());
   }
 
@@ -65,12 +80,74 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     _lastScreenshot = now;
     final snap = SnapViewer.showing;
     final about = snap == null ? null : ReplyRef(id: snap.id, senderId: snap.senderId, preview: snap.preview);
-    unawaited(_backend.sendChatEvent(ChatEvent.screenshot, about: about).catchError((Object e) => debugPrint('screenshot event: $e')));
+    unawaited(
+      _backend
+          .sendChatEvent(ChatEvent.screenshot, about: about, ttl: _ttl)
+          .catchError((Object e) => debugPrint('screenshot event: $e')),
+    );
+  }
+
+  /// Leaving the chat (closed or app sent to the background): "after
+  /// viewing" messages you've seen disappear.
+  void _leave() {
+    unawaited(_backend.clearViewedMessages().catchError((Object e) => debugPrint('clearViewed: $e')));
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) _leave();
+  }
+
+  Future<void> _pickTtl() async {
+    final current = _ttl;
+    final picked = await showModalBottomSheet<ChatTtl>(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(Space.m, Space.m, Space.m, Space.xs),
+                child: Text('⏱️ Disappearing messages', style: ctx.tt.titleLarge),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(Space.m, 0, Space.m, Space.s),
+                child: Text(
+                  'For new messages, for both of you. Either of you can change it.',
+                  style: ctx.tt.bodySmall?.copyWith(color: ctx.cc.muted),
+                ),
+              ),
+              for (final t in ChatTtl.values)
+                ListTile(
+                  leading: Icon(
+                    t == ChatTtl.never
+                        ? Icons.timer_off_outlined
+                        : (t == ChatTtl.viewed ? Icons.visibility_outlined : Icons.timer_outlined),
+                    color: t == current ? ctx.cc.accent : null,
+                  ),
+                  title: Text(t == ChatTtl.fallback ? '${t.label} (default)' : t.label),
+                  subtitle: Text(t.description),
+                  trailing: t == current ? Icon(Icons.check_circle_rounded, color: ctx.cc.accent) : null,
+                  onTap: () => Navigator.pop(ctx, t),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (picked == null || picked == current || !mounted) return;
+    final ok = await runAction(context, () => _backend.setChatTtl(picked));
+    if (ok && mounted) hapticSoft();
   }
 
   @override
   void dispose() {
     ChatScreen.isOpen = false;
+    WidgetsBinding.instance.removeObserver(this);
+    _leave();
     unawaited(_screenshots?.cancel());
     _typingIdle?.cancel();
     _readDebounce?.cancel();
@@ -107,7 +184,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   Future<void> _send(ChatDraft draft) async {
     setState(() => _sending = true);
-    final ok = await runAction(context, () => ref.read(backendProvider).sendMessage(draft));
+    final ok = await runAction(context, () => ref.read(backendProvider).sendMessage(draft.withTtl(_ttl)));
     if (!mounted) return;
     setState(() {
       _sending = false;
@@ -218,10 +295,40 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             .sendChatEvent(
               ChatEvent.saved,
               about: ReplyRef(id: m.id, senderId: m.senderId, preview: m.preview),
+              ttl: _ttl,
             )
             .catchError((Object e) => debugPrint('saved event: $e')),
       );
     }
+  }
+
+  /// Turns the chat into a floating chat head.
+  Future<void> _popOut(String name, String? photo) async {
+    final prefs = ref.read(prefsProvider);
+    await prefs.setBool(ChatHeads.prefKey, true);
+    if (!await ChatBubbles.areAllowed()) {
+      if (!mounted) return;
+      final go = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Turn on chat heads'),
+          content: const Text(
+            'Allow Closer to show bubbles so your chat floats over other apps. '
+            'In the settings, choose “All conversations can bubble”.',
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Not now')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Open settings')),
+          ],
+        ),
+      );
+      if (go ?? false) await ChatBubbles.openSettings();
+      return;
+    }
+    await ChatHeads.notify(prefs, name: name, photo: photo);
+    if (!mounted) return;
+    hapticSoft();
+    showToast(context, 'Chat head is on — it floats over your other apps 💬', icon: Icons.bubble_chart_rounded);
   }
 
   Future<void> _startRecording() async {
@@ -248,7 +355,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       showToast(context, 'Hold on a bit longer to record');
       return;
     }
-    await _send(ChatDraft(type: MessageType.voice, localPath: clip.path, durationMs: clip.durationMs, replyTo: _replyTo));
+    await _send(
+      ChatDraft(type: MessageType.voice, localPath: clip.path, durationMs: clip.durationMs, replyTo: _replyTo),
+    );
   }
 
   Future<void> _cancelRecording() async {
@@ -285,16 +394,27 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       onTap: () => Navigator.pop(ctx, 'react:$e'),
                       child: Container(
                         padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(shape: BoxShape.circle, color: current == e ? ctx.cc.accentTint : null),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: current == e ? ctx.cc.accentTint : null,
+                        ),
                         child: Text(e, style: const TextStyle(fontSize: 28)),
                       ),
                     ),
                 ],
               ),
             ),
-            ListTile(leading: const Icon(Icons.reply_rounded), title: const Text('Reply'), onTap: () => Navigator.pop(ctx, 'reply')),
+            ListTile(
+              leading: const Icon(Icons.reply_rounded),
+              title: const Text('Reply'),
+              onTap: () => Navigator.pop(ctx, 'reply'),
+            ),
             if (m.type == MessageType.text)
-              ListTile(leading: const Icon(Icons.copy_rounded), title: const Text('Copy'), onTap: () => Navigator.pop(ctx, 'copy')),
+              ListTile(
+                leading: const Icon(Icons.copy_rounded),
+                title: const Text('Copy'),
+                onTap: () => Navigator.pop(ctx, 'copy'),
+              ),
             if (m.type == MessageType.photo && m.mediaPath != null)
               ListTile(
                 leading: const Icon(Icons.download_rounded),
@@ -337,9 +457,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final partnerUid = ref.watch(partnerUidProvider);
     final partner = ref.watch(partnerProvider).value;
     final name = ref.watch(partnerNameProvider);
-    final messages = ref.watch(messagesProvider).value ?? const <ChatMessage>[];
     final states = ref.watch(chatStateProvider).value ?? const <String, ChatState>{};
     final now = ref.watch(clockProvider).value ?? DateTime.now();
+    final ttl = _ttl = ref.watch(pairProvider).value?.chatTtl ?? ChatTtl.fallback;
+    // Timed messages vanish on time, before the hourly cleanup deletes them.
+    final messages = [
+      for (final m in ref.watch(messagesProvider).value ?? const <ChatMessage>[])
+        if (!m.isExpired(DateTime.now())) m,
+    ];
     final partnerState = partnerUid == null ? null : states[partnerUid];
     final typing = partnerState?.isTyping(DateTime.now()) ?? false;
     final partnerRead = partnerState?.readAt;
@@ -351,7 +476,38 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        titleSpacing: 0,
+        automaticallyImplyLeading: !widget.inBubble,
+        titleSpacing: widget.inBubble ? Space.m : 0,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: ActionChip(
+              tooltip: 'Disappearing messages: ${ttl.label}',
+              avatar: Icon(
+                ttl == ChatTtl.never ? Icons.timer_off_outlined : Icons.timer_outlined,
+                size: 16,
+                color: context.cc.accent,
+              ),
+              label: Text(ttl.short),
+              visualDensity: VisualDensity.compact,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              shape: const StadiumBorder(),
+              onPressed: _pickTtl,
+            ),
+          ),
+          if (widget.inBubble)
+            IconButton(
+              tooltip: 'Open in Closer',
+              icon: const Icon(Icons.open_in_full_rounded),
+              onPressed: () => launchUrl(Uri.parse('closer://chat'), mode: LaunchMode.externalApplication),
+            )
+          else if (_canPopOut)
+            IconButton(
+              tooltip: 'Pop out as a chat head',
+              icon: const Icon(Icons.bubble_chart_outlined),
+              onPressed: () => _popOut(name, partner?.photoUrl),
+            ),
+        ],
         title: Row(
           children: [
             Avatar(name: partner?.displayName ?? name, photo: partner?.photoUrl, size: 36),
@@ -387,13 +543,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         children: [
           Expanded(
             child: messages.isEmpty
-                ? EmptyState(emoji: '💬', title: 'Just the two of you', body: 'Say hi to $name. Only you two can see this chat.')
+                ? EmptyState(
+                    emoji: '💬',
+                    title: 'Just the two of you',
+                    body: 'Say hi to $name. Only you two can see this chat.\n⏱️ ${ttl.description}.',
+                  )
                 : ListView.builder(
                     reverse: true,
                     padding: const EdgeInsets.fromLTRB(Space.s + 4, Space.s, Space.s + 4, Space.s),
-                    itemCount: messages.length + (typing ? 1 : 0),
+                    itemCount: messages.length + (typing ? 1 : 0) + 1,
                     itemBuilder: (context, i) {
                       if (typing && i == 0) return const _TypingBubble();
+                      // Oldest end of the list: what the disappearing setting is.
+                      if (i == messages.length + (typing ? 1 : 0)) return _TtlBanner(ttl: ttl, onTap: _pickTtl);
                       final idx = messages.length - 1 - (i - (typing ? 1 : 0));
                       final m = messages[idx];
                       final prev = idx > 0 ? messages[idx - 1] : null;
@@ -444,7 +606,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           _replyTo!.senderId == me ? 'Replying to yourself' : 'Replying to $name',
                           style: context.tt.labelMedium?.copyWith(color: context.cc.accent),
                         ),
-                        Text(_replyTo!.preview, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.tt.bodySmall),
+                        Text(
+                          _replyTo!.preview,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.tt.bodySmall,
+                        ),
                       ],
                     ),
                   ),
@@ -491,7 +658,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 counterText: '',
                                 isDense: true,
                                 contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(24), borderSide: BorderSide.none),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(24),
+                                  borderSide: BorderSide.none,
+                                ),
                                 filled: true,
                               ),
                             ),
@@ -582,6 +752,7 @@ class _EventLine extends StatelessWidget {
       ChatEvent.screenshot => '📸 $who took a screenshot of the chat',
       ChatEvent.saved when about != null => '⬇️ $who saved $owner photo',
       ChatEvent.saved => '⬇️ $who saved a photo',
+      ChatEvent.ttl => '⏱️ $who ${ChatTtl.parse(message.text).sentence}',
       null => '',
     };
     final time = DateFormat('HH:mm').format(message.createdAt);
@@ -599,6 +770,40 @@ class _EventLine extends StatelessWidget {
         ),
       ),
     ).animate().fadeIn(duration: 250.ms);
+  }
+}
+
+/// Top of the chat: "⏱️ Messages disappear after 24 hours".
+class _TtlBanner extends StatelessWidget {
+  const _TtlBanner({required this.ttl, required this.onTap});
+
+  final ChatTtl ttl;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = switch (ttl) {
+      ChatTtl.never => 'Messages are kept. Tap to make them disappear.',
+      ChatTtl.viewed => 'Messages disappear once they’re seen and the chat is closed.',
+      _ => 'Messages disappear ${ttl.label} after they’re sent.',
+    };
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Space.l, Space.s, Space.l, Space.m),
+      child: Center(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            child: Text(
+              '⏱️ $text',
+              textAlign: TextAlign.center,
+              style: context.tt.labelSmall?.copyWith(color: context.cc.muted),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -750,7 +955,12 @@ class _BubbleState extends State<_Bubble> {
     } else {
       content = switch (m.type) {
         MessageType.text => Text(m.text, style: context.tt.bodyLarge?.copyWith(color: fg, height: 1.3)),
-        MessageType.voice => VoicePlayer(mediaPath: m.mediaPath, durationMs: m.durationMs, onDark: mine, seed: m.id.hashCode),
+        MessageType.voice => VoicePlayer(
+          mediaPath: m.mediaPath,
+          durationMs: m.durationMs,
+          onDark: mine,
+          seed: m.id.hashCode,
+        ),
         MessageType.snap => _SnapTile(message: m, mine: mine, fg: fg, onTap: widget.onOpenSnap),
         MessageType.event => const SizedBox.shrink(),
         MessageType.photo => Column(
@@ -766,7 +976,10 @@ class _BubbleState extends State<_Bubble> {
                 ),
               ),
             ),
-            if (m.text.isNotEmpty) ...[const SizedBox(height: 6), Text(m.text, style: context.tt.bodyLarge?.copyWith(color: fg))],
+            if (m.text.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(m.text, style: context.tt.bodyLarge?.copyWith(color: fg)),
+            ],
           ],
         ),
       };
@@ -774,11 +987,15 @@ class _BubbleState extends State<_Bubble> {
 
     final bubble = Container(
       constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.75),
-      padding: m.type == MessageType.photo && !m.isDeleted ? const EdgeInsets.all(4) : const EdgeInsets.fromLTRB(14, 9, 14, 9),
+      padding: m.type == MessageType.photo && !m.isDeleted
+          ? const EdgeInsets.all(4)
+          : const EdgeInsets.fromLTRB(14, 9, 14, 9),
       decoration: BoxDecoration(
         borderRadius: radius,
         color: mine ? null : context.cc.card,
-        gradient: mine ? LinearGradient(colors: context.cc.gradient, begin: Alignment.topLeft, end: Alignment.bottomRight) : null,
+        gradient: mine
+            ? LinearGradient(colors: context.cc.gradient, begin: Alignment.topLeft, end: Alignment.bottomRight)
+            : null,
         boxShadow: const [BoxShadow(color: Color(0x0F000000), blurRadius: 4, offset: Offset(0, 1))],
       ),
       child: Column(
@@ -787,7 +1004,12 @@ class _BubbleState extends State<_Bubble> {
         children: [
           if (m.replyTo case final r? when !m.isDeleted)
             Container(
-              margin: EdgeInsets.fromLTRB(m.type == MessageType.photo ? 6 : 0, m.type == MessageType.photo ? 6 : 0, 0, 6),
+              margin: EdgeInsets.fromLTRB(
+                m.type == MessageType.photo ? 6 : 0,
+                m.type == MessageType.photo ? 6 : 0,
+                0,
+                6,
+              ),
               padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
               decoration: BoxDecoration(
                 color: (mine ? Colors.white : context.cc.accent).withValues(alpha: 0.15),
@@ -799,7 +1021,10 @@ class _BubbleState extends State<_Bubble> {
                 children: [
                   Text(
                     r.senderId == widget.me ? 'You' : widget.name,
-                    style: context.tt.labelSmall?.copyWith(color: mine ? Colors.white : context.cc.accent, fontWeight: FontWeight.w700),
+                    style: context.tt.labelSmall?.copyWith(
+                      color: mine ? Colors.white : context.cc.accent,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   Text(
                     r.preview,

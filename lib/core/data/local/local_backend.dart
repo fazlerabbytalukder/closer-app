@@ -72,7 +72,11 @@ class LocalBackend implements CloserBackend {
     if (_db['textRepaired'] != true) await _repairSavedText();
     _rollDay();
     // Day rollover check (streaks + daily question), like the hourly jobs.
-    _dayTimer = Timer.periodic(const Duration(minutes: 1), (_) => _rollDay());
+    purgeExpiredMessages();
+    _dayTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      _rollDay();
+      purgeExpiredMessages();
+    });
     _sim.resume();
   }
 
@@ -1273,6 +1277,7 @@ class LocalBackend implements CloserBackend {
       replyTo: draft.replyTo,
       viewLimit: draft.type == MessageType.snap ? draft.viewLimit : 0,
       event: draft.event,
+      ttl: draft.ttl ?? ChatTtl.parse(pairDoc(pairId)?['chatTtl']),
       createdAt: DateTime.now(),
     );
     _sub('messages', pairId)[m.id] = m.toJson();
@@ -1334,9 +1339,62 @@ class LocalBackend implements CloserBackend {
   }
 
   @override
-  Future<void> sendChatEvent(ChatEvent event, {ReplyRef? about}) async {
+  Future<void> sendChatEvent(ChatEvent event, {ReplyRef? about, ChatTtl? ttl}) async {
     if (myPairId == null || currentUid == null) return;
-    writeMessage(_pairId, _me, ChatDraft(type: MessageType.event, event: event, replyTo: about));
+    writeMessage(_pairId, _me, ChatDraft(type: MessageType.event, event: event, replyTo: about, ttl: ttl));
+  }
+
+  @override
+  Future<void> setChatTtl(ChatTtl ttl) async {
+    final pair = pairDoc(_pairId);
+    if (pair == null) return;
+    pair['chatTtl'] = ttl.name;
+    writeMessage(_pairId, _me, ChatDraft(type: MessageType.event, event: ChatEvent.ttl, text: ttl.name, ttl: ttl));
+  }
+
+  @override
+  Future<void> clearViewedMessages() async {
+    if (myPairId == null || currentUid == null) return;
+    clearViewedFor(_pairId, _me);
+  }
+
+  /// [uid] left the chat: their partner's "after viewing" messages go.
+  void clearViewedFor(String pairId, String uid) {
+    final messages = _sub('messages', pairId);
+    final gone = [
+      for (final e in messages.entries)
+        if ((e.value as Map)['ttl'] == ChatTtl.viewed.name && (e.value as Map)['senderId'] != uid) e.key,
+    ];
+    if (gone.isEmpty) return;
+    for (final id in gone) {
+      _deleteMessageMedia(messages.remove(id) as Map?);
+    }
+    _commit();
+  }
+
+  /// The hourly cleanup on Firebase: drops timed messages past their time.
+  void purgeExpiredMessages() {
+    final now = DateTime.now();
+    var changed = false;
+    for (final pairId in _col('messages').keys.toList()) {
+      final messages = _sub('messages', pairId);
+      for (final e in messages.entries.toList()) {
+        final m = ChatMessage.fromJson(e.key, Map<String, dynamic>.from(e.value as Map));
+        if (!m.isExpired(now)) continue;
+        _deleteMessageMedia(messages.remove(e.key) as Map?);
+        changed = true;
+      }
+    }
+    if (changed) _commit();
+  }
+
+  void _deleteMessageMedia(Map<dynamic, dynamic>? raw) {
+    final path = raw?['mediaPath'];
+    if (path is! String) return;
+    try {
+      final f = File(path);
+      if (f.existsSync()) f.deleteSync();
+    } on Object catch (_) {}
   }
 
   @override

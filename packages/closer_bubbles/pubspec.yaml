@@ -1,0 +1,19 @@
+name: closer_bubbles
+description: Android conversation bubbles ("chat heads") for Closer's private chat.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.13.7
+  flutter: ">=3.27.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+flutter:
+  plugin:
+    platforms:
+      android:
+        package: app.closer.bubbles
+        pluginClass: CloserBubblesPlugin

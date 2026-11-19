@@ -177,7 +177,13 @@ final unreadChatProvider = Provider<int>((ref) {
   final readAt = ref.watch(chatStateProvider).value?[me]?.readAt;
   final messages = ref.watch(messagesProvider).value ?? const <ChatMessage>[];
   return messages
-      .where((m) => m.senderId != me && !m.isDeleted && (readAt == null || m.createdAt.isAfter(readAt)))
+      .where(
+        (m) =>
+            m.senderId != me &&
+            !m.isDeleted &&
+            !m.isExpired(DateTime.now()) &&
+            (readAt == null || m.createdAt.isAfter(readAt)),
+      )
       .length;
 });
 

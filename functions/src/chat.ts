@@ -8,10 +8,11 @@
  * These functions notify the partner, count chat and goodnights as streak
  * activity, and send the evening goodnight reminder.
  */
-import {onDocumentCreated, onDocumentUpdated, onDocumentWritten} from "firebase-functions/v2/firestore";
+import {onDocumentCreated, onDocumentDeleted, onDocumentUpdated, onDocumentWritten} from "firebase-functions/v2/firestore";
+import {Timestamp} from "firebase-admin/firestore";
 import {getStorage} from "firebase-admin/storage";
 import {onSchedule} from "firebase-functions/v2/scheduler";
-import {db, REGION, PairDoc, getUser, firstName, notify, localDateKey, localHour, logger} from "./common";
+import {db, REGION, PairDoc, getUser, firstName, notify, notifyChat, localDateKey, localHour, logger} from "./common";
 import {markActivity} from "./streaks";
 
 /** Local hour the goodnight reminder goes out. */
@@ -28,6 +29,7 @@ function preview(d: FirebaseFirestore.DocumentData): string {
     case "event": {
       const snap = String(d.replyTo?.preview ?? "").startsWith("👻");
       if (d.event === "saved") return "⬇️ Saved your photo";
+      if (d.event === "ttl") return "⏱️ Changed disappearing messages";
       return d.replyTo ? `📸 Took a screenshot of your ${snap ? "snap" : "photo"}` : "📸 Took a screenshot of the chat";
     }
     default: {
@@ -57,14 +59,11 @@ export const onMessageCreated = onDocumentCreated(
     }
     if (!to) return;
     const user = await getUser(sender);
-    // One "chat" notification at a time (same tag): the newest replaces it.
-    await notify(to, {
-      channel: "chat",
-      type: "chat",
+    // The app shows it as a chat head (Android) or iOS shows the alert.
+    await notifyChat(to, {
       title: firstName(user),
       body: preview(d),
-      data: {route: "/chat", pairId, messageId: event.params.messageId},
-      prefKey: "chat",
+      data: {route: "/chat", pairId, messageId: event.params.messageId, senderPhoto: user.photoUrl ?? ""},
     });
   },
 );
@@ -85,6 +84,52 @@ export const onSnapOpened = onDocumentUpdated(
       logger.warn("snap media delete failed", {path: after.mediaPath, e});
     }
     await event.data!.after.ref.update({mediaPath: null});
+  },
+);
+
+/** Disappearing messages: days each timed setting keeps a message. */
+const TTL_DAYS: Record<string, number> = {day: 1, week: 7, month: 30, year: 365};
+
+/**
+ * Hourly: deletes chat messages past their disappearing time. Their photos
+ * and voice files go with them (onMessageDeleted). "After viewing"
+ * messages are deleted by the app when the reader leaves the chat.
+ */
+export const chatCleanup = onSchedule(
+  {schedule: "every 60 minutes", region: REGION, timeoutSeconds: 540, memory: "256MiB"},
+  async () => {
+    let deleted = 0;
+    for (const [ttl, days] of Object.entries(TTL_DAYS)) {
+      const cutoff = Timestamp.fromMillis(Date.now() - days * 86_400_000);
+      for (;;) {
+        const q = await db.collectionGroup("messages")
+          .where("ttl", "==", ttl)
+          .where("createdAt", "<", cutoff)
+          .limit(400)
+          .get();
+        if (q.empty) break;
+        const batch = db.batch();
+        q.docs.forEach((d) => batch.delete(d.ref));
+        await batch.commit();
+        deleted += q.size;
+        if (q.size < 400) break;
+      }
+    }
+    if (deleted > 0) logger.info("chatCleanup", {deleted});
+  },
+);
+
+/** A deleted chat message takes its photo / voice file with it. */
+export const onMessageDeleted = onDocumentDeleted(
+  {document: "pairs/{pairId}/messages/{messageId}", region: REGION},
+  async (event) => {
+    const path = event.data?.data()?.mediaPath;
+    if (typeof path !== "string" || path.length === 0) return;
+    try {
+      await getStorage().bucket().file(path).delete({ignoreNotFound: true});
+    } catch (e) {
+      logger.warn("chat media delete failed", {path, e});
+    }
   },
 );
 

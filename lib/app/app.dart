@@ -72,6 +72,9 @@ class _CloserAppState extends ConsumerState<CloserApp> with WidgetsBindingObserv
       void handle(Uri uri) {
         if (uri.scheme == 'https' && uri.pathSegments.firstOrNull == 'i') {
           router.go(routeForLink(uri));
+        } else if (uri.scheme == 'closer' && uri.host == 'chat') {
+          // Chat-head notification / "Open in Closer" from the bubble.
+          open('/chat');
         }
       }
 

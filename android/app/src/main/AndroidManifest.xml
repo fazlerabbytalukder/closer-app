@@ -57,6 +57,23 @@
                 <data android:scheme="https" android:host="closer.app" android:pathPrefix="/i/" />
             </intent-filter>
         </activity>
+        <!-- Chat head: the chat inside an Android bubble (closer_bubbles plugin). -->
+        <activity
+            android:name="app.closer.bubbles.ChatBubbleActivity"
+            android:exported="false"
+            android:allowEmbedded="true"
+            android:resizeableActivity="true"
+            android:documentLaunchMode="always"
+            android:label="Closer chat"
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme"
+              />
+        </activity>
         <!-- Home-screen widgets (Glance). -->
         <receiver
             android:name=".widgets.PartnerPhotoWidgetReceiver"

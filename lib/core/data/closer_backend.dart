@@ -204,7 +204,14 @@ abstract class CloserBackend {
   Future<void> openSnap(String messageId);
 
   /// Posts a system line: "📸 took a screenshot" / "⬇️ saved a photo".
-  Future<void> sendChatEvent(ChatEvent event, {ReplyRef? about});
+  Future<void> sendChatEvent(ChatEvent event, {ReplyRef? about, ChatTtl? ttl});
+
+  /// Disappearing messages for new messages; posts a line in the chat.
+  Future<void> setChatTtl(ChatTtl ttl);
+
+  /// "After viewing" messages: call when leaving the chat. Deletes the
+  /// partner's "after viewing" messages sent before now (you've seen them).
+  Future<void> clearViewedMessages();
 
   /// uid → read / typing state.
   Stream<Map<String, ChatState>> watchChatState(String pairId);
@@ -348,6 +355,7 @@ void checkMessage(ChatDraft d) {
       }
     case MessageType.event:
       if (d.event == null) throw const CloserException('Unknown event');
+      if (d.event == ChatEvent.ttl && ChatTtl.tryParse(d.text) == null) throw const CloserException('Unknown setting');
     case MessageType.voice:
       if (d.localPath == null || d.durationMs < 500) throw const CloserException('That voice message was too short');
       if (d.durationMs > ChatMessage.maxVoiceMs) throw const CloserException('Voice messages can be up to 5 minutes');

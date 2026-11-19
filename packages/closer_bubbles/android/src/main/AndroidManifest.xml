@@ -1,0 +1,3 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- ChatBubbleActivity is declared in the app's manifest so it can use the app's themes. -->
+</manifest>

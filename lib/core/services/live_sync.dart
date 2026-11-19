@@ -6,6 +6,7 @@ import 'package:closer_app/core/services/always_with_me.dart';
 import 'package:closer_app/core/services/notifications.dart';
 import 'package:closer_app/core/services/widget_bridge.dart';
 import 'package:closer_app/core/services/widget_contract.dart';
+import 'package:closer_app/features/chat/chat_heads.dart';
 import 'package:closer_app/features/chat/chat_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -270,7 +271,24 @@ class LiveSync {
       final first = prefs.getString(_kChat) == null;
       await prefs.setString(_kChat, lastFromPartner.id);
       if (!first && !ChatScreen.isOpen && prefsN.chat && !quiet) {
-        await notif.show(channel: Channels.chat, title: name, body: lastFromPartner.preview, route: '/chat', id: 1007);
+        // As a chat head when allowed (same notification id, so the push
+        // and this listener never show it twice).
+        final bubbled = await ChatHeads.notify(
+          prefs,
+          name: name,
+          photo: partner?.photoUrl,
+          message: lastFromPartner.preview,
+          messageId: lastFromPartner.id,
+        );
+        if (!bubbled) {
+          await notif.show(
+            channel: Channels.chat,
+            title: name,
+            body: lastFromPartner.preview,
+            route: '/chat',
+            id: 1007,
+          );
+        }
       }
     }
 

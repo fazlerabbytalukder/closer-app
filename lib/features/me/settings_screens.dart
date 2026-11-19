@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:closer_app/app/providers.dart';
@@ -8,6 +9,8 @@ import 'package:closer_app/core/services/widget_bridge.dart';
 import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:closer_app/core/ui/actions.dart';
 import 'package:closer_app/core/ui/components.dart';
+import 'package:closer_app/features/chat/chat_heads.dart';
+import 'package:closer_bubbles/closer_bubbles.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -30,7 +33,10 @@ class SettingsScreen extends ConsumerWidget {
     String hour(int h) => '${h.toString().padLeft(2, '0')}:00';
 
     Future<int?> pickHour(int initial) async {
-      final t = await showTimePicker(context: context, initialTime: TimeOfDay(hour: initial, minute: 0));
+      final t = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay(hour: initial, minute: 0),
+      );
       return t?.hour;
     }
 
@@ -45,8 +51,10 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text('Relationship type, labels & anniversary'),
             subtitle: Text(
               [
-                if (ref.watch(myLabelForPartnerProvider) case final l?) '${l.emoji} ${l.title}'
-                else (ref.watch(pairModeProvider) == PairMode.couple ? '💑 Couple' : '👯 Best friends'),
+                if (ref.watch(myLabelForPartnerProvider) case final l?)
+                  '${l.emoji} ${l.title}'
+                else
+                  (ref.watch(pairModeProvider) == PairMode.couple ? '💑 Couple' : '👯 Best friends'),
                 'Nickname, together since',
               ].join(' · '),
             ),
@@ -70,6 +78,7 @@ class SettingsScreen extends ConsumerWidget {
             value: prefs.chat,
             onChanged: (v) => update(prefs.copyWith(chat: v)),
           ),
+          if (Platform.isAndroid) const _ChatHeadsTile(),
           SwitchListTile(
             title: const Text('Plant & calendar reminders'),
             value: prefs.reminders,
@@ -81,7 +90,11 @@ class SettingsScreen extends ConsumerWidget {
           ),
           SwitchListTile(
             title: const Text('Quiet hours'),
-            subtitle: Text(quiet ? '${hour(prefs.quietStart!)} – ${hour(prefs.quietEnd!)} · widget still updates silently' : 'Pause notifications at night'),
+            subtitle: Text(
+              quiet
+                  ? '${hour(prefs.quietStart!)} – ${hour(prefs.quietEnd!)} · widget still updates silently'
+                  : 'Pause notifications at night',
+            ),
             value: quiet,
             onChanged: (v) => update(prefs.copyWith(quietStart: () => v ? 22 : null, quietEnd: () => v ? 8 : null)),
           ),
@@ -115,7 +128,8 @@ class SettingsScreen extends ConsumerWidget {
             trailing: const Icon(Icons.open_in_new_rounded, size: 18),
             onTap: () async {
               final granted = await NotificationService.instance.requestPermission();
-              if (context.mounted) showToast(context, granted ? 'Notifications are on' : 'Enable notifications in Android settings');
+              if (context.mounted)
+                showToast(context, granted ? 'Notifications are on' : 'Enable notifications in Android settings');
             },
           ),
           const Divider(height: Space.xl),
@@ -197,7 +211,8 @@ class PrivacyScreen extends ConsumerWidget {
                 final yes = await confirm(
                   context,
                   title: 'Unpair from $name?',
-                  body: 'Your shared memories, questions, countdowns and plant will be deleted. You can export your memories first. $name will be notified.',
+                  body:
+                      'Your shared memories, questions, countdowns and plant will be deleted. You can export your memories first. $name will be notified.',
                   ok: 'Unpair',
                   destructive: true,
                 );
@@ -211,7 +226,12 @@ class PrivacyScreen extends ConsumerWidget {
             leading: const Icon(Icons.logout_rounded),
             title: const Text('Sign out'),
             onTap: () async {
-              final yes = await confirm(context, title: 'Sign out?', body: 'Your widgets will show “Open Closer to connect” until you sign in again.', ok: 'Sign out');
+              final yes = await confirm(
+                context,
+                title: 'Sign out?',
+                body: 'Your widgets will show “Open Closer to connect” until you sign in again.',
+                ok: 'Sign out',
+              );
               if (!yes || !context.mounted) return;
               await WidgetBridge.clear();
               await ref.read(onboardingFlagsProvider.notifier).clear();
@@ -263,11 +283,23 @@ class HelpScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(Space.m),
         children: [
-          const _Faq(q: 'How fast do photos arrive?', a: 'Usually within a few seconds. Some phones delay background work to save battery — see “Widget not updating?”.'),
+          const _Faq(
+            q: 'How fast do photos arrive?',
+            a: 'Usually within a few seconds. Some phones delay background work to save battery — see “Widget not updating?”.',
+          ),
           if (AppConfig.monetizationEnabled)
-            const _Faq(q: 'Is Closer Plus shared?', a: 'Yes. One subscription covers both of you. If you unpair, Plus stays with whoever bought it.'),
-          const _Faq(q: 'How do we connect?', a: 'One of you taps “Invite your person” and sends the 6-character code (or link). The other taps “I have a code” and enters it. You’re connected as soon as the code is accepted, as a couple or as best friends, whichever the inviter chose. You can change the relationship type later in Settings → Relationship.'),
-          const _Faq(q: 'What counts for the streak?', a: 'Sending something, a heart tap, or answering the daily question. A day counts when you both do something.'),
+            const _Faq(
+              q: 'Is Closer Plus shared?',
+              a: 'Yes. One subscription covers both of you. If you unpair, Plus stays with whoever bought it.',
+            ),
+          const _Faq(
+            q: 'How do we connect?',
+            a: 'One of you taps “Invite your person” and sends the 6-character code (or link). The other taps “I have a code” and enters it. You’re connected as soon as the code is accepted, as a couple or as best friends, whichever the inviter chose. You can change the relationship type later in Settings → Relationship.',
+          ),
+          const _Faq(
+            q: 'What counts for the streak?',
+            a: 'Sending something, a heart tap, or answering the daily question. A day counts when you both do something.',
+          ),
           const _Faq(q: 'Can I change my person?', a: 'Unpair in Privacy & data, then invite someone new.'),
           const SizedBox(height: Space.m),
           ListTile(
@@ -301,7 +333,12 @@ class _Faq extends StatelessWidget {
       shape: const Border(),
       title: Text(q, style: context.tt.titleSmall),
       childrenPadding: const EdgeInsets.fromLTRB(Space.m, 0, Space.m, Space.m),
-      children: [Align(alignment: Alignment.centerLeft, child: Text(a, style: context.tt.bodyMedium))],
+      children: [
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Text(a, style: context.tt.bodyMedium),
+        ),
+      ],
     );
   }
 }
@@ -311,11 +348,36 @@ class WidgetHelpScreen extends StatelessWidget {
   const WidgetHelpScreen({super.key});
 
   static const _oems = <(String, List<String>)>[
-    ('Samsung (One UI)', ['Settings → Apps → Closer → Battery → Unrestricted', 'Settings → Battery → Background usage limits → remove Closer from “Sleeping apps”']),
-    ('Xiaomi / Redmi / POCO (HyperOS, MIUI)', ['Settings → Apps → Manage apps → Closer → Autostart: On', 'Battery saver → No restrictions', 'In Recents, long-press Closer → lock it']),
-    ('Oppo / Realme / OnePlus (ColorOS)', ['Settings → Battery → Closer → Allow background activity', 'Settings → Apps → Closer → Auto launch: On']),
-    ('Vivo (Funtouch / OriginOS)', ['Settings → Battery → Background power consumption → Closer: Allow', 'i Manager → App manager → Autostart → Closer: On']),
-    ('Huawei / Honor (EMUI, MagicOS)', ['Settings → Battery → App launch → Closer → Manage manually, enable all three']),
+    (
+      'Samsung (One UI)',
+      [
+        'Settings → Apps → Closer → Battery → Unrestricted',
+        'Settings → Battery → Background usage limits → remove Closer from “Sleeping apps”',
+      ],
+    ),
+    (
+      'Xiaomi / Redmi / POCO (HyperOS, MIUI)',
+      [
+        'Settings → Apps → Manage apps → Closer → Autostart: On',
+        'Battery saver → No restrictions',
+        'In Recents, long-press Closer → lock it',
+      ],
+    ),
+    (
+      'Oppo / Realme / OnePlus (ColorOS)',
+      ['Settings → Battery → Closer → Allow background activity', 'Settings → Apps → Closer → Auto launch: On'],
+    ),
+    (
+      'Vivo (Funtouch / OriginOS)',
+      [
+        'Settings → Battery → Background power consumption → Closer: Allow',
+        'i Manager → App manager → Autostart → Closer: On',
+      ],
+    ),
+    (
+      'Huawei / Honor (EMUI, MagicOS)',
+      ['Settings → Battery → App launch → Closer → Manage manually, enable all three'],
+    ),
     ('Google Pixel & others', ['Settings → Apps → Closer → App battery usage → Unrestricted']),
   ];
 
@@ -352,7 +414,10 @@ class WidgetHelpScreen extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 6),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [const Text('•  '), Expanded(child: Text(s))],
+                      children: [
+                        const Text('•  '),
+                        Expanded(child: Text(s)),
+                      ],
                     ),
                   ),
               ],
@@ -364,6 +429,74 @@ class WidgetHelpScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// "Chat heads": the partner's messages float over other apps as a bubble
+/// (Android 11+). Hidden where bubbles aren't supported.
+class _ChatHeadsTile extends ConsumerStatefulWidget {
+  const _ChatHeadsTile();
+
+  @override
+  ConsumerState<_ChatHeadsTile> createState() => _ChatHeadsTileState();
+}
+
+class _ChatHeadsTileState extends ConsumerState<_ChatHeadsTile> with WidgetsBindingObserver {
+  bool _supported = false;
+  bool _allowed = true;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    unawaited(_refresh());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  // Back from the system bubble settings.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) unawaited(_refresh());
+  }
+
+  Future<void> _refresh() async {
+    final supported = await ChatBubbles.isSupported();
+    final allowed = await ChatBubbles.areAllowed();
+    if (!mounted) return;
+    setState(() {
+      _supported = supported;
+      _allowed = allowed;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_supported) return const SizedBox.shrink();
+    final prefs = ref.watch(prefsProvider);
+    final on = ChatHeads.enabled(prefs);
+    return SwitchListTile(
+      title: const Text('Chat heads'),
+      subtitle: Text(
+        !on
+            ? 'Messages float over other apps, like Messenger'
+            : _allowed
+            ? 'Messages float over other apps · tap to chat'
+            : 'Bubbles are off for Closer · tap “Allow”',
+      ),
+      value: on,
+      secondary: on && !_allowed ? const TextButton(onPressed: ChatBubbles.openSettings, child: Text('Allow')) : null,
+      onChanged: (v) async {
+        await prefs.setBool(ChatHeads.prefKey, v);
+        if (!v) await ChatBubbles.dismiss();
+        setState(() {});
+        if (v && !_allowed) await ChatBubbles.openSettings();
+      },
     );
   }
 }

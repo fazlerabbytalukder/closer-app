@@ -258,6 +258,7 @@ String routeForLink(Uri uri) {
       'countdowns' => '/calendar',
       'plant' => '/plant',
       'always' => '/always',
+      'chat' => '/chat',
       _ => '/home',
     };
   }

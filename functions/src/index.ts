@@ -10,7 +10,7 @@ export {sendItem, sendTap, grantRewardedSends, reactItem, revealAdmirer} from ".
 export {submitMissMeter} from "./missMeter";
 export {onCapsuleCreated, capsuleUnlocks} from "./capsules";
 export {onEventCreated, onTodoCreated, onTodoUpdated, onWishCreated} from "./shared";
-export {onMessageCreated, onSnapOpened, onGoodnightWritten, goodnightReminders} from "./chat";
+export {onMessageCreated, onSnapOpened, chatCleanup, onMessageDeleted, onGoodnightWritten, goodnightReminders} from "./chat";
 export {makeThumbnail} from "./thumbnails";
 export {submitAnswer, assignDailyQuestions, startGame, submitGameAnswers} from "./questions";
 export {updateStreaks, countdownReminders, countdownTimedReminders} from "./streaks";

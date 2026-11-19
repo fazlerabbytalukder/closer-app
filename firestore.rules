@@ -197,7 +197,7 @@ service cloud.firestore {
         && resource.data.status == 'active'
         && changedOnly(['widgetTheme', 'questionPack', 'timezone',
                         'mode', 'anniversary', 'relationLabels', 'nicknames',
-                        'lastMetAt', 'dateGoal', 'pet', 'home'])
+                        'lastMetAt', 'dateGoal', 'pet', 'home', 'chatTtl'])
         && ownEntryOnly('widgetTheme')
         && validTheme()
         && validLabels()
@@ -210,7 +210,8 @@ service cloud.firestore {
         && request.resource.data.get('mode', 'couple') in ['couple', 'friends']
         && request.resource.data.get('questionPack', 'everyday')
              in ['everyday', 'deep', 'longDistance', 'bestFriends', 'spicy']
-        && request.resource.data.get('timezone', 'UTC') is string;
+        && request.resource.data.get('timezone', 'UTC') is string
+        && request.resource.data.get('chatTtl', 'day') in ['viewed', 'day', 'week', 'month', 'year', 'never'];
 
       match /items/{itemId} {
         allow read: if isMember(pairId);
@@ -491,7 +492,7 @@ service cloud.firestore {
         }
         function validMessage(d) {
           return d.keys().hasOnly(['senderId', 'type', 'text', 'mediaPath', 'durationMs', 'replyTo',
-                                   'reactions', 'deletedAt', 'viewLimit', 'views', 'event', 'createdAt'])
+                                   'reactions', 'deletedAt', 'viewLimit', 'views', 'event', 'ttl', 'createdAt'])
             && d.senderId == request.auth.uid
             && d.type in ['text', 'photo', 'voice', 'snap', 'event']
             && d.text is string && d.text.size() <= 2000
@@ -501,10 +502,15 @@ service cloud.firestore {
             && (d.type == 'snap'
                   ? (d.viewLimit in [1, 2] && d.views == 0)
                   : (d.get('viewLimit', 0) == 0 && d.get('views', 0) == 0))
-            // Events ("took a screenshot", "saved a photo") carry no content.
+            // Events ("took a screenshot", "saved a photo", a new
+            // disappearing setting) carry no content.
             && (d.type == 'event'
-                  ? (d.event in ['screenshot', 'saved'] && d.mediaPath == null && d.text == '')
+                  ? (d.mediaPath == null
+                     && ((d.event in ['screenshot', 'saved'] && d.text == '')
+                         || (d.event == 'ttl' && d.text in ['viewed', 'day', 'week', 'month', 'year', 'never'])))
                   : d.get('event', null) == null)
+            // Disappearing messages (missing on older app versions: kept).
+            && d.get('ttl', 'never') in ['viewed', 'day', 'week', 'month', 'year', 'never']
             && validMedia(d)
             && d.durationMs is int && d.durationMs >= 0 && d.durationMs <= 300000
             && (d.replyTo == null || (d.replyTo is map && d.replyTo.keys().hasOnly(['id', 'senderId', 'preview'])
@@ -535,7 +541,11 @@ service cloud.firestore {
             && request.resource.data.mediaPath == null
             && request.resource.data.deletedAt == request.time)
         );
-        allow delete: if false;
+        // "After viewing" messages: the reader deletes them on leaving the
+        // chat. Timed ones are deleted by the chatCleanup function.
+        allow delete: if isMember(pairId)
+          && resource.data.get('ttl', null) == 'viewed'
+          && resource.data.senderId != request.auth.uid;
       }
 
       // Last read time and "typing…" — each member writes their own.

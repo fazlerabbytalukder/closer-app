@@ -356,6 +356,26 @@ export async function notify(
   });
 }
 
+/**
+ * Chat message push. Android gets a data-only, high-priority message so the
+ * app can show it as a chat head (bubble); iOS gets a normal alert.
+ * Suppressed in quiet hours or when chat notifications are off.
+ */
+export async function notifyChat(
+  uid: string,
+  n: {title: string; body: string; data: Record<string, string>},
+): Promise<void> {
+  const user = await getUser(uid);
+  const prefs = user.notificationPrefs;
+  if (prefs?.chat === false) return;
+  if (inQuietHours(prefs, user.timezone)) return;
+  await sendMulticast(uid, {
+    data: {...n.data, type: "chat", channel: "chat", title: n.title, body: n.body, silent: "0"},
+    android: {priority: "high", ttl: 24 * 3600 * 1000},
+    apns: {payload: {aps: {alert: {title: n.title, body: n.body}, sound: "default", "thread-id": "chat"}}},
+  });
+}
+
 export async function notifyMany(uids: string[], n: Parameters<typeof notify>[1]): Promise<void> {
   await Promise.all(uids.filter(Boolean).map((u) => notify(u, {...n, user: undefined})));
 }

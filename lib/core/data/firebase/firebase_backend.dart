@@ -1069,6 +1069,7 @@ class FirebaseBackend implements CloserBackend {
         'viewLimit': draft.type == MessageType.snap ? draft.viewLimit : 0,
         'views': 0,
         'event': draft.event?.name,
+        'ttl': (draft.ttl ?? ChatTtl.fallback).name,
         'createdAt': FieldValue.serverTimestamp(),
       })
       ..set(_db.doc('pairs/$pairId/chatState/$_uid'), {
@@ -1109,13 +1110,13 @@ class FirebaseBackend implements CloserBackend {
   }
 
   @override
-  Future<void> sendChatEvent(ChatEvent event, {ReplyRef? about}) async {
+  Future<void> sendChatEvent(ChatEvent event, {ReplyRef? about, ChatTtl? ttl, String text = ''}) async {
     final pairId = _pairId;
     if (currentUid == null || pairId == null) return;
     await _db.collection('pairs/$pairId/messages').add({
       'senderId': _uid,
       'type': MessageType.event.name,
-      'text': '',
+      'text': text,
       'mediaPath': null,
       'durationMs': 0,
       'replyTo': about?.toJson(),
@@ -1124,8 +1125,35 @@ class FirebaseBackend implements CloserBackend {
       'viewLimit': 0,
       'views': 0,
       'event': event.name,
+      'ttl': (ttl ?? ChatTtl.fallback).name,
       'createdAt': FieldValue.serverTimestamp(),
     });
+  }
+
+  @override
+  Future<void> setChatTtl(ChatTtl ttl) async {
+    final pairId = await _requirePairId();
+    await _db.doc('pairs/$pairId').update({'chatTtl': ttl.name});
+    await sendChatEvent(ChatEvent.ttl, ttl: ttl, text: ttl.name);
+  }
+
+  @override
+  Future<void> clearViewedMessages() async {
+    final uid = currentUid;
+    final pairId = _pairId;
+    if (uid == null || pairId == null) return;
+    final now = DateTime.now();
+    final q = await _db.collection('pairs/$pairId/messages').where('ttl', isEqualTo: ChatTtl.viewed.name).get();
+    final batch = _db.batch();
+    var n = 0;
+    for (final d in q.docs) {
+      if (d.metadata.hasPendingWrites) continue;
+      final m = ChatMessage.fromJson(d.id, d.data());
+      if (m.senderId == uid || m.createdAt.isAfter(now)) continue;
+      batch.delete(d.reference);
+      if (++n == 450) break;
+    }
+    if (n > 0) await batch.commit();
   }
 
   @override
