@@ -2,7 +2,6 @@ package app.closer.widget.widgets
 
 import android.content.Context
 import android.net.Uri
-import android.os.Build
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -16,7 +15,6 @@ import androidx.glance.LocalContext
 import androidx.glance.LocalSize
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.SizeMode
-import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.currentState
@@ -36,22 +34,31 @@ import androidx.glance.state.GlanceStateDefinition
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import androidx.glance.unit.ColorProvider
 import app.closer.widget.MainActivity
 import app.closer.widget.R
-import app.closer.widget.widgets.ui.Pill
+import app.closer.widget.widgets.ui.Chip
+import app.closer.widget.widgets.ui.HeartBadge
+import app.closer.widget.widgets.ui.OnPhoto
+import app.closer.widget.widgets.ui.OnPhotoMuted
+import app.closer.widget.widgets.ui.ScrimModifier
 import app.closer.widget.widgets.ui.WidgetContainer
 import app.closer.widget.widgets.ui.WidgetMessage
 import app.closer.widget.widgets.ui.WidgetPalette
 import app.closer.widget.widgets.ui.WidgetSizes
 import app.closer.widget.widgets.ui.WidgetTheme
 import app.closer.widget.widgets.ui.WidgetUtils
+import app.closer.widget.widgets.ui.roundedIfSupported
 import app.closer.widget.work.WidgetRefreshWorker
 import es.antonborri.home_widget.HomeWidgetGlanceState
 import es.antonborri.home_widget.HomeWidgetGlanceStateDefinition
 import es.antonborri.home_widget.HomeWidgetGlanceWidgetReceiver
 import es.antonborri.home_widget.actionStartActivity
 
-/** Partner's latest photo / note / doodle. S 2×2, M 4×2, L 4×4. Tap → closer://reply. */
+/**
+ * Partner's latest photo / note / doodle in a gradient frame, with "💌 Sam · 2m" on a
+ * dark fade. S 2×2, M 4×2, L 4×4. Tap → closer://reply.
+ */
 class PartnerPhotoWidget : GlanceAppWidget() {
 
     override val stateDefinition: GlanceStateDefinition<*> = HomeWidgetGlanceStateDefinition()
@@ -108,7 +115,7 @@ class PartnerPhotoWidget : GlanceAppWidget() {
         if (bitmap == null && caption.isEmpty()) {
             val name = partner.ifEmpty { context.getString(R.string.widget_partner_fallback) }
             WidgetContainer(palette, onClick) {
-                WidgetMessage(palette, context.getString(R.string.widget_waiting_first, name))
+                WidgetMessage(palette, context.getString(R.string.widget_waiting_first, name), emoji = "💌")
             }
             return
         }
@@ -128,7 +135,7 @@ class PartnerPhotoWidget : GlanceAppWidget() {
             ),
         )
 
-        WidgetContainer(palette, onClick, padding = 8.dp) {
+        WidgetContainer(palette, onClick, padding = 6.dp) {
             when {
                 wide && tall -> LargeLayout(item, palette)
                 wide -> MediumLayout(item, palette)
@@ -149,12 +156,14 @@ class PartnerPhotoWidget : GlanceAppWidget() {
         val imageDescription: String,
     )
 
-    /** Photo (or note card) with the heart badge overlaid in the top-left corner. */
+    /**
+     * The photo in a thin gradient frame, with a dark fade at the bottom for
+     * "💌 Sam · 2m" (and the caption when [showCaption]). A text-only note
+     * becomes a big quote instead.
+     */
     @Composable
-    private fun Media(item: Item, palette: WidgetPalette, modifier: GlanceModifier, noteMaxLines: Int) {
-        var m = modifier
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) m = m.cornerRadius(R.dimen.widget_inner_radius)
-        Box(modifier = m.background(palette.surface)) {
+    private fun Media(item: Item, palette: WidgetPalette, modifier: GlanceModifier, showCaption: Boolean, noteMaxLines: Int) {
+        Box(modifier = modifier.roundedIfSupported(16.dp).background(palette.surface)) {
             if (item.image != null) {
                 Image(
                     provider = item.image,
@@ -162,100 +171,116 @@ class PartnerPhotoWidget : GlanceAppWidget() {
                     contentScale = ContentScale.Crop,
                     modifier = GlanceModifier.fillMaxSize(),
                 )
-            } else {
-                // Text-only note: show the caption as the card itself.
-                Box(
-                    modifier = GlanceModifier.fillMaxSize().padding(10.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = item.caption,
-                        maxLines = noteMaxLines,
-                        style = TextStyle(color = palette.text, fontSize = 16.sp, fontWeight = FontWeight.Medium),
-                    )
+                Column(modifier = GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.Bottom) {
+                    Column(modifier = ScrimModifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 18.dp, bottom = 8.dp)) {
+                        if (showCaption && item.caption.isNotEmpty()) {
+                            Text(
+                                text = item.caption,
+                                maxLines = 2,
+                                style = TextStyle(color = OnPhoto, fontSize = 13.sp, fontWeight = FontWeight.Bold),
+                            )
+                        }
+                        FromRow(item, OnPhoto, OnPhotoMuted)
+                    }
                 }
+            } else {
+                NoteCard(item, palette, noteMaxLines)
             }
             if (item.heart) {
-                Box(modifier = GlanceModifier.padding(6.dp)) {
-                    Pill(item.heartEmoji, bg = palette.bg, fg = palette.accent)
+                Box(modifier = GlanceModifier.fillMaxSize().padding(7.dp), contentAlignment = Alignment.TopEnd) {
+                    HeartBadge(item.heartEmoji, palette)
                 }
             }
         }
     }
 
+    /** Text-only note: a big quote signed by the partner. */
     @Composable
-    private fun NameRow(item: Item, palette: WidgetPalette) {
-        Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    private fun NoteCard(item: Item, palette: WidgetPalette, maxLines: Int) {
+        Column(
+            modifier = GlanceModifier.fillMaxSize().padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("❝", style = TextStyle(color = palette.textMuted, fontSize = 22.sp, fontWeight = FontWeight.Bold))
             Text(
-                text = item.partner,
-                maxLines = 1,
-                modifier = GlanceModifier.defaultWeight(),
-                style = TextStyle(color = palette.text, fontSize = 13.sp, fontWeight = FontWeight.Bold),
+                text = item.caption,
+                maxLines = maxLines,
+                style = TextStyle(color = palette.text, fontSize = 16.sp, fontWeight = FontWeight.Bold),
             )
-            if (item.time.isNotEmpty()) {
-                Text(
-                    text = item.time,
-                    maxLines = 1,
-                    style = TextStyle(color = palette.textMuted, fontSize = 12.sp),
-                )
-            }
+            Spacer(GlanceModifier.height(6.dp))
+            FromRow(item, palette.text, palette.textMuted)
         }
     }
 
+    /** "💌 Sam" · "2m ago". */
     @Composable
-    private fun CaptionText(item: Item, palette: WidgetPalette, maxLines: Int) {
-        if (item.caption.isEmpty() || item.image == null) return
-        Text(
-            text = item.caption,
-            maxLines = maxLines,
-            style = TextStyle(color = palette.text, fontSize = 13.sp),
-        )
-    }
-
-    @Composable
-    private fun MoodText(item: Item, palette: WidgetPalette) {
-        if (item.mood.isEmpty()) return
-        Text(
-            text = item.mood,
-            maxLines = 1,
-            style = TextStyle(color = palette.textMuted, fontSize = 12.sp),
-        )
+    private fun FromRow(item: Item, fg: ColorProvider, muted: ColorProvider) {
+        Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "💌 ${item.partner}",
+                maxLines = 1,
+                modifier = GlanceModifier.defaultWeight(),
+                style = TextStyle(color = fg, fontSize = 12.sp, fontWeight = FontWeight.Bold),
+            )
+            if (item.time.isNotEmpty()) {
+                Text(text = item.time, maxLines = 1, style = TextStyle(color = muted, fontSize = 11.sp))
+            }
+        }
     }
 
     @Composable
     private fun SmallLayout(item: Item, palette: WidgetPalette, size: DpSize) {
-        Column(modifier = GlanceModifier.fillMaxSize()) {
-            Media(item, palette, GlanceModifier.fillMaxWidth().defaultWeight(), noteMaxLines = 4)
-            Spacer(GlanceModifier.height(4.dp))
-            NameRow(item, palette)
-            if (size.height >= 170.dp) CaptionText(item, palette, maxLines = 1)
-        }
+        Media(item, palette, GlanceModifier.fillMaxSize(), showCaption = size.height >= 170.dp, noteMaxLines = 4)
     }
 
+    /** Photo on the left; "From Sam" chip, caption and mood on the gradient. */
     @Composable
     private fun MediumLayout(item: Item, palette: WidgetPalette) {
         Row(modifier = GlanceModifier.fillMaxSize()) {
-            Media(item, palette, GlanceModifier.fillMaxHeight().width(130.dp), noteMaxLines = 4)
+            Media(item, palette, GlanceModifier.fillMaxHeight().width(140.dp), showCaption = false, noteMaxLines = 4)
             Spacer(GlanceModifier.width(10.dp))
-            Column(modifier = GlanceModifier.fillMaxHeight().defaultWeight()) {
-                NameRow(item, palette)
-                Spacer(GlanceModifier.height(4.dp))
+            Column(modifier = GlanceModifier.fillMaxHeight().defaultWeight().padding(top = 4.dp, bottom = 4.dp, end = 4.dp)) {
+                Chip("💕 From ${item.partner}", palette)
+                Spacer(GlanceModifier.height(6.dp))
                 Box(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
-                    CaptionText(item, palette, maxLines = 3)
+                    if (item.image != null && item.caption.isNotEmpty()) {
+                        Text(
+                            text = item.caption,
+                            maxLines = 3,
+                            style = TextStyle(color = palette.text, fontSize = 15.sp, fontWeight = FontWeight.Bold),
+                        )
+                    } else if (item.image != null) {
+                        Text(
+                            text = "Thinking of you 💭",
+                            maxLines = 2,
+                            style = TextStyle(color = palette.text, fontSize = 15.sp, fontWeight = FontWeight.Bold),
+                        )
+                    }
                 }
-                MoodText(item, palette)
+                Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = item.mood,
+                        maxLines = 1,
+                        modifier = GlanceModifier.defaultWeight(),
+                        style = TextStyle(color = palette.textMuted, fontSize = 11.sp, fontWeight = FontWeight.Medium),
+                    )
+                    if (item.time.isNotEmpty()) {
+                        Text(item.time, maxLines = 1, style = TextStyle(color = palette.textMuted, fontSize = 11.sp))
+                    }
+                }
             }
         }
     }
 
+    /** Big photo with the caption on the fade, mood chip underneath. */
     @Composable
     private fun LargeLayout(item: Item, palette: WidgetPalette) {
         Column(modifier = GlanceModifier.fillMaxSize()) {
-            Media(item, palette, GlanceModifier.fillMaxWidth().defaultWeight(), noteMaxLines = 8)
-            Spacer(GlanceModifier.height(6.dp))
-            CaptionText(item, palette, maxLines = 2)
-            NameRow(item, palette)
-            MoodText(item, palette)
+            Media(item, palette, GlanceModifier.fillMaxWidth().defaultWeight(), showCaption = true, noteMaxLines = 8)
+            if (item.mood.isNotEmpty()) {
+                Spacer(GlanceModifier.height(6.dp))
+                Chip(item.mood, palette)
+            }
         }
     }
 

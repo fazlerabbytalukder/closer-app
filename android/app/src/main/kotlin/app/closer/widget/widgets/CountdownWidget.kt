@@ -16,6 +16,8 @@ import androidx.glance.appwidget.provideContent
 import androidx.glance.currentState
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
+import androidx.glance.layout.padding
+import androidx.glance.layout.height
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
@@ -28,6 +30,8 @@ import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import app.closer.widget.MainActivity
 import app.closer.widget.R
+import app.closer.widget.widgets.ui.Chip
+import app.closer.widget.widgets.ui.EmojiBubble
 import app.closer.widget.widgets.ui.WidgetContainer
 import app.closer.widget.widgets.ui.WidgetMessage
 import app.closer.widget.widgets.ui.WidgetPalette
@@ -79,61 +83,67 @@ class CountdownWidget : GlanceAppWidget() {
         }
 
         val title = prefs.str(WidgetKeys.COUNTDOWN_TITLE)
-        val emoji = prefs.str(WidgetKeys.COUNTDOWN_EMOJI)
+        val emoji = prefs.str(WidgetKeys.COUNTDOWN_EMOJI).ifEmpty { "💕" }
         val wide = WidgetSizes.isWide(LocalSize.current)
 
-        WidgetContainer(palette, onClick, contentAlignment = Alignment.Center) {
-            if (days == 0L) {
-                Today(palette, emoji, title, context)
-            } else if (wide) {
-                Row(
+        WidgetContainer(palette, onClick, padding = 14.dp) {
+            when {
+                days == 0L -> Today(palette, emoji, title, context)
+                wide -> Row(
                     modifier = GlanceModifier.fillMaxSize(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    if (emoji.isNotEmpty()) {
-                        Text(emoji, style = TextStyle(fontSize = 40.sp))
-                        Spacer(GlanceModifier.width(12.dp))
-                    }
-                    Column(horizontalAlignment = Alignment.Start) {
-                        BigNumber(days, palette)
-                        Label(daysLabel(context, days, title), palette, TextAlign.Start)
+                    EmojiBubble(emoji, palette, size = 68.dp, emojiSize = 32.sp)
+                    Spacer(GlanceModifier.width(14.dp))
+                    Column(modifier = GlanceModifier.defaultWeight()) {
+                        Chip(context.getString(R.string.widget_countdown_chip), palette)
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            BigNumber(days, palette, 44)
+                            Spacer(GlanceModifier.width(6.dp))
+                            Text(
+                                text = context.resources.getQuantityString(R.plurals.widget_days_unit, days.toInt()),
+                                maxLines = 1,
+                                modifier = GlanceModifier.padding(bottom = 8.dp),
+                                style = TextStyle(color = palette.textMuted, fontSize = 14.sp, fontWeight = FontWeight.Bold),
+                            )
+                        }
+                        if (title.isNotEmpty()) Label(title, palette, TextAlign.Start, 14)
                     }
                 }
-            } else {
-                Column(
-                    modifier = GlanceModifier.fillMaxSize(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    if (emoji.isNotEmpty()) Text(emoji, style = TextStyle(fontSize = 22.sp))
-                    BigNumber(days, palette)
-                    Label(daysLabel(context, days, title), palette, TextAlign.Center)
+                else -> Column(modifier = GlanceModifier.fillMaxSize()) {
+                    Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        EmojiBubble(emoji, palette, size = 34.dp, emojiSize = 17.sp)
+                        Spacer(GlanceModifier.defaultWeight())
+                        Text("💕", style = TextStyle(fontSize = 12.sp))
+                    }
+                    Spacer(GlanceModifier.defaultWeight())
+                    BigNumber(days, palette, 40)
+                    Label(daysLabel(context, days, title), palette, TextAlign.Start, 12)
                 }
             }
         }
     }
 
     @Composable
-    private fun BigNumber(days: Long, palette: WidgetPalette) {
+    private fun BigNumber(days: Long, palette: WidgetPalette, sizeSp: Int) {
         Text(
             text = days.toString(),
             maxLines = 1,
             style = TextStyle(
-                color = palette.primary,
-                fontSize = if (days >= 1000) 34.sp else 44.sp,
+                color = palette.text,
+                fontSize = if (days >= 1000) (sizeSp - 10).sp else sizeSp.sp,
                 fontWeight = FontWeight.Bold,
             ),
         )
     }
 
     @Composable
-    private fun Label(text: String, palette: WidgetPalette, align: TextAlign) {
+    private fun Label(text: String, palette: WidgetPalette, align: TextAlign, sizeSp: Int) {
         Text(
             text = text,
             maxLines = 2,
             modifier = if (align == TextAlign.Center) GlanceModifier.fillMaxWidth() else GlanceModifier,
-            style = TextStyle(color = palette.text, fontSize = 13.sp, fontWeight = FontWeight.Medium, textAlign = align),
+            style = TextStyle(color = palette.textMuted, fontSize = sizeSp.sp, fontWeight = FontWeight.Bold, textAlign = align),
         )
     }
 
@@ -144,13 +154,14 @@ class CountdownWidget : GlanceAppWidget() {
             verticalAlignment = Alignment.CenterVertically,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            if (emoji.isNotEmpty()) Text(emoji, style = TextStyle(fontSize = 28.sp))
+            EmojiBubble(emoji, palette, size = 48.dp, emojiSize = 24.sp)
+            Spacer(GlanceModifier.height(6.dp))
             Text(
                 text = context.getString(R.string.widget_countdown_today),
                 maxLines = 1,
-                style = TextStyle(color = palette.primary, fontSize = 24.sp, fontWeight = FontWeight.Bold),
+                style = TextStyle(color = palette.text, fontSize = 22.sp, fontWeight = FontWeight.Bold),
             )
-            if (title.isNotEmpty()) Label(title, palette, TextAlign.Center)
+            if (title.isNotEmpty()) Label(title, palette, TextAlign.Center, 13)
         }
     }
 

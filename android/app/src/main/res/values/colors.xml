@@ -9,12 +9,14 @@
     <color name="closer_text">#1C2433</color>
     <color name="closer_text_muted">#6B7385</color>
 
-    <!-- Widget themes: classic -->
-    <color name="widget_classic_bg">#FFFFFF</color>
-    <color name="widget_classic_surface">#E6F0FC</color>
-    <color name="widget_classic_primary">#2F7BE6</color>
-    <color name="widget_classic_text">#1C2433</color>
-    <color name="widget_classic_accent">#FF6B8A</color>
+    <!-- Widget themes: classic ("Closer" gradient #1737E2 → #FF5C9A, white text).
+         Only the widget-picker preview layouts use these; WidgetTheme.kt has the live values. -->
+    <color name="widget_classic_bg">#1737E2</color>
+    <color name="widget_classic_surface">#38FFFFFF</color>
+    <color name="widget_classic_primary">#FFFFFF</color>
+    <color name="widget_classic_text">#FFFFFF</color>
+    <color name="widget_classic_text_muted">#D9FFFFFF</color>
+    <color name="widget_classic_accent">#FFFFFF</color>
     <!-- blush -->
     <color name="widget_blush_bg">#FFF1F4</color>
     <color name="widget_blush_surface">#FFDDE5</color>

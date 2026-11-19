@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- "midnight" widget theme: diagonal gradient with soft light bubbles (matches the app's hero). -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient android:angle="315" android:startColor="#141033" android:centerColor="#2E1F66" android:endColor="#5B2E8C" android:type="linear" />
+            <corners android:radius="@dimen/widget_corner_radius" />
+        </shape>
+    </item>
+    <item android:gravity="top|end" android:width="150dp" android:height="150dp" android:top="-60dp" android:right="-50dp">
+        <shape android:shape="oval"><solid android:color="#1FFFFFFF" /></shape>
+    </item>
+    <item android:gravity="bottom|start" android:width="110dp" android:height="110dp" android:bottom="-50dp" android:left="-40dp">
+        <shape android:shape="oval"><solid android:color="#14FFFFFF" /></shape>
+    </item>
+</layer-list>

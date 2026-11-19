@@ -192,58 +192,40 @@ class _AlwaysWidgetPreviewState extends ConsumerState<AlwaysWidgetPreview> {
 
     return AspectRatio(
       aspectRatio: 2.2,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: p.bg,
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: const [BoxShadow(color: Color(0x22000000), blurRadius: 18, offset: Offset(0, 8))],
-        ),
+      child: WidgetFrame(
+        palette: p,
+        padding: 6,
         child: Row(
           children: [
             AspectRatio(
               aspectRatio: 1,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: ColoredBox(
-                  color: p.surface,
-                  child: memory == null
-                      ? const Center(child: Text('💞', style: TextStyle(fontSize: 40)))
-                      : AppImage(image),
-                ),
-              ),
+              child: WidgetPhoto(palette: p, url: memory == null ? null : image),
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Always with me · $name',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: p.primary, fontWeight: FontWeight.w700, fontSize: 12),
-                  ),
-                  const SizedBox(height: 4),
-                  Expanded(
-                    child: Text(
-                      message,
-                      maxLines: 4,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: p.text, fontWeight: FontWeight.w700, fontSize: 14, height: 1.25),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(0, 4, 4, 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    WidgetChip('💞 Always with me', palette: p),
+                    const SizedBox(height: 6),
+                    Expanded(
+                      child: Text(
+                        '“$message”',
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: p.text, fontWeight: FontWeight.w800, fontSize: 14, height: 1.25),
+                      ),
                     ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(color: p.surface, borderRadius: BorderRadius.circular(999)),
-                    child: Text(
+                    Text(
                       AlwaysWithMe.sinceLabel(pair?.lastMetAt, now),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: p.accent, fontWeight: FontWeight.w700, fontSize: 11),
+                      style: TextStyle(color: p.muted, fontWeight: FontWeight.w700, fontSize: 11),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],

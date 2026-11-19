@@ -17,6 +17,9 @@ import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.provideContent
 import androidx.glance.currentState
 import androidx.glance.layout.Alignment
+import androidx.glance.layout.padding
+import androidx.glance.background
+import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.ContentScale
 import androidx.glance.layout.Row
@@ -33,11 +36,13 @@ import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import app.closer.widget.MainActivity
 import app.closer.widget.R
+import app.closer.widget.widgets.ui.Chip
 import app.closer.widget.widgets.ui.WidgetContainer
 import app.closer.widget.widgets.ui.WidgetMessage
 import app.closer.widget.widgets.ui.WidgetPalette
 import app.closer.widget.widgets.ui.WidgetSizes
 import app.closer.widget.widgets.ui.WidgetTheme
+import app.closer.widget.widgets.ui.roundedIfSupported
 import app.closer.widget.work.WidgetRefreshWorker
 import es.antonborri.home_widget.HomeWidgetGlanceState
 import es.antonborri.home_widget.HomeWidgetGlanceStateDefinition
@@ -85,52 +90,50 @@ class PlantWidget : GlanceAppWidget() {
         val subtitle = if (wilted) context.getString(R.string.widget_plant_wilted) else null
         val plantCd = context.getString(R.string.widget_plant_cd)
 
-        WidgetContainer(palette, onClick, padding = 10.dp) {
+        val streakChip = if (streak > 0) "🔥 $streak" else "🌱 Day 1"
+
+        WidgetContainer(palette, onClick, padding = 12.dp) {
             if (WidgetSizes.isWide(LocalSize.current)) {
                 Row(modifier = GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-                    Image(
-                        provider = ImageProvider(drawable),
-                        contentDescription = plantCd,
-                        contentScale = ContentScale.Fit,
-                        modifier = GlanceModifier.fillMaxHeight().width(110.dp),
-                    )
-                    Spacer(GlanceModifier.width(10.dp))
+                    // The plant in a frosted "pot light".
+                    Box(
+                        modifier = GlanceModifier.fillMaxHeight().width(110.dp).background(palette.surface)
+                            .roundedIfSupported(20.dp).padding(6.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Image(
+                            provider = ImageProvider(drawable),
+                            contentDescription = plantCd,
+                            contentScale = ContentScale.Fit,
+                            modifier = GlanceModifier.fillMaxSize(),
+                        )
+                    }
+                    Spacer(GlanceModifier.width(14.dp))
                     Column(modifier = GlanceModifier.defaultWeight()) {
-                        StreakText(streakText, palette, 18, TextAlign.Start)
+                        Chip(context.getString(R.string.widget_plant_chip), palette)
+                        Spacer(GlanceModifier.height(6.dp))
+                        Text(
+                            text = streakText,
+                            maxLines = 2,
+                            style = TextStyle(color = palette.text, fontSize = 17.sp, fontWeight = FontWeight.Bold),
+                        )
                         if (subtitle != null) SubText(subtitle, palette, TextAlign.Start)
                     }
                 }
             } else {
-                Column(
-                    modifier = GlanceModifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
+                Box(modifier = GlanceModifier.fillMaxSize()) {
                     Image(
                         provider = ImageProvider(drawable),
                         contentDescription = plantCd,
                         contentScale = ContentScale.Fit,
-                        modifier = GlanceModifier.fillMaxWidth().defaultWeight(),
+                        modifier = GlanceModifier.fillMaxSize().padding(top = 6.dp, bottom = 22.dp),
                     )
-                    Spacer(GlanceModifier.height(2.dp))
-                    StreakText(streakText, palette, 13, TextAlign.Center)
-                    if (subtitle != null) SubText(subtitle, palette, TextAlign.Center)
+                    Box(modifier = GlanceModifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+                        Chip(if (subtitle != null) "💧 $streakChip" else streakChip, palette, textSize = 12.sp)
+                    }
                 }
             }
         }
-    }
-
-    @Composable
-    private fun StreakText(text: String, palette: WidgetPalette, sizeSp: Int, align: TextAlign) {
-        Text(
-            text = text,
-            maxLines = 1,
-            style = TextStyle(
-                color = palette.text,
-                fontSize = sizeSp.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = align,
-            ),
-        )
     }
 
     @Composable
@@ -138,7 +141,7 @@ class PlantWidget : GlanceAppWidget() {
         Text(
             text = text,
             maxLines = 1,
-            style = TextStyle(color = palette.textMuted, fontSize = 12.sp, textAlign = align),
+            style = TextStyle(color = palette.textMuted, fontSize = 12.sp, fontWeight = FontWeight.Medium, textAlign = align),
         )
     }
 
