@@ -94,7 +94,7 @@ class EnvelopeCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: context.tt.bodySmall?.copyWith(
                               color: ready ? const Color(0xFFB8304F) : Brand.grey700,
-                              fontWeight: ready ? FontWeight.w800 : FontWeight.w500,
+                              fontWeight: ready ? FontWeight.w700 : FontWeight.w500,
                             ),
                           ),
                         ],

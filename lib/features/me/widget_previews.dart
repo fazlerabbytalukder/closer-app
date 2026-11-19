@@ -93,7 +93,7 @@ class PhotoWidgetPreview extends ConsumerWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (latest.caption.isNotEmpty)
-                            Text(latest.caption, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12)),
+                            Text(latest.caption, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 12)),
                           Text('$name · ${timeAgo(latest.sentAt)}', style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w700, fontSize: 10)),
                         ],
                       ),
@@ -128,7 +128,7 @@ class CountdownWidgetPreview extends ConsumerWidget {
               ? [const Text('📅', style: TextStyle(fontSize: 24)), Text('Add a date', style: TextStyle(color: p.text, fontWeight: FontWeight.w700, fontSize: 12))]
               : [
                   Text(c.emoji, style: const TextStyle(fontSize: 20)),
-                  Text(days == 0 ? 'Today!' : '$days', style: TextStyle(color: p.primary, fontWeight: FontWeight.w900, fontSize: days == 0 ? 22 : 34, height: 1.1)),
+                  Text(days == 0 ? 'Today!' : '$days', style: TextStyle(color: p.primary, fontWeight: FontWeight.w800, fontSize: days == 0 ? 22 : 34, height: 1.1)),
                   Text(
                     days == 0 ? c.title : '${days == 1 ? 'day' : 'days'} to ${c.title}',
                     maxLines: 2,
@@ -160,7 +160,7 @@ class PlantWidgetPreview extends ConsumerWidget {
         child: Column(
           children: [
             Expanded(child: FittedBox(child: PlantArt(stage: pair?.plant.stage ?? 0, health: pair?.plant.health ?? PlantHealth.healthy))),
-            Text('🔥 ${pair?.streak.count ?? 0}', style: TextStyle(color: p.text, fontWeight: FontWeight.w800, fontSize: 12)),
+            Text('🔥 ${pair?.streak.count ?? 0}', style: TextStyle(color: p.text, fontWeight: FontWeight.w700, fontSize: 12)),
           ],
         ),
       ),

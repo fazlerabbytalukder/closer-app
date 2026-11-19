@@ -83,7 +83,8 @@ class CloserCard extends StatelessWidget {
         color: gradient == null ? (color ?? context.cc.card) : null,
         gradient: gradient,
         borderRadius: BorderRadius.circular(Radii.card),
-        boxShadow: dark ? null : const [BoxShadow(color: Color(0x165B50E0), blurRadius: 30, offset: Offset(0, 10))],
+        border: dark && gradient == null ? Border.all(color: context.cs.outlineVariant.withValues(alpha: 0.6)) : null,
+        boxShadow: dark ? null : Shadows.card,
       ),
       child: Material(
         type: MaterialType.transparency,
@@ -145,7 +146,7 @@ class Avatar extends StatelessWidget {
                 child: Center(
                   child: Text(
                     initial,
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: size * 0.42),
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: size * 0.42),
                   ),
                 ),
               ),
@@ -271,7 +272,7 @@ class CounterChip extends StatelessWidget {
     final c = color ?? context.cc.accent;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(color: c.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(100)),
+      decoration: BoxDecoration(color: c.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -370,15 +371,15 @@ class RoundIconButton extends StatelessWidget {
       child: Material(
         color: background ?? context.cs.surfaceContainer,
         shape: const CircleBorder(),
-        elevation: onPressed == null ? 0 : 3,
-        shadowColor: context.cs.primary.withValues(alpha: 0.6),
+        elevation: onPressed == null ? 0 : 1,
+        shadowColor: context.cs.primary.withValues(alpha: 0.4),
         child: InkWell(
           customBorder: const CircleBorder(),
           onTap: onPressed,
           child: Gloss(
             circle: true,
             enabled: onPressed != null,
-            strength: 0.6,
+            strength: 0.5,
             child: SizedBox(
               width: size,
               height: size,

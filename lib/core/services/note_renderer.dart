@@ -23,11 +23,7 @@ const noteBackgrounds = <NoteBackground>[
   NoteBackground('night', [Color(0xFF2B3150), Color(0xFF141A2E)], Color(0xFFF7F3FF)),
 ];
 
-const noteFonts = <String, String>{
-  'rounded': 'Nunito',
-  'serif': 'serif',
-  'mono': 'monospace',
-};
+const noteFonts = <String, String>{'rounded': 'Nunito', 'serif': 'serif', 'mono': 'monospace'};
 
 NoteBackground noteBackground(String id) =>
     noteBackgrounds.firstWhere((b) => b.id == id, orElse: () => noteBackgrounds.first);
@@ -46,11 +42,7 @@ class NoteCard extends StatelessWidget {
       aspectRatio: 1,
       child: DecoratedBox(
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: bg.colors,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          gradient: LinearGradient(colors: bg.colors, begin: Alignment.topLeft, end: Alignment.bottomRight),
         ),
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -61,7 +53,7 @@ class NoteCard extends StatelessWidget {
               style: TextStyle(
                 fontFamily: noteFonts[style.font],
                 fontSize: _fontSizeFor(text, 34),
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w700,
                 height: 1.2,
                 color: text.isEmpty ? bg.ink.withValues(alpha: 0.45) : bg.ink,
               ),
@@ -111,22 +103,20 @@ abstract final class NoteRenderer {
       ..drawCircle(Offset(s * 0.9, s * 0.86), s * 0.1, deco);
 
     final scale = s / 340; // NoteCard is designed at ~340 logical px.
-    final pb = ui.ParagraphBuilder(
-      ui.ParagraphStyle(
-        textAlign: TextAlign.center,
-        fontFamily: noteFonts[style.font],
-        fontSize: _fontSizeFor(text, 34) * scale,
-        fontWeight: FontWeight.w800,
-        height: 1.2,
-      ),
-    )
-      ..pushStyle(ui.TextStyle(color: bg.ink))
-      ..addText(text);
+    final pb =
+        ui.ParagraphBuilder(
+            ui.ParagraphStyle(
+              textAlign: TextAlign.center,
+              fontFamily: noteFonts[style.font],
+              fontSize: _fontSizeFor(text, 34) * scale,
+              fontWeight: FontWeight.w700,
+              height: 1.2,
+            ),
+          )
+          ..pushStyle(ui.TextStyle(color: bg.ink))
+          ..addText(text);
     final paragraph = pb.build()..layout(ui.ParagraphConstraints(width: s - 48 * scale * 2));
-    canvas.drawParagraph(
-      paragraph,
-      Offset(48 * scale, (s - paragraph.height) / 2),
-    );
+    canvas.drawParagraph(paragraph, Offset(48 * scale, (s - paragraph.height) / 2));
 
     final image = await recorder.endRecording().toImage(size, size);
     final bytes = await image.toByteData(format: ui.ImageByteFormat.png);

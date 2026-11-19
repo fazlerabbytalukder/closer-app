@@ -6,13 +6,7 @@ import 'package:flutter/material.dart';
 /// The shared plant, drawn in code so it scales and animates smoothly.
 /// Stage 0 = seed in a pot … stage 8 = big plant in full bloom.
 class PlantArt extends StatelessWidget {
-  const PlantArt({
-    required this.stage,
-    super.key,
-    this.health = PlantHealth.healthy,
-    this.size = 160,
-    this.sway = 0,
-  });
+  const PlantArt({required this.stage, super.key, this.health = PlantHealth.healthy, this.size = 160, this.sway = 0});
 
   final int stage;
   final PlantHealth health;
@@ -70,10 +64,7 @@ class _PlantPainter extends CustomPainter {
         ),
         Paint()..color = _potDark,
       )
-      ..drawOval(
-        Rect.fromLTWH(w * 0.29, potTop - h * 0.045, w * 0.42, h * 0.04),
-        Paint()..color = _soil,
-      );
+      ..drawOval(Rect.fromLTWH(w * 0.29, potTop - h * 0.045, w * 0.42, h * 0.04), Paint()..color = _soil);
 
     // Face on the pot (cute!).
     final eye = Paint()..color = const Color(0xFF5A3426);
@@ -129,7 +120,13 @@ class _PlantPainter extends CustomPainter {
       final left = i.isEven;
       final len = w * (0.08 + 0.012 * stage) * (1 - t * 0.35);
       final angle = (left ? -1 : 1) * (wilted ? 0.35 : 0.9) + (wilted ? 0.9 : 0);
-      _leaf(canvas, pos, len, (left ? math.pi : 0) + (left ? angle : -angle) * 0.6 + (wilted ? 0.6 : 0), i.isEven ? leaf : leafDark.withValues(alpha: 0.9));
+      _leaf(
+        canvas,
+        pos,
+        len,
+        (left ? math.pi : 0) + (left ? angle : -angle) * 0.6 + (wilted ? 0.6 : 0),
+        i.isEven ? leaf : leafDark.withValues(alpha: 0.9),
+      );
     }
 
     // Flowers from stage 4.
@@ -170,6 +167,5 @@ class _PlantPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_PlantPainter old) =>
-      old.stage != stage || old.wilted != wilted || old.sway != sway;
+  bool shouldRepaint(_PlantPainter old) => old.stage != stage || old.wilted != wilted || old.sway != sway;
 }

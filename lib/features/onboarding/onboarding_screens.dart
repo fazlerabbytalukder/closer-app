@@ -126,7 +126,7 @@ class _WelcomeHero extends StatelessWidget {
                 children: [
                   Text('💌', style: TextStyle(fontSize: 48)),
                   SizedBox(height: 8),
-                  Text('Miss you!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
+                  Text('Miss you!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18)),
                 ],
               ),
             ),

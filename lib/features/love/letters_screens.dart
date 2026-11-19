@@ -443,7 +443,7 @@ class _Paper extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (capsule.title.isNotEmpty) ...[
-            Text(capsule.title, style: const TextStyle(fontFamily: 'Nunito', fontSize: 22, fontWeight: FontWeight.w800, color: Brand.ink)),
+            Text(capsule.title, style: const TextStyle(fontFamily: 'Nunito', fontSize: 22, fontWeight: FontWeight.w700, color: Brand.ink)),
             const SizedBox(height: Space.m),
           ],
           CapsuleBody(

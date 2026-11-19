@@ -68,9 +68,7 @@ class _SimulatedRewardedAdState extends State<_SimulatedRewardedAd> {
           LinearProgressIndicator(value: (5 - _left) / 5),
         ],
       ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Skip (no reward)')),
-      ],
+      actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Skip (no reward)'))],
     );
   }
 }

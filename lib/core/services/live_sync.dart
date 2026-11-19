@@ -111,7 +111,12 @@ class LiveSync {
         lastMetAt: pair.lastMetAt,
         memoryImage: memoryImage,
         memoryId: memory?.id,
-        alwaysMessage: AlwaysWithMe.message(mode: pair.mode, now: now, partnerName: partnerName, partnerTap: partnerTap),
+        alwaysMessage: AlwaysWithMe.message(
+          mode: pair.mode,
+          now: now,
+          partnerName: partnerName,
+          partnerTap: partnerTap,
+        ),
       ),
     );
 
@@ -131,8 +136,8 @@ class LiveSync {
     final name = (nick?.isNotEmpty ?? false)
         ? nick!
         : (partner?.displayName.isNotEmpty ?? false)
-            ? partner!.displayName
-            : 'Your person';
+        ? partner!.displayName
+        : 'Your person';
     final notif = NotificationService.instance;
     final question = _ref.read(todayQuestionProvider).value;
     final games = _ref.read(gamesProvider).value ?? const <Game>[];
@@ -237,12 +242,16 @@ class LiveSync {
         if (!quiet) {
           final c = unseen.first;
           final (title, body, route) = switch (c.kind) {
-            CapsuleKind.reason => ('A new reason from $name 💗', 'Today’s reason is ready. Tap to read it.', '/reasons'),
+            CapsuleKind.reason => (
+              'A new reason from $name 💗',
+              'Today’s reason is ready. Tap to read it.',
+              '/reasons',
+            ),
             CapsuleKind.letter => (
-                'A letter from $name just opened 💌',
-                c.title.isEmpty ? 'Tap to read it' : '“${c.title}”',
-                '/letters/${c.id}',
-              ),
+              'A letter from $name just opened 💌',
+              c.title.isEmpty ? 'Tap to read it' : '“${c.title}”',
+              '/letters/${c.id}',
+            ),
             CapsuleKind.surprise => ('$name sent you a surprise 🎁', 'Tap to unwrap it', '/surprises'),
           };
           await notif.show(channel: Channels.partnerItems, title: title, body: body, route: route, id: 1006);
@@ -282,7 +291,8 @@ class LiveSync {
 
     final seenGames = (prefs.getStringList(_kGames) ?? const []).toSet();
     for (final g in games) {
-      final myTurn = (g.status == GameStatus.guesserTurn && g.guesserUid == me) ||
+      final myTurn =
+          (g.status == GameStatus.guesserTurn && g.guesserUid == me) ||
           (g.status == GameStatus.done && g.subjectUid == me);
       final key = '${g.id}:${g.status.name}';
       if (myTurn && !seenGames.contains(key)) {
@@ -291,7 +301,9 @@ class LiveSync {
           await notif.show(
             channel: Channels.gameTurns,
             title: g.status == GameStatus.done ? '$name finished guessing 🎯' : '$name finished — your turn!',
-            body: g.status == GameStatus.done ? 'They got ${g.score}/${g.questions.length}. See results' : 'How well do you know them?',
+            body: g.status == GameStatus.done
+                ? 'They got ${g.score}/${g.questions.length}. See results'
+                : 'How well do you know them?',
             route: '/games/${g.id}',
             id: 1004,
           );

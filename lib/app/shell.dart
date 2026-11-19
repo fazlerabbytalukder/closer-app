@@ -118,8 +118,8 @@ class _NotchedBarPainter extends CustomPainter {
   static const _radius = 24.0;
   static const _halfWidth = 22.0;
 
-  /// Thickness of the slab's visible side edge.
-  static const _thickness = 5.0;
+  /// Bottom inset kept for the row padding (flat bar: no visible side edge).
+  static const _thickness = 0.0;
 
   Path _shape(Size size) {
     final x = notchX;
@@ -136,88 +136,29 @@ class _NotchedBarPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final faceSize = Size(size.width, size.height - _thickness);
-    final face = _shape(faceSize);
-    final side = face.shift(const Offset(0, _thickness));
-    final faceRect = Offset.zero & faceSize;
+    final face = _shape(size);
 
-    final faceTop = dark ? const Color(0xFF353A4B) : Colors.white;
-    final faceBottom = dark ? const Color(0xFF242836) : const Color(0xFFF1EEFF);
-    final sideTop = dark ? const Color(0xFF181B25) : const Color(0xFFD9D2FF);
-    final sideBottom = dark ? const Color(0xFF0E1018) : const Color(0xFFB9AEF5);
-
-    // 1. Ambient + contact shadows under the whole slab.
+    // 1. Soft, blue-tinted drop shadow (flat card elevation).
     canvas
       ..drawPath(
-        side.shift(const Offset(0, 8)),
+        face.shift(const Offset(0, 6)),
         Paint()
-          ..color = const Color(0xFF5B50E0).withValues(alpha: dark ? 0.35 : 0.22)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16),
+          ..color = (dark ? Colors.black : const Color(0xFF1737E2)).withValues(alpha: dark ? 0.45 : 0.12)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14),
       )
-      ..drawPath(
-        side.shift(const Offset(0, 2)),
-        Paint()
-          ..color = const Color(0xFF2A2170).withValues(alpha: dark ? 0.5 : 0.18)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
-      )
-      // 2. Side edge (slab thickness).
-      ..drawPath(
-        side,
-        Paint()
-          ..shader = LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [sideTop, sideBottom],
-          ).createShader(Offset.zero & size),
-      )
-      // 3. Top-lit face.
-      ..drawPath(
-        face,
-        Paint()
-          ..shader = LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [faceTop, faceBottom],
-          ).createShader(faceRect),
-      )
-      // 4. Glossy rim: bright along the top, fading out towards the bottom.
+      // 2. Flat face.
+      ..drawPath(face, Paint()..color = dark ? Brand.darkSurface : Colors.white)
+      // 3. Hairline border.
       ..drawPath(
         face,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.2
-          ..shader = LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.white.withValues(alpha: dark ? 0.25 : 1),
-              Colors.white.withValues(alpha: 0),
-            ],
-          ).createShader(faceRect),
+          ..strokeWidth = 1
+          ..color = dark ? const Color(0xFF283048) : const Color(0xFFE6EBF5),
       );
 
-    // 5. Spherical dot resting in the notch.
-    final c = Offset(notchX, depth / 2 - 1);
-    const r = 5.5;
-    canvas
-      ..drawCircle(
-        c + const Offset(0, 2),
-        r,
-        Paint()
-          ..color = dotColor.withValues(alpha: 0.45)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5),
-      )
-      ..drawCircle(
-        c,
-        r,
-        Paint()
-          ..shader = RadialGradient(
-            center: const Alignment(-0.4, -0.5),
-            radius: 0.9,
-            colors: [Color.lerp(dotColor, Colors.white, 0.65)!, dotColor, Color.lerp(dotColor, Colors.black, 0.25)!],
-            stops: const [0, 0.55, 1],
-          ).createShader(Rect.fromCircle(center: c, radius: r)),
-      );
+    // 4. Solid indicator dot resting in the notch.
+    canvas.drawCircle(Offset(notchX, depth / 2 - 1), 5, Paint()..color = dotColor);
   }
 
   @override
@@ -235,7 +176,7 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = selected ? context.cs.primary : context.cs.onSurface.withValues(alpha: 0.8);
+    final fg = selected ? context.cs.primary : context.cc.muted;
     return Semantics(
       button: true,
       selected: selected,
@@ -250,18 +191,7 @@ class _NavItem extends StatelessWidget {
             bold: selected,
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 180),
-              child: Icon(
-                icon,
-                key: ValueKey(selected),
-                color: fg,
-                size: 26,
-                shadows: [
-                  if (selected)
-                    Shadow(color: fg.withValues(alpha: 0.45), blurRadius: 8, offset: const Offset(0, 3))
-                  else
-                    const Shadow(color: Color(0x14000000), blurRadius: 2, offset: Offset(0, 1)),
-                ],
-              ),
+              child: Icon(icon, key: ValueKey(selected), color: fg, size: 25),
             ),
           ),
         ),
@@ -293,7 +223,7 @@ class _NavLabel extends StatelessWidget {
             style: context.tt.labelSmall?.copyWith(
               color: color,
               fontSize: 12,
-              fontWeight: bold ? FontWeight.w700 : FontWeight.w600,
+              fontWeight: bold ? FontWeight.w600 : FontWeight.w500,
             ),
           ),
         ),
@@ -319,8 +249,24 @@ class _SendButton extends StatelessWidget {
         child: ExcludeSemantics(
           child: _NavLabel(
             label: 'Send',
-            color: context.cs.onSurface.withValues(alpha: 0.8),
-            child: Icon(Icons.add_circle_outline_rounded, color: context.cs.primary, size: 26),
+            color: context.cc.muted,
+            // Gradient "plus" tile, like the design's primary action.
+            child: Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Brand.royalLight, Brand.royal],
+                ),
+                boxShadow: [
+                  BoxShadow(color: Brand.royal.withValues(alpha: 0.35), blurRadius: 8, offset: const Offset(0, 3)),
+                ],
+              ),
+              child: const Icon(Icons.add_rounded, color: Colors.white, size: 22),
+            ),
           ),
         ),
       ),

@@ -75,7 +75,9 @@ class _ReactionBarState extends ConsumerState<ReactionBar> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
               decoration: BoxDecoration(
-                color: (widget.onDark ? Colors.white : context.cs.surfaceContainerHighest).withValues(alpha: widget.onDark ? 0.12 : 0.6),
+                color: (widget.onDark ? Colors.white : context.cs.surfaceContainerHighest).withValues(
+                  alpha: widget.onDark ? 0.12 : 0.6,
+                ),
                 borderRadius: BorderRadius.circular(999),
               ),
               child: Row(
@@ -121,7 +123,12 @@ class _ReactionBarState extends ConsumerState<ReactionBar> {
                           delay: (i * 70).ms,
                           onComplete: i == 4 ? (_) => setState(() => _bursts.removeWhere((b) => b.$1 == id)) : null,
                         )
-                        .scale(begin: const Offset(0.4, 0.4), end: const Offset(1.2, 1.2), duration: 300.ms, curve: Curves.easeOutBack)
+                        .scale(
+                          begin: const Offset(0.4, 0.4),
+                          end: const Offset(1.2, 1.2),
+                          duration: 300.ms,
+                          curve: Curves.easeOutBack,
+                        )
                         .moveY(begin: 0, end: -90 - i * 14.0, duration: 900.ms, curve: Curves.easeOut)
                         .moveX(begin: 0, end: (i - 2) * 26.0, duration: 900.ms)
                         .fadeOut(delay: 450.ms, duration: 450.ms),

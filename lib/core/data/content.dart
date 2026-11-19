@@ -139,26 +139,49 @@ const questionPacks = <QuestionPack>[
   ),
 ];
 
-QuestionPack packById(String id) =>
-    questionPacks.firstWhere((p) => p.id == id, orElse: () => questionPacks.first);
+QuestionPack packById(String id) => questionPacks.firstWhere((p) => p.id == id, orElse: () => questionPacks.first);
 
 /// "How well do you know me?" question bank.
 const knowMeQuestions = <GameQuestion>[
-  GameQuestion(text: 'My ideal weekend is…', options: ['Adventure outdoors', 'Couch + series', 'Seeing friends', 'A spontaneous trip']),
+  GameQuestion(
+    text: 'My ideal weekend is…',
+    options: ['Adventure outdoors', 'Couch + series', 'Seeing friends', 'A spontaneous trip'],
+  ),
   GameQuestion(text: 'My go-to comfort food is…', options: ['Pizza', 'Pasta', 'Sushi', 'Something sweet']),
-  GameQuestion(text: 'If I won the lottery, first I would…', options: ['Travel the world', 'Buy a house', 'Quit my job', 'Give a lot away']),
+  GameQuestion(
+    text: 'If I won the lottery, first I would…',
+    options: ['Travel the world', 'Buy a house', 'Quit my job', 'Give a lot away'],
+  ),
   GameQuestion(text: 'My biggest pet peeve is…', options: ['Lateness', 'Loud chewing', 'Slow walkers', 'Messy rooms']),
-  GameQuestion(text: 'On a night out I am most likely…', options: ['On the dance floor', 'Chatting at the bar', 'Leaving early', 'Organising everyone']),
+  GameQuestion(
+    text: 'On a night out I am most likely…',
+    options: ['On the dance floor', 'Chatting at the bar', 'Leaving early', 'Organising everyone'],
+  ),
   GameQuestion(text: 'My dream pet would be…', options: ['A dog', 'A cat', 'Something exotic', 'No pets, thanks']),
-  GameQuestion(text: 'I would rather…', options: ['Read the book', 'Watch the movie', 'Listen to the podcast', 'Skip it']),
+  GameQuestion(
+    text: 'I would rather…',
+    options: ['Read the book', 'Watch the movie', 'Listen to the podcast', 'Skip it'],
+  ),
   GameQuestion(text: 'My favourite season is…', options: ['Spring', 'Summer', 'Autumn', 'Winter']),
   GameQuestion(text: 'When stressed I usually…', options: ['Go for a walk', 'Eat snacks', 'Talk it out', 'Sleep']),
-  GameQuestion(text: 'My hidden talent is…', options: ['Cooking', 'Singing', 'Remembering everything', 'Making people laugh']),
-  GameQuestion(text: 'The superpower I would choose is…', options: ['Flying', 'Teleporting', 'Mind reading', 'Pausing time']),
+  GameQuestion(
+    text: 'My hidden talent is…',
+    options: ['Cooking', 'Singing', 'Remembering everything', 'Making people laugh'],
+  ),
+  GameQuestion(
+    text: 'The superpower I would choose is…',
+    options: ['Flying', 'Teleporting', 'Mind reading', 'Pausing time'],
+  ),
   GameQuestion(text: 'My morning starts with…', options: ['Coffee', 'Phone scrolling', 'Exercise', 'Snoozing 5 times']),
-  GameQuestion(text: 'My favourite way to say "I care" is…', options: ['Words', 'Gifts', 'Doing things for you', 'Quality time']),
+  GameQuestion(
+    text: 'My favourite way to say "I care" is…',
+    options: ['Words', 'Gifts', 'Doing things for you', 'Quality time'],
+  ),
   GameQuestion(text: "I'd most like to visit…", options: ['Japan', 'Iceland', 'Italy', 'New Zealand']),
-  GameQuestion(text: 'In a group project I am…', options: ['The leader', 'The ideas person', 'The quiet worker', 'The one who forgets']),
+  GameQuestion(
+    text: 'In a group project I am…',
+    options: ['The leader', 'The ideas person', 'The quiet worker', 'The one who forgets'],
+  ),
 ];
 
 /// Moods and status presets (F6).

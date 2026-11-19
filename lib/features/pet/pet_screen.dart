@@ -780,7 +780,7 @@ class _ShopSheet extends ConsumerWidget {
                                     : '💗 ${d.cost}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: context.tt.labelSmall?.copyWith(color: context.cc.accent, fontWeight: FontWeight.w800),
+                            style: context.tt.labelSmall?.copyWith(color: context.cc.accent, fontWeight: FontWeight.w700),
                           ),
                         ],
                       ),

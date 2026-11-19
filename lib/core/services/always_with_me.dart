@@ -30,12 +30,7 @@ abstract final class AlwaysWithMe {
   static int _dayIndex(DateTime d) => DateTime.utc(d.year, d.month, d.day).millisecondsSinceEpoch ~/ 86400000;
 
   /// The line of the day. A partner tap from the last 24 h wins.
-  static String message({
-    required PairMode mode,
-    required DateTime now,
-    String partnerName = '',
-    Tap? partnerTap,
-  }) {
+  static String message({required PairMode mode, required DateTime now, String partnerName = '', Tap? partnerTap}) {
     if (partnerTap != null && now.difference(partnerTap.createdAt) < const Duration(hours: 24)) {
       final who = partnerName.isEmpty ? 'Your person' : partnerName;
       return '$who ${partnerTap.info.message} ${partnerTap.info.emoji}';

@@ -222,7 +222,7 @@ class _AlwaysWidgetPreviewState extends ConsumerState<AlwaysWidgetPreview> {
                     'Always with me · $name',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: p.primary, fontWeight: FontWeight.w800, fontSize: 12),
+                    style: TextStyle(color: p.primary, fontWeight: FontWeight.w700, fontSize: 12),
                   ),
                   const SizedBox(height: 4),
                   Expanded(
@@ -240,7 +240,7 @@ class _AlwaysWidgetPreviewState extends ConsumerState<AlwaysWidgetPreview> {
                       AlwaysWithMe.sinceLabel(pair?.lastMetAt, now),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: p.accent, fontWeight: FontWeight.w800, fontSize: 11),
+                      style: TextStyle(color: p.accent, fontWeight: FontWeight.w700, fontSize: 11),
                     ),
                   ),
                 ],

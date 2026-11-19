@@ -76,9 +76,7 @@ Future<void> initFirebaseMessaging() async {
   FirebaseMessaging.onBackgroundMessage(closerFirebaseBackgroundHandler);
   // In the foreground the background handler doesn't run, so keep the widget
   // in sync here too (no system notification: the open app shows it).
-  _foregroundSub ??= FirebaseMessaging.onMessage.listen(
-    (m) => handleCloserMessage(m, foreground: true),
-  );
+  _foregroundSub ??= FirebaseMessaging.onMessage.listen((m) => handleCloserMessage(m, foreground: true));
 }
 
 /// Background isolate entry point. Must stay a top-level function.
@@ -98,10 +96,7 @@ Future<void> closerFirebaseBackgroundHandler(RemoteMessage message) async {
 }
 
 /// Handles one Closer message. Never throws.
-Future<void> handleCloserMessage(
-  RemoteMessage message, {
-  bool foreground = false,
-}) async {
+Future<void> handleCloserMessage(RemoteMessage message, {bool foreground = false}) async {
   try {
     final data = message.data;
     final notify = !foreground && data['silent'] != '1';
@@ -121,10 +116,7 @@ Future<void> handleCloserMessage(
   }
 }
 
-Future<void> _handleItem(
-  Map<String, dynamic> data, {
-  required bool notify,
-}) async {
+Future<void> _handleItem(Map<String, dynamic> data, {required bool notify}) async {
   final itemId = '${data['itemId'] ?? ''}';
   final thumbUrl = '${data['thumbUrl'] ?? ''}';
   if (itemId.isEmpty || thumbUrl.isEmpty) return;
@@ -134,9 +126,7 @@ Future<void> _handleItem(
   final itemType = '${data['itemType'] ?? 'photo'}';
 
   // Ignore out-of-order deliveries of older items.
-  final previousSentAt = int.tryParse(
-    await _read(WidgetKeys.latestSentAt) ?? '',
-  );
+  final previousSentAt = int.tryParse(await _read(WidgetKeys.latestSentAt) ?? '');
   final thisSentAt = int.tryParse(sentAt) ?? 0;
   final isNewest = previousSentAt == null || thisSentAt >= previousSentAt;
 
@@ -154,18 +144,11 @@ Future<void> _handleItem(
     await HomeWidget.saveWidgetData<String>(WidgetKeys.latestCaption, caption);
     await HomeWidget.saveWidgetData<String>(WidgetKeys.latestSentAt, sentAt);
     if (senderName.isNotEmpty) {
-      await HomeWidget.saveWidgetData<String>(
-        WidgetKeys.partnerName,
-        senderName,
-      );
+      await HomeWidget.saveWidgetData<String>(WidgetKeys.partnerName, senderName);
     }
     await HomeWidget.saveWidgetData<bool>(WidgetKeys.paired, true);
-    await HomeWidget.updateWidget(
-      qualifiedAndroidName: WidgetReceivers.partnerPhoto,
-    );
-    if (previousPath != null &&
-        previousPath.isNotEmpty &&
-        previousPath != file.path) {
+    await HomeWidget.updateWidget(qualifiedAndroidName: WidgetReceivers.partnerPhoto);
+    if (previousPath != null && previousPath.isNotEmpty && previousPath != file.path) {
       try {
         final old = File(previousPath);
         if (old.existsSync()) await old.delete();
@@ -193,24 +176,16 @@ Future<void> _handleItem(
   }
 }
 
-Future<void> _handleTap(
-  Map<String, dynamic> data, {
-  required bool notify,
-}) async {
+Future<void> _handleTap(Map<String, dynamic> data, {required bool notify}) async {
   final until = DateTime.now().add(const Duration(hours: 1));
-  await HomeWidget.saveWidgetData<String>(
-    WidgetKeys.heartUntil,
-    '${until.millisecondsSinceEpoch}',
-  );
+  await HomeWidget.saveWidgetData<String>(WidgetKeys.heartUntil, '${until.millisecondsSinceEpoch}');
   final kind = TapKind.byId('${data['kind'] ?? 'heart'}');
   await HomeWidget.saveWidgetData<String>(WidgetKeys.tapEmoji, kind.emoji);
   final senderName = '${data['senderName'] ?? ''}';
   if (senderName.isNotEmpty) {
     await HomeWidget.saveWidgetData<String>(WidgetKeys.partnerName, senderName);
   }
-  await HomeWidget.updateWidget(
-    qualifiedAndroidName: WidgetReceivers.partnerPhoto,
-  );
+  await HomeWidget.updateWidget(qualifiedAndroidName: WidgetReceivers.partnerPhoto);
   if (notify) {
     final name = senderName.isEmpty ? 'Your person' : senderName;
     await _show(
@@ -299,9 +274,7 @@ Future<void> _show({
       // Background isolate only: the main isolate initialises the plugin
       // itself (with its tap callback), so we never re-initialise there.
       await _plugin.initialize(
-        settings: const InitializationSettings(
-          android: AndroidInitializationSettings(_notificationIcon),
-        ),
+        settings: const InitializationSettings(android: AndroidInitializationSettings(_notificationIcon)),
       );
       _pluginReady = true;
     }
@@ -310,19 +283,14 @@ Future<void> _show({
       CloserChannels.names[channelId] ?? channelId,
       icon: _notificationIcon,
       importance: importance,
-      priority: importance == Importance.high
-          ? Priority.high
-          : Priority.defaultPriority,
+      priority: importance == Importance.high ? Priority.high : Priority.defaultPriority,
       enableVibration: vibrate,
       vibrationPattern: vibrationPattern,
       playSound: playSound,
       category: AndroidNotificationCategory.social,
       styleInformation: bigPicturePath == null
           ? null
-          : BigPictureStyleInformation(
-              FilePathAndroidBitmap(bigPicturePath),
-              hideExpandedLargeIcon: true,
-            ),
+          : BigPictureStyleInformation(FilePathAndroidBitmap(bigPicturePath), hideExpandedLargeIcon: true),
     );
     await _plugin.show(
       id: id,

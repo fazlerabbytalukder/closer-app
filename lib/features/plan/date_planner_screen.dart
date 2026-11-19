@@ -91,7 +91,7 @@ class DatePlannerScreen extends ConsumerWidget {
                     ),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: Space.l),
-                      child: Text('$count', style: ctx.tt.displaySmall?.copyWith(fontWeight: FontWeight.w800)),
+                      child: Text('$count', style: ctx.tt.displaySmall?.copyWith(fontWeight: FontWeight.w700)),
                     ),
                     IconButton.filledTonal(
                       tooltip: 'More',
@@ -241,7 +241,7 @@ class _GoalCard extends StatelessWidget {
                     strokeCap: StrokeCap.round,
                   ),
                 ),
-                Text(reached ? '🎉' : '$done/${g.count}', style: context.tt.titleMedium?.copyWith(color: Brand.ink, fontWeight: FontWeight.w800)),
+                Text(reached ? '🎉' : '$done/${g.count}', style: context.tt.titleMedium?.copyWith(color: Brand.ink, fontWeight: FontWeight.w700)),
               ],
             ),
           ),
@@ -284,7 +284,7 @@ class _Stat extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: Space.m, horizontal: Space.s),
       child: Column(
         children: [
-          FittedBox(child: Text(value, style: context.tt.titleLarge?.copyWith(fontWeight: FontWeight.w800))),
+          FittedBox(child: Text(value, style: context.tt.titleLarge?.copyWith(fontWeight: FontWeight.w700))),
           Text(label, textAlign: TextAlign.center, style: context.tt.bodySmall?.copyWith(color: context.cc.muted)),
         ],
       ),

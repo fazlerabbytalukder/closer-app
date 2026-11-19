@@ -31,7 +31,10 @@ abstract final class StreakRules {
 
     final month = today.substring(0, 7);
     if (streak.freezesMonth != month) {
-      streak = streak.copyWith(freezesMonth: month, freezesLeft: Streak.monthlyFreezes(plus: plus));
+      streak = streak.copyWith(
+        freezesMonth: month,
+        freezesLeft: Streak.monthlyFreezes(plus: plus),
+      );
     }
     if (streak.activeDate != today) {
       streak = streak.copyWith(activeDate: today, activeToday: const []);
@@ -117,11 +120,8 @@ abstract final class StreakRules {
     return ActivityResult(streak, p, grewTo: grewTo < 0 ? null : grewTo, newYear: newYear);
   }
 
-  static DateTime _parse(String key) => DateTime.utc(
-        int.parse(key.substring(0, 4)),
-        int.parse(key.substring(5, 7)),
-        int.parse(key.substring(8, 10)),
-      );
+  static DateTime _parse(String key) =>
+      DateTime.utc(int.parse(key.substring(0, 4)), int.parse(key.substring(5, 7)), int.parse(key.substring(8, 10)));
 
   static String _key(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';

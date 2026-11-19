@@ -64,8 +64,7 @@ abstract final class WidgetKeys {
 
 /// Fully-qualified receiver class names of the Glance widgets.
 abstract final class WidgetReceivers {
-  static const partnerPhoto =
-      'app.closer.widget.widgets.PartnerPhotoWidgetReceiver';
+  static const partnerPhoto = 'app.closer.widget.widgets.PartnerPhotoWidgetReceiver';
   static const countdown = 'app.closer.widget.widgets.CountdownWidgetReceiver';
   static const plant = 'app.closer.widget.widgets.PlantWidgetReceiver';
   static const alwaysWithMe = 'app.closer.widget.widgets.AlwaysWithMeWidgetReceiver';

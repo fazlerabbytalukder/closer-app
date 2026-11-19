@@ -131,7 +131,7 @@ class _CountdownCard extends StatelessWidget {
             const Spacer(),
             Text(
               days == 0 ? 'Today!' : '$days ${days == 1 ? 'day' : 'days'}',
-              style: (big ? context.tt.headlineSmall : context.tt.titleLarge)?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
+              style: (big ? context.tt.headlineSmall : context.tt.titleLarge)?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
             ),
             Text(c.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.tt.bodyMedium?.copyWith(color: Colors.white)),
           ],
@@ -262,7 +262,7 @@ class _DayCell extends StatelessWidget {
                 '${day.day}',
                 style: context.tt.bodyMedium?.copyWith(
                   color: selected ? Colors.white : null,
-                  fontWeight: today || selected ? FontWeight.w800 : FontWeight.w500,
+                  fontWeight: today || selected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
               const SizedBox(height: 2),

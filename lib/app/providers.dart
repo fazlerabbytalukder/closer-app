@@ -15,9 +15,7 @@ final prefsProvider = Provider<SharedPreferences>(
   (ref) => throw UnimplementedError('prefsProvider must be overridden'),
 );
 
-final authUidProvider = StreamProvider<String?>(
-  (ref) => ref.watch(backendProvider).authState(),
-);
+final authUidProvider = StreamProvider<String?>((ref) => ref.watch(backendProvider).authState());
 
 final meProvider = StreamProvider<AppUser?>((ref) {
   final uid = ref.watch(authUidProvider).value;
@@ -25,9 +23,7 @@ final meProvider = StreamProvider<AppUser?>((ref) {
   return ref.watch(backendProvider).watchUser(uid);
 });
 
-final pairIdProvider = Provider<String?>(
-  (ref) => ref.watch(meProvider).value?.pairId,
-);
+final pairIdProvider = Provider<String?>((ref) => ref.watch(meProvider).value?.pairId);
 
 final pairProvider = StreamProvider<Pair?>((ref) {
   final id = ref.watch(pairIdProvider);
@@ -74,9 +70,7 @@ final partnerLabelForMeProvider = Provider<RelationLabel?>((ref) {
 });
 
 final pairModeProvider = Provider<PairMode>((ref) {
-  return ref.watch(pairProvider).value?.mode ??
-      ref.watch(meProvider).value?.pendingMode ??
-      PairMode.couple;
+  return ref.watch(pairProvider).value?.mode ?? ref.watch(meProvider).value?.pendingMode ?? PairMode.couple;
 });
 
 /// Plus is checked on the **pair** so one subscription covers both partners.
@@ -95,12 +89,10 @@ final itemsProvider = StreamProvider<List<Item>>((ref) {
   return ref.watch(backendProvider).watchItems(id);
 });
 
-final sendsTodayProvider = StreamProvider<int>(
-  (ref) {
-    ref.watch(authUidProvider);
-    return ref.watch(backendProvider).watchSendsToday();
-  },
-);
+final sendsTodayProvider = StreamProvider<int>((ref) {
+  ref.watch(authUidProvider);
+  return ref.watch(backendProvider).watchSendsToday();
+});
 
 final sendsLeftProvider = Provider<int?>((ref) {
   if (ref.watch(isPlusProvider)) return null; // unlimited
@@ -123,7 +115,8 @@ final missMetersProvider = StreamProvider<List<MissMeter>>((ref) {
 /// Today's miss meter (device-local date), or null before anyone answered.
 final todayMissMeterProvider = Provider<MissMeter?>((ref) {
   final n = DateTime.now();
-  final key = '${n.year.toString().padLeft(4, '0')}-${n.month.toString().padLeft(2, '0')}-${n.day.toString().padLeft(2, '0')}';
+  final key =
+      '${n.year.toString().padLeft(4, '0')}-${n.month.toString().padLeft(2, '0')}-${n.day.toString().padLeft(2, '0')}';
   final list = ref.watch(missMetersProvider).value ?? const <MissMeter>[];
   return list.where((m) => m.date == key).firstOrNull;
 });
@@ -183,7 +176,9 @@ final unreadChatProvider = Provider<int>((ref) {
   if (me == null) return 0;
   final readAt = ref.watch(chatStateProvider).value?[me]?.readAt;
   final messages = ref.watch(messagesProvider).value ?? const <ChatMessage>[];
-  return messages.where((m) => m.senderId != me && !m.isDeleted && (readAt == null || m.createdAt.isAfter(readAt))).length;
+  return messages
+      .where((m) => m.senderId != me && !m.isDeleted && (readAt == null || m.createdAt.isAfter(readAt)))
+      .length;
 });
 
 final goodnightsProvider = StreamProvider<List<Goodnight>>((ref) {
@@ -227,9 +222,12 @@ final eventsProvider = StreamProvider<List<Countdown>>((ref) {
 /// countdown widget, the countdown strip on the calendar).
 final countdownsProvider = Provider<AsyncValue<List<Countdown>>>((ref) {
   final now = DateTime.now();
-  return ref.watch(eventsProvider).whenData(
-        (all) => all.where((c) => c.showAsCountdown && c.daysLeft(now) >= 0).toList()
-          ..sort((a, b) => a.nextMoment(now).compareTo(b.nextMoment(now))),
+  return ref
+      .watch(eventsProvider)
+      .whenData(
+        (all) =>
+            all.where((c) => c.showAsCountdown && c.daysLeft(now) >= 0).toList()
+              ..sort((a, b) => a.nextMoment(now).compareTo(b.nextMoment(now))),
       );
 });
 
@@ -286,8 +284,7 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
   }
 }
 
-final themeModeProvider =
-    NotifierProvider<ThemeModeNotifier, ThemeMode>(ThemeModeNotifier.new);
+final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(ThemeModeNotifier.new);
 
 /// Small persisted onboarding flags.
 class OnboardingFlags extends Notifier<Set<String>> {
@@ -298,8 +295,7 @@ class OnboardingFlags extends Notifier<Set<String>> {
   static const reviewAsked = 'review_asked';
 
   @override
-  Set<String> build() =>
-      (ref.watch(prefsProvider).getStringList(_key) ?? const []).toSet();
+  Set<String> build() => (ref.watch(prefsProvider).getStringList(_key) ?? const []).toSet();
 
   Future<void> mark(String flag) async {
     state = {...state, flag};
@@ -312,5 +308,4 @@ class OnboardingFlags extends Notifier<Set<String>> {
   }
 }
 
-final onboardingFlagsProvider =
-    NotifierProvider<OnboardingFlags, Set<String>>(OnboardingFlags.new);
+final onboardingFlagsProvider = NotifierProvider<OnboardingFlags, Set<String>>(OnboardingFlags.new);

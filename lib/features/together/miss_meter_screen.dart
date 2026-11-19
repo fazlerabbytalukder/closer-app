@@ -121,7 +121,7 @@ class _Picker extends StatelessWidget {
             transitionBuilder: (c, a) => ScaleTransition(scale: a, child: c),
             child: Text(_emojiFor(v), key: ValueKey(_emojiFor(v)), style: const TextStyle(fontSize: 72)),
           ),
-          Text('$v%', style: context.tt.displaySmall?.copyWith(fontWeight: FontWeight.w800, color: Brand.pink)),
+          Text('$v%', style: context.tt.displaySmall?.copyWith(fontWeight: FontWeight.w700, color: Brand.pink)),
           Text(MissMeter.describe(v), style: context.tt.titleMedium?.copyWith(color: Brand.ink)),
           const SizedBox(height: Space.m),
           SliderTheme(
@@ -253,7 +253,7 @@ class _Bar extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
             Text(_emojiFor(shown), style: const TextStyle(fontSize: 28)),
-            Text('$shown%', style: context.tt.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+            Text('$shown%', style: context.tt.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 4),
             Container(
               width: 64,

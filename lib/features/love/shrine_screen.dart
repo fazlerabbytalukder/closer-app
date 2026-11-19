@@ -224,7 +224,7 @@ class _ShrineView extends ConsumerWidget {
             child: Text(
               heading + (editable ? ' ✏️' : ''),
               textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'Nunito', fontSize: 24, fontWeight: FontWeight.w800, color: ink),
+              style: TextStyle(fontFamily: 'Nunito', fontSize: 24, fontWeight: FontWeight.w700, color: ink),
             ),
           ),
           if (editable) ...[

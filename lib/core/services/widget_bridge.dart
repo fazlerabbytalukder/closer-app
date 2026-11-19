@@ -103,11 +103,25 @@ abstract final class WidgetBridge {
   static Future<void> sync(WidgetSnapshot s) async {
     if (!Platform.isAndroid) return;
     final fingerprint = [
-      s.paired, s.partnerName, s.mode, s.latestItemId, s.latestCaption,
-      s.heartUntil?.millisecondsSinceEpoch, s.partnerMood, s.themeId,
-      s.countdown?.id, s.countdown?.title, s.countdown?.date, s.countdown?.emoji,
-      s.streak, s.plantStage, s.plantHealth, s.tapEmoji,
-      s.lastMetAt?.millisecondsSinceEpoch, s.memoryId, s.alwaysMessage,
+      s.paired,
+      s.partnerName,
+      s.mode,
+      s.latestItemId,
+      s.latestCaption,
+      s.heartUntil?.millisecondsSinceEpoch,
+      s.partnerMood,
+      s.themeId,
+      s.countdown?.id,
+      s.countdown?.title,
+      s.countdown?.date,
+      s.countdown?.emoji,
+      s.streak,
+      s.plantStage,
+      s.plantHealth,
+      s.tapEmoji,
+      s.lastMetAt?.millisecondsSinceEpoch,
+      s.memoryId,
+      s.alwaysMessage,
     ].join('|');
     if (fingerprint == _lastFingerprint) return;
     _lastFingerprint = fingerprint;
@@ -197,8 +211,7 @@ abstract final class WidgetBridge {
     }
   }
 
-  static Future<void> requestPin(String receiver) =>
-      HomeWidget.requestPinWidget(qualifiedAndroidName: receiver);
+  static Future<void> requestPin(String receiver) => HomeWidget.requestPinWidget(qualifiedAndroidName: receiver);
 
   static Future<int> installedCount() async {
     if (!Platform.isAndroid) return 0;

@@ -27,7 +27,10 @@ class HomeScreen extends ConsumerWidget {
     final name = ref.watch(partnerNameProvider);
     final installed = ref.watch(_installedWidgetsProvider).value;
     if (me == null || pair == null) {
-      return const Scaffold(backgroundColor: Colors.transparent, body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
     final partnerUid = pair.partnerOf(me.uid);
     final latest = pair.latestItemByUser[partnerUid];
@@ -97,28 +100,17 @@ class _Hero extends ConsumerWidget {
     final status = partner?.status;
     final first = me.displayName.trim().split(' ').first;
     final hour = DateTime.now().hour;
-    final greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Hey' : 'Good evening';
+    final greeting = hour < 12
+        ? 'Good morning'
+        : hour < 18
+        ? 'Hey'
+        : 'Good evening';
     final top = MediaQuery.paddingOf(context).top;
     final wilted = pair.plant.health == PlantHealth.wilted;
 
     return Stack(
       children: [
-        Positioned(
-          left: 0,
-          right: 0,
-          top: 0,
-          height: top + 250,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [const Color(0xFF7D6EF5), const Color(0xFFA699FF), Brand.lavender.withValues(alpha: 0)],
-                stops: const [0, 0.6, 1],
-              ),
-            ),
-          ),
-        ),
+        Positioned(left: 0, right: 0, top: 0, height: top + 232, child: const HeroBackdrop()),
         Padding(
           padding: EdgeInsets.fromLTRB(Space.m, top + Space.s, Space.m, 0),
           child: Column(
@@ -182,7 +174,8 @@ class _Hero extends ConsumerWidget {
                             [
                               if (mood != null) '$name feels ${mood.emoji} ${mood.label.toLowerCase()}',
                               if (status != null && status.text.isNotEmpty) status.text,
-                              if (mood == null && (status == null || status.text.isEmpty)) 'Ready for a good day with $name?',
+                              if (mood == null && (status == null || status.text.isEmpty))
+                                'Ready for a good day with $name?',
                             ].join(' · '),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -298,7 +291,7 @@ class _ProgressCard extends ConsumerWidget {
           end: Alignment.bottomRight,
           colors: [Brand.indigo, Brand.indigoDeep],
         ),
-        boxShadow: const [BoxShadow(color: Color(0x405B50E0), blurRadius: 24, offset: Offset(0, 12))],
+        boxShadow: const [BoxShadow(color: Color(0x401737E2), blurRadius: 24, offset: Offset(0, 12))],
       ),
       child: Stack(
         children: [
@@ -308,7 +301,7 @@ class _ProgressCard extends ConsumerWidget {
             child: Buddy(
               size: 112,
               withBody: true,
-              color: const Color(0xFFB4A5FF),
+              color: const Color(0xFF8FB0FF),
               mood: done == rituals.length ? BuddyMood.love : BuddyMood.happy,
             ),
           ),
@@ -380,14 +373,7 @@ class _Rituals extends ConsumerWidget {
         const SectionHeader('Today’s rituals'),
         for (final (i, r) in rituals.indexed) ...[
           if (i > 0) const SizedBox(height: Space.s + 2),
-          RitualTile(
-            emoji: r.emoji,
-            title: r.title,
-            subtitle: r.subtitle,
-            done: r.done,
-            tint: r.tint,
-            onTap: r.onTap,
-          ),
+          RitualTile(emoji: r.emoji, title: r.title, subtitle: r.subtitle, done: r.done, tint: r.tint, onTap: r.onTap),
         ],
       ],
     );
@@ -497,7 +483,7 @@ class _LatestCard extends ConsumerWidget {
                           ),
                           child: Text(
                             l.secret ? '🕵️' : (name.isEmpty ? '?' : name.characters.first.toUpperCase()),
-                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800),
+                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
                           ),
                         ),
                         const SizedBox(width: 6),
@@ -542,7 +528,10 @@ class _LatestCard extends ConsumerWidget {
                                 children: [
                                   Icon(Icons.reply_rounded, size: 18, color: cs.primary),
                                   const SizedBox(width: 6),
-                                  Text('Reply', style: context.tt.labelLarge?.copyWith(color: cs.primary, fontSize: 14)),
+                                  Text(
+                                    'Reply',
+                                    style: context.tt.labelLarge?.copyWith(color: cs.primary, fontSize: 14),
+                                  ),
                                 ],
                               ),
                             ),
@@ -620,7 +609,10 @@ class _HeartTapState extends ConsumerState<_HeartTap> with SingleTickerProviderS
     });
     final ok = await runAction(context, () => ref.read(backendProvider).sendTap(kind: kind.id));
     if (ok && mounted) {
-      showToast(context, kind == TapKind.heart ? '${widget.name} will feel that 💗' : 'Sent “${kind.label}” ${kind.emoji}');
+      showToast(
+        context,
+        kind == TapKind.heart ? '${widget.name} will feel that 💗' : 'Sent “${kind.label}” ${kind.emoji}',
+      );
     }
   }
 
@@ -639,12 +631,12 @@ class _HeartTapState extends ConsumerState<_HeartTap> with SingleTickerProviderS
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: dark
-              ? [cc.accentTint, pink.withValues(alpha: 0.16)]
-              : const [Color(0xFFF1EDFF), Color(0xFFFFE6EF)],
+          colors: dark ? [cc.accentTint, pink.withValues(alpha: 0.16)] : const [Color(0xFFF1EDFF), Color(0xFFFFE6EF)],
         ),
         border: Border.all(color: Colors.white.withValues(alpha: dark ? 0.08 : 0.9), width: 1.5),
-        boxShadow: dark ? null : [BoxShadow(color: pink.withValues(alpha: 0.18), blurRadius: 24, offset: const Offset(0, 10))],
+        boxShadow: dark
+            ? null
+            : [BoxShadow(color: pink.withValues(alpha: 0.18), blurRadius: 24, offset: const Offset(0, 10))],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(Radii.card),
@@ -674,17 +666,23 @@ class _HeartTapState extends ConsumerState<_HeartTap> with SingleTickerProviderS
                               ),
                               child: Text(
                                 '💌 Love tap',
-                                style: context.tt.labelSmall?.copyWith(color: dark ? Colors.white70 : const Color(0xFFE0557F), fontWeight: FontWeight.w700),
+                                style: context.tt.labelSmall?.copyWith(
+                                  color: dark ? Colors.white70 : const Color(0xFFE0557F),
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ),
                             const SizedBox(height: Space.s),
-                            Text('Thinking of ${widget.name}? 🥰', style: context.tt.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                            Text(
+                              'Thinking of ${widget.name}? 🥰',
+                              style: context.tt.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                            ),
                             const SizedBox(height: 6),
                             if (fromPartner)
-                              _Bubble(text: '${widget.name} ${tap.info.message} ${tap.info.emoji} · ${timeAgo(tap.createdAt)}')
-                                  .animate()
-                                  .fadeIn(duration: 300.ms)
-                                  .slideX(begin: -0.1, end: 0, curve: Curves.easeOutBack)
+                              _Bubble(
+                                text:
+                                    '${widget.name} ${tap.info.message} ${tap.info.emoji} · ${timeAgo(tap.createdAt)}',
+                              ).animate().fadeIn(duration: 300.ms).slideX(begin: -0.1, end: 0, curve: Curves.easeOutBack)
                             else
                               Text(
                                 'Tap the heart, or send a little message 👇',
@@ -725,7 +723,10 @@ class _HeartTapState extends ConsumerState<_HeartTap> with SingleTickerProviderS
                   onTap: () => _tap(k),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                    child: Text('${k.emoji} ${k.label}', style: context.tt.labelMedium?.copyWith(fontWeight: FontWeight.w700)),
+                    child: Text(
+                      '${k.emoji} ${k.label}',
+                      style: context.tt.labelMedium?.copyWith(fontWeight: FontWeight.w700),
+                    ),
                   ),
                 ),
               ),
@@ -737,18 +738,22 @@ class _HeartTapState extends ConsumerState<_HeartTap> with SingleTickerProviderS
 
   /// A small symbol at a relative position that bobs gently forever.
   List<Widget> _decor(Offset at, String glyph, double size, int delayMs, {Color? color}) => [
-        Positioned.fill(
-          child: Align(
-            alignment: Alignment(at.dx * 2 - 1, at.dy * 2 - 1),
-            child: IgnorePointer(
-              child: Text(glyph, style: TextStyle(fontSize: size, color: color?.withValues(alpha: 0.55)))
+    Positioned.fill(
+      child: Align(
+        alignment: Alignment(at.dx * 2 - 1, at.dy * 2 - 1),
+        child: IgnorePointer(
+          child:
+              Text(
+                    glyph,
+                    style: TextStyle(fontSize: size, color: color?.withValues(alpha: 0.55)),
+                  )
                   .animate(onPlay: (c) => c.repeat(reverse: true), delay: delayMs.ms)
                   .moveY(begin: 0, end: -6, duration: 1800.ms, curve: Curves.easeInOut)
                   .fade(begin: 0.45, end: 0.9, duration: 1800.ms),
-            ),
-          ),
         ),
-      ];
+      ),
+    ),
+  ];
 
   Widget _heartButton(CloserColors cc, Color pink) {
     return SizedBox(
@@ -760,19 +765,26 @@ class _HeartTapState extends ConsumerState<_HeartTap> with SingleTickerProviderS
         children: [
           // Soft halo that keeps pulsing outward, inviting a tap.
           Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: pink.withValues(alpha: 0.25)),
-          )
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(shape: BoxShape.circle, color: pink.withValues(alpha: 0.25)),
+              )
               .animate(onPlay: (c) => c.repeat())
-              .scale(begin: const Offset(0.9, 0.9), end: const Offset(1.25, 1.25), duration: 1600.ms, curve: Curves.easeOut)
+              .scale(
+                begin: const Offset(0.9, 0.9),
+                end: const Offset(1.25, 1.25),
+                duration: 1600.ms,
+                curve: Curves.easeOut,
+              )
               .fadeOut(duration: 1600.ms),
           for (final b in _bursts)
             Text(_burstEmoji[b] ?? '💗', key: ValueKey(b), style: const TextStyle(fontSize: 22))
-                .animate(onComplete: (_) => setState(() {
-                      _bursts.remove(b);
-                      _burstEmoji.remove(b);
-                    }))
+                .animate(
+                  onComplete: (_) => setState(() {
+                    _bursts.remove(b);
+                    _burstEmoji.remove(b);
+                  }),
+                )
                 .moveY(begin: 0, end: -70, duration: 900.ms, curve: Curves.easeOut)
                 .moveX(begin: 0, end: (b % 3 - 1) * 18.0, duration: 900.ms)
                 .fadeOut(delay: 400.ms, duration: 500.ms),
@@ -787,31 +799,48 @@ class _HeartTapState extends ConsumerState<_HeartTap> with SingleTickerProviderS
                   TweenSequenceItem(tween: Tween(begin: 0.8, end: 1.15), weight: 1),
                   TweenSequenceItem(tween: Tween(begin: 1.15, end: 1), weight: 1),
                 ]).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut)),
-                child: Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [pink, cc.accent],
-                    ),
-                    border: Border.all(color: Colors.white, width: 3),
-                    boxShadow: [BoxShadow(color: pink.withValues(alpha: 0.45), blurRadius: 18, offset: const Offset(0, 8))],
-                  ),
-                  child: const Gloss(
-                    circle: true,
-                    strength: 0.8,
-                    child: Center(child: Icon(Icons.favorite_rounded, color: Colors.white, size: 34)),
-                  ),
-                )
-                    // Gentle heartbeat while idle.
-                    .animate(onPlay: (c) => c.repeat())
-                    .scale(begin: const Offset(1, 1), end: const Offset(1.08, 1.08), duration: 220.ms, curve: Curves.easeOut)
-                    .then()
-                    .scale(begin: const Offset(1, 1), end: const Offset(1 / 1.08, 1 / 1.08), duration: 260.ms, curve: Curves.easeIn)
-                    .then(delay: 1100.ms),
+                child:
+                    Container(
+                          width: 72,
+                          height: 72,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [pink, cc.accent],
+                            ),
+                            border: Border.all(color: Colors.white, width: 3),
+                            boxShadow: [
+                              BoxShadow(
+                                color: pink.withValues(alpha: 0.45),
+                                blurRadius: 18,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: const Gloss(
+                            circle: true,
+                            strength: 0.8,
+                            child: Center(child: Icon(Icons.favorite_rounded, color: Colors.white, size: 34)),
+                          ),
+                        )
+                        // Gentle heartbeat while idle.
+                        .animate(onPlay: (c) => c.repeat())
+                        .scale(
+                          begin: const Offset(1, 1),
+                          end: const Offset(1.08, 1.08),
+                          duration: 220.ms,
+                          curve: Curves.easeOut,
+                        )
+                        .then()
+                        .scale(
+                          begin: const Offset(1, 1),
+                          end: const Offset(1 / 1.08, 1 / 1.08),
+                          duration: 260.ms,
+                          curve: Curves.easeIn,
+                        )
+                        .then(delay: 1100.ms),
               ),
             ),
           ),
@@ -861,10 +890,10 @@ class _QuestionCard extends ConsumerWidget {
     final status = q.revealed
         ? 'Both answered — tap to see! 👀'
         : answered
-            ? 'Waiting for $name…'
-            : partnerAnswered
-                ? '$name answered. Your turn!'
-                : 'Answer to unlock $name’s answer';
+        ? 'Waiting for $name…'
+        : partnerAnswered
+        ? '$name answered. Your turn!'
+        : 'Answer to unlock $name’s answer';
     return CloserCard(
       onTap: () => context.push('/question'),
       child: Column(
@@ -929,9 +958,10 @@ class _GoodnightCard extends ConsumerWidget {
         gradient: const LinearGradient(colors: [Color(0xFF2D2760), Color(0xFF5A3F84)]),
         child: Row(
           children: [
-            const Text('🌙', style: TextStyle(fontSize: 34))
-                .animate(onPlay: (c) => c.repeat(reverse: true))
-                .rotate(begin: -0.03, end: 0.03, duration: 1500.ms),
+            const Text(
+              '🌙',
+              style: TextStyle(fontSize: 34),
+            ).animate(onPlay: (c) => c.repeat(reverse: true)).rotate(begin: -0.03, end: 0.03, duration: 1500.ms),
             const SizedBox(width: Space.m),
             Expanded(
               child: Column(
@@ -970,8 +1000,8 @@ class _LoveInbox extends ConsumerWidget {
     final (emoji, title, route) = letters.isNotEmpty
         ? ('💌', 'A letter from $name just opened', '/letters/${letters.first.id}')
         : surprises > 0
-            ? ('🎁', '$name sent you a surprise', '/surprises')
-            : ('💗', 'Today’s reason from $name is here', '/reasons');
+        ? ('🎁', '$name sent you a surprise', '/surprises')
+        : ('💗', 'Today’s reason from $name is here', '/reasons');
     final more = fresh.length - 1;
     return Padding(
       padding: const EdgeInsets.only(top: Space.m),
@@ -980,9 +1010,10 @@ class _LoveInbox extends ConsumerWidget {
         gradient: const LinearGradient(colors: [Color(0xFFFFE6EF), Color(0xFFFFF3D6)]),
         child: Row(
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 34))
-                .animate(onPlay: (c) => c.repeat(reverse: true))
-                .scaleXY(begin: 1, end: 1.12, duration: 700.ms),
+            Text(
+              emoji,
+              style: const TextStyle(fontSize: 34),
+            ).animate(onPlay: (c) => c.repeat(reverse: true)).scaleXY(begin: 1, end: 1.12, duration: 700.ms),
             const SizedBox(width: Space.m),
             Expanded(
               child: Column(

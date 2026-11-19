@@ -46,8 +46,7 @@ class PendingInvite extends Notifier<String?> {
   void set(String? code) => state = code;
 }
 
-final pendingInviteProvider =
-    NotifierProvider<PendingInvite, String?>(PendingInvite.new);
+final pendingInviteProvider = NotifierProvider<PendingInvite, String?>(PendingInvite.new);
 
 final _rootKey = GlobalKey<NavigatorState>();
 
@@ -119,17 +118,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/i/:code', builder: (_, _) => const SplashScreen()),
       GoRoute(path: '/paired', builder: (_, _) => const PairedScreen()),
       GoRoute(path: '/widget-tutorial', builder: (_, _) => const WidgetTutorialScreen()),
-      GoRoute(
-        path: '/notifications-permission',
-        builder: (_, _) => const NotificationsPermissionScreen(),
-      ),
+      GoRoute(path: '/notifications-permission', builder: (_, _) => const NotificationsPermissionScreen()),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(shell: shell),
         branches: [
-          StatefulShellBranch(routes: [GoRoute(path: '/home', builder: (_, _) => const HomeScreen())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/together', builder: (_, _) => const TogetherScreen())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/memories', builder: (_, _) => const MemoriesScreen())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/me', builder: (_, _) => const MeScreen())]),
+          StatefulShellBranch(
+            routes: [GoRoute(path: '/home', builder: (_, _) => const HomeScreen())],
+          ),
+          StatefulShellBranch(
+            routes: [GoRoute(path: '/together', builder: (_, _) => const TogetherScreen())],
+          ),
+          StatefulShellBranch(
+            routes: [GoRoute(path: '/memories', builder: (_, _) => const MemoriesScreen())],
+          ),
+          StatefulShellBranch(
+            routes: [GoRoute(path: '/me', builder: (_, _) => const MeScreen())],
+          ),
         ],
       ),
       // Full-screen routes.
@@ -159,7 +163,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ),
       GoRoute(path: '/question', parentNavigatorKey: _rootKey, builder: (_, _) => const QuestionScreen()),
-      GoRoute(path: '/question/history', parentNavigatorKey: _rootKey, builder: (_, _) => const QuestionHistoryScreen()),
+      GoRoute(
+        path: '/question/history',
+        parentNavigatorKey: _rootKey,
+        builder: (_, _) => const QuestionHistoryScreen(),
+      ),
       GoRoute(path: '/packs', parentNavigatorKey: _rootKey, builder: (_, _) => const QuestionPacksScreen()),
       GoRoute(path: '/games', parentNavigatorKey: _rootKey, builder: (_, _) => const GamesScreen()),
       GoRoute(
@@ -199,7 +207,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootKey,
         builder: (_, state) => WishEditScreen(
           wishId: state.uri.queryParameters['id'],
-          category: state.uri.queryParameters['category'] == null ? null : WishCategory.parse(state.uri.queryParameters['category']),
+          category: state.uri.queryParameters['category'] == null
+              ? null
+              : WishCategory.parse(state.uri.queryParameters['category']),
         ),
       ),
       GoRoute(path: '/plant', parentNavigatorKey: _rootKey, builder: (_, _) => const PlantScreen()),
@@ -217,9 +227,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/surprises/new',
         parentNavigatorKey: _rootKey,
-        builder: (_, state) => NewSurpriseScreen(
-          type: SurpriseType.parse(state.uri.queryParameters['type']) ?? SurpriseType.note,
-        ),
+        builder: (_, state) =>
+            NewSurpriseScreen(type: SurpriseType.parse(state.uri.queryParameters['type']) ?? SurpriseType.note),
       ),
       GoRoute(path: '/timeline', parentNavigatorKey: _rootKey, builder: (_, _) => const TimelineScreen()),
       GoRoute(

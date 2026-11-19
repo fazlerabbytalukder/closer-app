@@ -53,8 +53,16 @@ abstract final class Channels {
     importance: Importance.high,
   );
 
-  static List<AndroidNotificationChannel> get all =>
-      [partnerItems, taps, chat, dailyQuestion, streak, countdowns, gameTurns, account];
+  static List<AndroidNotificationChannel> get all => [
+    partnerItems,
+    taps,
+    chat,
+    dailyQuestion,
+    streak,
+    countdowns,
+    gameTurns,
+    account,
+  ];
 }
 
 /// Thin wrapper around flutter_local_notifications. Notification taps carry a
@@ -83,16 +91,13 @@ class NotificationService {
     if (_ready || !Platform.isAndroid) return;
     try {
       await _plugin.initialize(
-        settings: const InitializationSettings(
-          android: AndroidInitializationSettings('ic_stat_closer'),
-        ),
+        settings: const InitializationSettings(android: AndroidInitializationSettings('ic_stat_closer')),
         onDidReceiveNotificationResponse: (r) {
           final p = r.payload;
           if (p != null && p.isNotEmpty) _taps.add(p);
         },
       );
-      final android = _plugin.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+      final android = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
       for (final c in Channels.all) {
         await android?.createNotificationChannel(c);
       }
@@ -108,14 +113,12 @@ class NotificationService {
 
   /// Android 13+ POST_NOTIFICATIONS runtime permission.
   Future<bool> requestPermission() async {
-    final android = _plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final android = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
     return await android?.requestNotificationsPermission() ?? false;
   }
 
   Future<bool> areEnabled() async {
-    final android = _plugin.resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>();
+    final android = _plugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
     return await android?.areNotificationsEnabled() ?? false;
   }
 
@@ -160,4 +163,3 @@ class NotificationService {
     }
   }
 }
-

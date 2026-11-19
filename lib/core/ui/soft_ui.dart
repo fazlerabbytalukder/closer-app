@@ -3,8 +3,8 @@ import 'dart:math' as math;
 import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 
-/// Lavender-to-white wash with a warm peach glow — the soft backdrop used
-/// behind the main tabs.
+/// Clean, flat page backdrop behind the main tabs (pale primary-50 in light
+/// mode, deep navy in dark), as in the design system's screens.
 class SoftBackground extends StatelessWidget {
   const SoftBackground({required this.child, super.key});
 
@@ -12,43 +12,49 @@ class SoftBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    final base = context.cs.surface;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: dark
-              ? [const Color(0xFF221E3A), base, base]
-              : [const Color(0xFFE4DDFF), const Color(0xFFF6F3FF), base],
-          stops: const [0, 0.38, 1],
+    return ColoredBox(color: context.cs.surface, child: child);
+  }
+}
+
+/// Full-bleed gradient hero with rounded bottom corners — the header style
+/// of the design system's home screens (deep royal blue fading to cyan,
+/// with soft decorative circles).
+class HeroBackdrop extends StatelessWidget {
+  const HeroBackdrop({super.key, this.radius = 28});
+
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final g = context.cc.gradient;
+    return ClipRRect(
+      borderRadius: BorderRadius.vertical(bottom: Radius.circular(radius)),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Brand.royal, g.first, g.last],
+            stops: const [0, 0.55, 1],
+          ),
         ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -120,
-            bottom: -80,
-            child: _Glow(size: 360, color: dark ? const Color(0x33FF9D7A) : const Color(0x66FFD2BC)),
-          ),
-          Positioned(
-            left: -140,
-            top: 220,
-            child: _Glow(size: 300, color: dark ? const Color(0x227B6CF6) : const Color(0x40C9BEFF)),
-          ),
-          Positioned.fill(child: child),
-        ],
+        child: Stack(
+          children: [
+            Positioned(right: -60, top: -40, child: _Bubble(size: 200, alpha: 0.10)),
+            Positioned(left: -50, bottom: -70, child: _Bubble(size: 180, alpha: 0.08)),
+            Positioned(right: 70, bottom: 20, child: _Bubble(size: 60, alpha: 0.10)),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _Glow extends StatelessWidget {
-  const _Glow({required this.size, required this.color});
+class _Bubble extends StatelessWidget {
+  const _Bubble({required this.size, required this.alpha});
 
   final double size;
-  final Color color;
+  final double alpha;
 
   @override
   Widget build(BuildContext context) {
@@ -58,14 +64,15 @@ class _Glow extends StatelessWidget {
         height: size,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: RadialGradient(colors: [color, color.withValues(alpha: 0)]),
+          color: Colors.white.withValues(alpha: alpha),
         ),
       ),
     );
   }
 }
 
-/// Frosted white pill (header icon groups, small tags).
+/// Frosted pill (header icon groups, small tags) — reads well on top of the
+/// gradient hero.
 class GlassPill extends StatelessWidget {
   const GlassPill({
     required this.child,
@@ -82,9 +89,9 @@ class GlassPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     return Material(
-      color: dark ? Colors.white.withValues(alpha: 0.10) : Colors.white.withValues(alpha: 0.72),
+      color: dark ? Colors.white.withValues(alpha: 0.12) : Colors.white.withValues(alpha: 0.92),
       shape: StadiumBorder(
-        side: BorderSide(color: Colors.white.withValues(alpha: dark ? 0.12 : 0.9)),
+        side: BorderSide(color: Colors.white.withValues(alpha: dark ? 0.14 : 0.6)),
       ),
       child: InkWell(
         customBorder: const StadiumBorder(),
@@ -106,16 +113,16 @@ class SpeechBubble extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.85),
+        color: Colors.white.withValues(alpha: 0.95),
         borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(16),
-          topRight: Radius.circular(16),
-          bottomLeft: Radius.circular(16),
+          topLeft: Radius.circular(14),
+          topRight: Radius.circular(14),
+          bottomLeft: Radius.circular(14),
           bottomRight: Radius.circular(4),
         ),
-        boxShadow: const [BoxShadow(color: Color(0x145B50E0), blurRadius: 12, offset: Offset(0, 4))],
+        boxShadow: Shadows.soft,
       ),
-      child: Text(text, style: context.tt.labelSmall?.copyWith(color: Brand.indigo)),
+      child: Text(text, style: context.tt.labelSmall?.copyWith(color: Brand.royal)),
     );
   }
 }
@@ -216,50 +223,53 @@ class RitualTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    return Material(
-      color: dark ? context.cc.card : Colors.white.withValues(alpha: 0.9),
-      borderRadius: BorderRadius.circular(22),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(22),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: tint ?? context.cs.surfaceContainer,
-                  borderRadius: BorderRadius.circular(14),
+    return DecoratedBox(
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(Radii.tile), boxShadow: dark ? null : Shadows.soft),
+      child: Material(
+        color: context.cc.card,
+        borderRadius: BorderRadius.circular(Radii.tile),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(Radii.tile),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: tint ?? context.cs.surfaceContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(emoji, style: const TextStyle(fontSize: 22)),
                 ),
-                child: Text(emoji, style: const TextStyle(fontSize: 22)),
-              ),
-              const SizedBox(width: Space.m - 4),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: context.tt.titleSmall?.copyWith(
-                        decoration: done ? TextDecoration.lineThrough : null,
-                        decorationColor: context.cc.muted,
+                const SizedBox(width: Space.m - 4),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: context.tt.titleSmall?.copyWith(
+                          decoration: done ? TextDecoration.lineThrough : null,
+                          decorationColor: context.cc.muted,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: context.tt.bodySmall?.copyWith(color: context.cc.muted),
-                    ),
-                  ],
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.tt.bodySmall?.copyWith(color: context.cc.muted),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              trailing ?? CheckDot(done: done),
-            ],
+                trailing ?? CheckDot(done: done),
+              ],
+            ),
           ),
         ),
       ),
@@ -288,15 +298,12 @@ class StatTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: dark ? null : const [BoxShadow(color: Color(0x1A5B50E0), blurRadius: 24, offset: Offset(0, 10))],
-      ),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(Radii.tile), boxShadow: dark ? null : Shadows.card),
       child: Material(
         color: context.cc.card,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(Radii.tile),
         child: InkWell(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(Radii.tile),
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),

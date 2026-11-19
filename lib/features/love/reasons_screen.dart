@@ -112,7 +112,7 @@ class _ProgressHeader extends StatelessWidget {
                     strokeCap: StrokeCap.round,
                   ),
                 ),
-                Text('$revealed', style: context.tt.titleLarge?.copyWith(color: Brand.ink, fontWeight: FontWeight.w800)),
+                Text('$revealed', style: context.tt.titleLarge?.copyWith(color: Brand.ink, fontWeight: FontWeight.w700)),
               ],
             ),
           ),
@@ -212,7 +212,7 @@ class _ReasonCard extends StatelessWidget {
               height: 40,
               alignment: Alignment.center,
               decoration: const BoxDecoration(shape: BoxShape.circle, color: Brand.pink),
-              child: Text('#$number', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
+              child: Text('#$number', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
             ),
             const SizedBox(width: Space.m),
             Expanded(

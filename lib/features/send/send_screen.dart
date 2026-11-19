@@ -787,7 +787,7 @@ class _LocationStamp extends StatelessWidget {
                       : (g.place.isEmpty ? 'Here right now' : g.place),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: white, fontWeight: FontWeight.w800, fontSize: 15, shadows: shadow),
+                  style: const TextStyle(color: white, fontWeight: FontWeight.w700, fontSize: 15, shadows: shadow),
                 ),
                 if (g != null) Text(g.coords, style: small),
                 Text(DateFormat('EEE d MMM yyyy · HH:mm').format(time), style: small),

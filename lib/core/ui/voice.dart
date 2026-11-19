@@ -74,7 +74,13 @@ String formatDuration(Duration d) {
 /// The bar shown while recording: pulsing dot, timer, live levels, and
 /// cancel / send.
 class RecordingBar extends StatefulWidget {
-  const RecordingBar({required this.recorder, required this.onCancel, required this.onDone, super.key, this.maxDuration = const Duration(minutes: 5)});
+  const RecordingBar({
+    required this.recorder,
+    required this.onCancel,
+    required this.onDone,
+    super.key,
+    this.maxDuration = const Duration(minutes: 5),
+  });
 
   final VoiceRecorder recorder;
   final VoidCallback onCancel;
@@ -119,12 +125,21 @@ class _RecordingBarState extends State<RecordingBar> {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        IconButton(tooltip: 'Cancel recording', icon: const Icon(Icons.delete_outline_rounded), onPressed: widget.onCancel),
-        Container(width: 10, height: 10, decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle))
-            .animate(onPlay: (c) => c.repeat(reverse: true))
-            .fade(begin: 1, end: 0.2, duration: 600.ms),
+        IconButton(
+          tooltip: 'Cancel recording',
+          icon: const Icon(Icons.delete_outline_rounded),
+          onPressed: widget.onCancel,
+        ),
+        Container(
+          width: 10,
+          height: 10,
+          decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+        ).animate(onPlay: (c) => c.repeat(reverse: true)).fade(begin: 1, end: 0.2, duration: 600.ms),
         const SizedBox(width: 8),
-        Text(formatDuration(widget.recorder.elapsed), style: context.tt.titleSmall?.copyWith(fontFeatures: const [FontFeature.tabularFigures()])),
+        Text(
+          formatDuration(widget.recorder.elapsed),
+          style: context.tt.titleSmall?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]),
+        ),
         const SizedBox(width: 12),
         Expanded(
           child: SizedBox(
@@ -147,7 +162,11 @@ class _RecordingBarState extends State<RecordingBar> {
           ),
         ),
         const SizedBox(width: 8),
-        IconButton.filled(tooltip: 'Send voice message', icon: const Icon(Icons.send_rounded), onPressed: widget.onDone),
+        IconButton.filled(
+          tooltip: 'Send voice message',
+          icon: const Icon(Icons.send_rounded),
+          onPressed: widget.onDone,
+        ),
       ],
     );
   }
@@ -156,7 +175,14 @@ class _RecordingBarState extends State<RecordingBar> {
 /// Plays a voice note (storage ref or local file). Starting one stops any
 /// other that's playing.
 class VoicePlayer extends ConsumerStatefulWidget {
-  const VoicePlayer({required this.mediaPath, required this.durationMs, super.key, this.color, this.onDark = false, this.seed = 0});
+  const VoicePlayer({
+    required this.mediaPath,
+    required this.durationMs,
+    super.key,
+    this.color,
+    this.onDark = false,
+    this.seed = 0,
+  });
 
   final String? mediaPath;
   final int durationMs;
@@ -263,11 +289,18 @@ class _VoicePlayerState extends ConsumerState<VoicePlayer> {
           width: 40,
           height: 40,
           child: _loading
-              ? Padding(padding: const EdgeInsets.all(10), child: CircularProgressIndicator(strokeWidth: 2, color: fg))
+              ? Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: CircularProgressIndicator(strokeWidth: 2, color: fg),
+                )
               : IconButton(
                   padding: EdgeInsets.zero,
                   tooltip: _playing ? 'Pause' : 'Play voice message',
-                  icon: Icon(_playing ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded, color: fg, size: 36),
+                  icon: Icon(
+                    _playing ? Icons.pause_circle_filled_rounded : Icons.play_circle_fill_rounded,
+                    color: fg,
+                    size: 36,
+                  ),
                   onPressed: widget.mediaPath == null ? null : _toggle,
                 ),
         ),

@@ -66,7 +66,7 @@ class GoodnightScreen extends ConsumerWidget {
                         children: [
                           Text(
                             complete ? 'Sweet dreams, you two 💫' : 'Time to say goodnight',
-                            style: context.tt.headlineSmall?.copyWith(color: _ink, fontWeight: FontWeight.w800),
+                            style: context.tt.headlineSmall?.copyWith(color: _ink, fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 4),
                           Text(
