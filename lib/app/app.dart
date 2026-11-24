@@ -73,7 +73,7 @@ class _CloserAppState extends ConsumerState<CloserApp> with WidgetsBindingObserv
         if (uri.scheme == 'https' && uri.pathSegments.firstOrNull == 'i') {
           router.go(routeForLink(uri));
         } else if (uri.scheme == 'closer' && uri.host == 'chat') {
-          // Chat-head notification / "Open in Closer" from the bubble.
+          // Chat-head notification / "Open in Duosy" from the bubble.
           open('/chat');
         }
       }
@@ -110,7 +110,7 @@ class _CloserAppState extends ConsumerState<CloserApp> with WidgetsBindingObserv
     final mode = ref.watch(pairModeProvider);
     final themeMode = ref.watch(themeModeProvider);
     return MaterialApp.router(
-      title: 'Closer',
+      title: 'Duosy',
       debugShowCheckedModeBanner: false,
       routerConfig: router,
       theme: AppTheme.build(Brightness.light, mode),

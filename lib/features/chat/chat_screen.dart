@@ -313,7 +313,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
         builder: (ctx) => AlertDialog(
           title: const Text('Turn on chat heads'),
           content: const Text(
-            'Allow Closer to show bubbles so your chat floats over other apps. '
+            'Allow Duosy to show bubbles so your chat floats over other apps. '
             'In the settings, choose “All conversations can bubble”.',
           ),
           actions: [
@@ -497,7 +497,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
           ),
           if (widget.inBubble)
             IconButton(
-              tooltip: 'Open in Closer',
+              tooltip: 'Open in Duosy',
               icon: const Icon(Icons.open_in_full_rounded),
               onPressed: () => launchUrl(Uri.parse('closer://chat'), mode: LaunchMode.externalApplication),
             )

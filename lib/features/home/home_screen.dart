@@ -407,7 +407,7 @@ class _WidgetNudge extends StatelessWidget {
           const SizedBox(width: Space.m),
           Expanded(
             child: Text(
-              'Add the Closer widget to your home screen so you never miss a thing',
+              'Add the Duosy widget to your home screen so you never miss a thing',
               style: context.tt.titleSmall,
             ),
           ),

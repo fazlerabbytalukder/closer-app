@@ -325,7 +325,7 @@ export const sendTap = onCall<{pairId?: string; kind?: string}>(CALLABLE_OPTS, a
   const {pairId, pairRef, partnerUid} = ctx;
   const kind = TAP_KIND_RE.test(String(req.data?.kind ?? "heart")) ? String(req.data?.kind ?? "heart") : "heart";
   if (!(kind in TAP_KINDS) && !isPremium(ctx.pair)) {
-    throw limitError("plus", "Custom taps are part of Closer Plus.");
+    throw limitError("plus", "Custom taps are part of Duosy Plus.");
   }
 
   const tapRef = pairRef.collection("taps").doc();

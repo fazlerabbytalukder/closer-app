@@ -1,5 +1,5 @@
 /**
- * Daily question packs. Everyday is free; the others need Closer Plus.
+ * Daily question packs. Everyday is free; the others need Duosy Plus.
  * `adult` packs also need both members to have confirmed they are 18+.
  * Question ids are stable: never reuse or renumber an id.
  */

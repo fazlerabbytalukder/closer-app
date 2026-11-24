@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Closer — Firestore security rules (plan section 12).
+// Duosy — Firestore security rules (plan section 12).
 //
 // * A pair and everything under it is visible only to its members.
 // * Function-only data: invites, usage, entitlements, devices (FCM tokens),
@@ -103,7 +103,7 @@ service cloud.firestore {
       allow read: if signedIn() && request.auth.uid in resource.data.memberIds;
       allow create, delete: if false;
 
-      // Closer Plus is switched off for now; keep in sync with
+      // Duosy Plus is switched off for now; keep in sync with
       // MONETIZATION_ENABLED in functions/src/common.ts. While off, every
       // widget theme is free.
       function monetizationEnabled() { return false; }

@@ -1320,7 +1320,7 @@ class FirebaseBackend implements CloserBackend {
       await _db.doc('pairs/$pairId').update({'widgetTheme.$_uid': themeId});
     } on FirebaseException catch (e) {
       if (e.code == 'permission-denied') {
-        throw const LimitReachedException('plus', 'This theme is part of Closer Plus.');
+        throw const LimitReachedException('plus', 'This theme is part of Duosy Plus.');
       }
       rethrow;
     }

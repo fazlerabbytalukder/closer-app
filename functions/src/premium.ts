@@ -1,5 +1,5 @@
 /**
- * Closer Plus via RevenueCat (plan section 11). One subscription covers the
+ * Duosy Plus via RevenueCat (plan section 11). One subscription covers the
  * pair: `pairs/{pairId}.premium` is active while ANY member has an active
  * `plus` entitlement. One-time packs are stored per user and their union is
  * mirrored to `pairs/{pairId}.ownedPacks` so the partner gets them too.
@@ -13,7 +13,7 @@ import {db, REGION, FieldValue, Timestamp, PremiumState, logger} from "./common"
 /** Set with: firebase functions:secrets:set REVENUECAT_WEBHOOK_AUTH */
 export const REVENUECAT_WEBHOOK_AUTH = defineSecret("REVENUECAT_WEBHOOK_AUTH");
 
-/** RevenueCat entitlement identifier for Closer Plus. */
+/** RevenueCat entitlement identifier for Duosy Plus. */
 export const PLUS_ENTITLEMENT = "plus";
 
 const NO_PREMIUM: PremiumState = {active: false, source: "subscription", ownerUid: null, expiresAt: null};

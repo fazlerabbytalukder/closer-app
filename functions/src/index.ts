@@ -1,5 +1,5 @@
 /**
- * Closer Cloud Functions (2nd gen, europe-west1).
+ * Duosy Cloud Functions (2nd gen, europe-west1).
  * Callables are invoked from Flutter with
  *   FirebaseFunctions.instanceFor(region: 'europe-west1').httpsCallable(name)
  */

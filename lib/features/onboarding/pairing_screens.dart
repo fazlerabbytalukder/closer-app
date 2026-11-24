@@ -60,7 +60,7 @@ class _ModeScreenState extends ConsumerState<ModeScreen> {
               Text('Who are you connecting with?', style: context.tt.headlineSmall),
               const SizedBox(height: Space.s),
               Text(
-                'Closer is just for two. You can change this later.',
+                'Duosy is just for two. You can change this later.',
                 style: context.tt.bodyLarge?.copyWith(color: context.cc.muted),
               ),
               const SizedBox(height: Space.xl),
@@ -258,7 +258,7 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
               ),
               const SizedBox(height: Space.s),
               Text(
-                'Send them this code (or the link). When they enter it in Closer, you’re connected.',
+                'Send them this code (or the link). When they enter it in Duosy, you’re connected.',
                 style: context.tt.bodyLarge?.copyWith(color: context.cc.muted),
               ),
               const SizedBox(height: Space.xl),
@@ -302,7 +302,7 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
                   icon: Icons.ios_share_rounded,
                   onPressed: () => SharePlus.instance.share(
                     ShareParams(
-                      text: 'Let’s get Closer 💌 Join me so we can send things to each other’s home screen: ${inv.link} (code ${inv.code})',
+                      text: 'Join me on Duosy 💌 so we can send things to each other’s home screen: ${inv.link} (code ${inv.code})',
                     ),
                   ),
                 ),
@@ -385,7 +385,7 @@ class _CodeScreenState extends ConsumerState<CodeScreen> {
               Text(
                 simulated
                     ? 'Demo mode: any 6 characters connect you with a simulated partner.'
-                    : 'Find it in their Closer app under “Invite your person”.',
+                    : 'Find it in their Duosy app under “Invite your person”.',
                 style: context.tt.bodyLarge?.copyWith(color: context.cc.muted),
               ),
               const SizedBox(height: Space.xl),

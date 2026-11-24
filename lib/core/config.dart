@@ -1,6 +1,6 @@
 /// App-wide feature switches.
 abstract final class AppConfig {
-  /// Closer Plus subscription, paywall, free-tier limits and ads.
+  /// Duosy Plus subscription, paywall, free-tier limits and ads.
   ///
   /// While false, everything is free and unlimited: no paywall, no ad slots,
   /// no locked themes/packs/stickers, no send or countdown limits. All the

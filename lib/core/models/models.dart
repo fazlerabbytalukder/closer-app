@@ -1,4 +1,4 @@
-// Core data models for Closer.
+// Core data models for Duosy.
 //
 // These mirror the Firestore data model in the design plan (section 6).
 // They are hand-written immutable classes with fromJson/toJson so they work

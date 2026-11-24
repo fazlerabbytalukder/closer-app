@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Closer — Cloud Storage rules (plan section 12).
+// Duosy — Cloud Storage rules (plan section 12).
 //   pairs/{pairId}/raw/{itemId}.jpg     members upload (images < 10 MB)
 //   pairs/{pairId}/thumbs/{itemId}.jpg  written by functions only
 //   pairs/{pairId}/media/{uid}/{id}.jpg capsule / timeline / shrine / chat photos

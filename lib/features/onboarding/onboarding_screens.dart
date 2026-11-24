@@ -317,7 +317,7 @@ class _PairedScreenState extends ConsumerState<PairedScreen> {
                   Text('You and $name are connected!', textAlign: TextAlign.center, style: context.tt.headlineMedium),
                   const SizedBox(height: Space.m),
                   Text(
-                    'Now add the Closer widget so their photos land right on your home screen.',
+                    'Now add the Duosy widget so their photos land right on your home screen.',
                     textAlign: TextAlign.center,
                     style: context.tt.bodyLarge?.copyWith(color: context.cc.muted),
                   ),
@@ -377,7 +377,7 @@ class _WidgetTutorialScreenState extends ConsumerState<WidgetTutorialScreen> {
             Text('Put $name on your home screen', style: context.tt.headlineSmall),
             const SizedBox(height: Space.s),
             Text(
-              'The widget is the heart of Closer. Everything they send shows up here instantly.',
+              'The widget is the heart of Duosy. Everything they send shows up here instantly.',
               style: context.tt.bodyLarge?.copyWith(color: context.cc.muted),
             ),
             const SizedBox(height: Space.l),

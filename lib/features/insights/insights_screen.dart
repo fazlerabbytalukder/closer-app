@@ -151,7 +151,7 @@ class InsightsScreen extends ConsumerWidget {
                       Text(
                         d.pair.anniversary != null
                             ? (couple ? 'days together' : 'days of friendship')
-                            : 'days on Closer',
+                            : 'days on Duosy',
                         style: context.tt.titleMedium?.copyWith(color: Colors.white),
                       ),
                     ],
@@ -239,7 +239,7 @@ class _Milestones extends StatelessWidget {
         .where((c) => c.kind == CapsuleKind.reason && c.isUnlocked(DateTime.now()))
         .length;
     final list = <(String, String, bool, String)>[
-      ('📲', 'Connected on Closer', true, DateFormat('d MMM yyyy').format(d.pair.pairedAt)),
+      ('📲', 'Connected on Duosy', true, DateFormat('d MMM yyyy').format(d.pair.pairedAt)),
       (
         '📸',
         'First photo',

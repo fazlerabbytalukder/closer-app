@@ -21,14 +21,14 @@ final _allMomentsProvider = Provider<List<TimelineEntry>>((ref) {
     if (pair?.anniversary case final a?)
       TimelineEntry(id: 'auto_anniversary', date: a, title: couple ? 'Together since this day' : 'Friends since this day', emoji: couple ? '💞' : '🤝', createdBy: '', auto: true),
     if (pair != null)
-      TimelineEntry(id: 'auto_paired', date: pair.pairedAt, title: 'We connected on Closer', emoji: '📲', createdBy: '', auto: true),
+      TimelineEntry(id: 'auto_paired', date: pair.pairedAt, title: 'We connected on Duosy', emoji: '📲', createdBy: '', auto: true),
     if (items.isNotEmpty)
       () {
         final first = items.reduce((a, b) => a.createdAt.isBefore(b.createdAt) ? a : b);
         return TimelineEntry(
           id: 'auto_first_item',
           date: first.createdAt,
-          title: 'Our first ${first.type == ItemType.note ? 'note' : first.type == ItemType.doodle ? 'doodle' : 'photo'} on Closer',
+          title: 'Our first ${first.type == ItemType.note ? 'note' : first.type == ItemType.doodle ? 'doodle' : 'photo'} on Duosy',
           emoji: '📸',
           photoPath: first.type == ItemType.photo || first.type == ItemType.location ? first.thumbPath : null,
           createdBy: first.senderId,

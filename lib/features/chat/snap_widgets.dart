@@ -33,7 +33,7 @@ Future<void> savePhotoToPhone(CloserBackend backend, String? path) async {
   }
   final bytes = await loadChatMedia(backend, path);
   try {
-    await Gal.putImageBytes(bytes, album: 'Closer', name: 'closer_${DateTime.now().millisecondsSinceEpoch}');
+    await Gal.putImageBytes(bytes, album: 'Duosy', name: 'duosy_${DateTime.now().millisecondsSinceEpoch}');
   } on GalException catch (e) {
     throw CloserException('Couldn’t save the photo (${e.type.name})');
   }

@@ -195,7 +195,7 @@ export const acceptInvite = onCall<{code?: string}>(CALLABLE_OPTS, async (req) =
       channel: "account",
       type: "paired",
       title: "You're connected 💞",
-      body: `${firstName(me)} joined you on Closer.`,
+      body: `${firstName(me)} joined you on Duosy.`,
       data: {route: "/home", pairId: result.pairId},
       ignoreQuiet: false,
     });
@@ -246,7 +246,7 @@ export const unpair = onCall<{pairId?: string}>(CALLABLE_OPTS, async (req) => {
     await notify(partner, {
       channel: "account",
       type: "unpaired",
-      title: "Closer",
+      title: "Duosy",
       body: `${firstName(user)} disconnected. Your memories can be exported for 7 days.`,
       data: {route: "/home", pairId},
     });

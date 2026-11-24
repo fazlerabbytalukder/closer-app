@@ -826,7 +826,7 @@ class LocalBackend implements CloserBackend {
   Future<void> setQuestionPack(String packId) async {
     final pairId = _pairId;
     if (packById(packId).plus && !_isPlus(pairId)) {
-      throw const LimitReachedException('packs', 'This pack is part of Closer Plus');
+      throw const LimitReachedException('packs', 'This pack is part of Duosy Plus');
     }
     _col('questionPack')[pairId] = packId;
     // Swap today's question if nobody answered yet.

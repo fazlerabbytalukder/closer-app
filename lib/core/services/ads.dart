@@ -95,7 +95,7 @@ class AdBanner extends ConsumerWidget {
                 const SizedBox(width: Space.m),
                 Text('Ad', style: context.tt.labelSmall?.copyWith(color: context.cc.muted)),
                 const SizedBox(width: Space.m),
-                const Expanded(child: Text('Go ad-free with Closer Plus — for both of you ✨')),
+                const Expanded(child: Text('Go ad-free with Duosy Plus — for both of you ✨')),
                 const Icon(Icons.chevron_right_rounded),
                 const SizedBox(width: Space.s),
               ],

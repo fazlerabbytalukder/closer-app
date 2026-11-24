@@ -93,7 +93,7 @@ class MeScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(plus ? 'Closer Plus is active' : 'Try Closer Plus', style: context.tt.titleMedium?.copyWith(color: plus ? null : Colors.white)),
+                      Text(plus ? 'Duosy Plus is active' : 'Try Duosy Plus', style: context.tt.titleMedium?.copyWith(color: plus ? null : Colors.white)),
                       Text(
                         plus ? 'Shared with $name' : 'Unlimited sends, all packs, no ads — for both of you',
                         style: context.tt.bodyMedium?.copyWith(color: plus ? context.cc.muted : Colors.white70),
@@ -126,7 +126,7 @@ class MeScreen extends ConsumerWidget {
           const SizedBox(height: Space.l),
           Center(
             child: Text(
-              'Closer 1.0.0 · ${backend.isSimulated ? 'demo mode (on-device)' : backend.name}',
+              'Duosy 1.0.0 · ${backend.isSimulated ? 'demo mode (on-device)' : backend.name}',
               style: context.tt.bodySmall?.copyWith(color: context.cc.muted),
             ),
           ),

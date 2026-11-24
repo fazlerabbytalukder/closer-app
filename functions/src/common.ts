@@ -1,5 +1,5 @@
 /**
- * Shared helpers for all Closer functions: Firebase Admin handles, auth and
+ * Shared helpers for all Duosy functions: Firebase Admin handles, auth and
  * membership checks, timezone maths and FCM sending (with quiet hours).
  */
 import {initializeApp, getApps} from "firebase-admin/app";
@@ -147,7 +147,7 @@ export async function requirePair(uid: string, pairId?: unknown): Promise<PairCo
 }
 
 /**
- * Closer Plus, free-tier limits and ads. While false every pair is treated
+ * Duosy Plus, free-tier limits and ads. While false every pair is treated
  * as premium (no limits, all packs/themes). Keep in sync with
  * `AppConfig.monetizationEnabled` in lib/core/config.dart.
  */

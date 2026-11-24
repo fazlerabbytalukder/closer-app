@@ -65,7 +65,7 @@ class AlwaysWithMeScreen extends ConsumerWidget {
                 const SizedBox(height: Space.xs),
                 Text(
                   lastMet == null
-                      ? 'Tell Closer when you last saw $name and the widget counts the time for you.'
+                      ? 'Tell Duosy when you last saw $name and the widget counts the time for you.'
                       : 'Last met ${DateFormat('EEEE d MMMM, HH:mm').format(lastMet)}',
                   style: context.tt.bodyMedium?.copyWith(color: context.cc.muted),
                 ),
@@ -110,7 +110,7 @@ class AlwaysWithMeScreen extends ConsumerWidget {
               if (await WidgetBridge.canPin()) {
                 await WidgetBridge.requestPin(WidgetReceivers.alwaysWithMe);
               } else if (context.mounted) {
-                showToast(context, 'Long-press your home screen → Widgets → Closer → Always with me');
+                showToast(context, 'Long-press your home screen → Widgets → Duosy → Always with me');
               }
             },
           ),

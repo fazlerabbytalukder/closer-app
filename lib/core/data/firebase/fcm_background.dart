@@ -1,4 +1,4 @@
-// FCM handling for Closer: the background isolate entry point that updates
+// FCM handling for Duosy: the background isolate entry point that updates
 // the home-screen widget when the partner sends something (plan section 5.3),
 // plus a foreground listener doing the same while the app is open.
 //
@@ -95,12 +95,12 @@ Future<void> closerFirebaseBackgroundHandler(RemoteMessage message) async {
       await Firebase.initializeApp();
     }
   } on Object catch (e) {
-    debugPrint('Closer FCM: Firebase init failed: $e');
+    debugPrint('Duosy FCM: Firebase init failed: $e');
   }
   await handleCloserMessage(message);
 }
 
-/// Handles one Closer message. Never throws.
+/// Handles one Duosy message. Never throws.
 Future<void> handleCloserMessage(RemoteMessage message, {bool foreground = false}) async {
   try {
     final data = message.data;
@@ -119,7 +119,7 @@ Future<void> handleCloserMessage(RemoteMessage message, {bool foreground = false
         break;
     }
   } on Object catch (e, st) {
-    debugPrint('Closer FCM: failed to handle message: $e\n$st');
+    debugPrint('Duosy FCM: failed to handle message: $e\n$st');
   }
 }
 
@@ -330,6 +330,6 @@ Future<void> _show({
       payload: payload,
     );
   } on Object catch (e) {
-    debugPrint('Closer FCM: local notification failed: $e');
+    debugPrint('Duosy FCM: local notification failed: $e');
   }
 }

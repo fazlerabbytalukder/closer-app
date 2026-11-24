@@ -8,7 +8,7 @@
 /// All values are stored as **String** (or Boolean where noted) so Kotlin
 /// never has to guess between Int and Long. Timestamps are millis as String.
 abstract final class WidgetKeys {
-  /// Boolean. False → widgets show "Open Closer to connect".
+  /// Boolean. False → widgets show "Open Duosy to connect".
   static const paired = 'paired';
   static const partnerName = 'partner_name';
 

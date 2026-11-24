@@ -47,7 +47,7 @@ class _QuestionScreenState extends ConsumerState<QuestionScreen> {
 
   Future<void> _share() async {
     final path = await captureToFile(_shareKey, pixelRatio: 2.5);
-    await SharePlus.instance.share(ShareParams(files: [XFile(path)], text: 'Our question of the day on Closer 💌'));
+    await SharePlus.instance.share(ShareParams(files: [XFile(path)], text: 'Our question of the day on Duosy 💌'));
   }
 
   @override

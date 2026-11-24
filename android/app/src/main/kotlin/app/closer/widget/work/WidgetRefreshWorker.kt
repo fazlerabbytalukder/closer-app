@@ -27,7 +27,7 @@ import java.time.ZonedDateTime
 import java.util.concurrent.TimeUnit
 
 /**
- * Re-renders all Closer widgets from the saved home_widget state, even if Flutter never
+ * Re-renders all Duosy widgets from the saved home_widget state, even if Flutter never
  * starts. Scheduled as a 15-minute periodic job plus a self-re-enqueuing job at local midnight
  * (so countdowns roll over on time).
  */

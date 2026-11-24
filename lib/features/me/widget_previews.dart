@@ -52,7 +52,7 @@ class WidgetPalette {
 }
 
 const widgetPalettes = <String, WidgetPalette>{
-  WidgetThemes.classic: WidgetPalette.gradient('classic', 'Closer', [
+  WidgetThemes.classic: WidgetPalette.gradient('classic', 'Duosy', [
     Color(0xFF1737E2),
     Color(0xFF7A4BE8),
     Color(0xFFFF5C9A),

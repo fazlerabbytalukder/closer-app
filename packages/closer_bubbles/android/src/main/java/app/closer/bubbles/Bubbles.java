@@ -31,7 +31,7 @@ import java.io.File;
 import java.util.Collections;
 
 /**
- * Chat heads for Closer, built on Android's conversation bubbles (Android 11+).
+ * Chat heads for Duosy, built on Android's conversation bubbles (Android 11+).
  *
  * One conversation (the partner), one notification slot (id 1007, the same id
  * the Dart side uses for chat notifications, so they replace each other).

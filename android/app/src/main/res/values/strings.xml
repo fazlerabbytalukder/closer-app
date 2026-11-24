@@ -9,10 +9,10 @@
     <string name="widget_always_label">Always with me</string>
     <string name="widget_always_description">A memory of the day, a sweet message and how long since you last met.</string>
 
-    <string name="widget_not_paired">Open Closer to connect</string>
+    <string name="widget_not_paired">Open Duosy to connect</string>
     <string name="widget_waiting_first">Waiting for %1$s\'s first photo 💌</string>
     <string name="widget_partner_fallback">your person</string>
-    <string name="widget_countdown_empty">Add a date in Closer</string>
+    <string name="widget_countdown_empty">Add a date in Duosy</string>
     <string name="widget_countdown_chip">💕 Next date</string>
     <string name="widget_countdown_today">Today! 🎉</string>
     <string name="widget_streak">🔥 %1$s day streak</string>

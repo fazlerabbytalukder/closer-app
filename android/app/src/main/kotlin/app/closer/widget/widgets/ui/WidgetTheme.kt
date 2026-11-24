@@ -8,7 +8,7 @@ import androidx.glance.unit.ColorProvider
 import app.closer.widget.R
 
 /**
- * Colours used by every Closer widget.
+ * Colours used by every Duosy widget.
  *
  * Gradient themes ([bgRes] set) draw white text on a diagonal gradient with
  * frosted [surface] chips; Material You uses the system's solid colours.

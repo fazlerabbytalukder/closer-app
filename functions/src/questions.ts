@@ -219,7 +219,7 @@ export const startGame = onCall<{pairId?: string; packId?: string}>(CALLABLE_OPT
   const packId = str(req.data?.packId, 40) || "starter";
   const pack = GAME_PACKS[packId];
   if (!pack) throw userError("not-found", "unknown-pack", "That game pack doesn't exist.");
-  if (pack.premium && !isPremium(ctx.pair)) throw limitError("plus", "This pack is part of Closer Plus.");
+  if (pack.premium && !isPremium(ctx.pair)) throw limitError("plus", "This pack is part of Duosy Plus.");
 
   const questions = shuffle(pack.questions)
     .slice(0, QUESTIONS_PER_GAME)

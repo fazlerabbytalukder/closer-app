@@ -77,7 +77,7 @@ class BubbleChatApp extends ConsumerWidget {
     final me = ref.watch(meProvider);
     final paired = me.value?.pairId != null;
     return MaterialApp(
-      title: 'Closer',
+      title: 'Duosy',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.build(Brightness.light, mode),
       darkTheme: AppTheme.build(Brightness.dark, mode),
@@ -96,7 +96,7 @@ class BubbleChatApp extends ConsumerWidget {
               body: Center(
                 child: Padding(
                   padding: EdgeInsets.all(24),
-                  child: Text('Open Closer to connect with your person first 💞', textAlign: TextAlign.center),
+                  child: Text('Open Duosy to connect with your person first 💞', textAlign: TextAlign.center),
                 ),
               ),
             ),

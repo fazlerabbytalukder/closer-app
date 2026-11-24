@@ -1,6 +1,6 @@
-# Closer — Setup & Launch Checklist
+# Duosy — Setup & Launch Checklist
 
-What's left to turn Closer from an offline demo into a real, published app.
+What's left to turn Duosy from an offline demo into a real, published app.
 Tick items off as you go (`- [x]`) and note who did them.
 
 ---
@@ -17,7 +17,7 @@ Tick items off as you go (`- [x]`) and note who did them.
   - no `ios/Runner/GoogleService-Info.plist`
   - no `lib/firebase_options.dart`
 - Release builds are signed with the **debug key** (`android/app/build.gradle.kts`).
-- Monetization (Closer Plus, ads) is built but **switched off**
+- Monetization (Duosy Plus, ads) is built but **switched off**
   (`AppConfig.monetizationEnabled = false` in `lib/core/config.dart`, and
   `MONETIZATION_ENABLED` in `functions/src/common.ts`).
 

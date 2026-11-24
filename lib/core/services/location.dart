@@ -17,7 +17,7 @@ abstract final class LocationService {
     if (perm == LocationPermission.denied) perm = await Geolocator.requestPermission();
     if (perm == LocationPermission.deniedForever) {
       unawaited(Geolocator.openAppSettings());
-      throw const CloserException('Allow Location for Closer in Settings to send where you are.');
+      throw const CloserException('Allow Location for Duosy in Settings to send where you are.');
     }
     if (perm == LocationPermission.denied) {
       throw const CloserException('Location permission is needed to send where you are.');

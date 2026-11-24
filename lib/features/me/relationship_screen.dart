@@ -184,7 +184,7 @@ class _RelationshipScreenState extends ConsumerState<RelationshipScreen> {
           ),
           const SizedBox(height: Space.s),
           Text(
-            'Shared with $realName. It sets the colours, the question packs and how Closer talks about you two.',
+            'Shared with $realName. It sets the colours, the question packs and how Duosy talks about you two.',
             style: context.tt.bodySmall?.copyWith(color: context.cc.muted),
           ),
 
@@ -280,7 +280,7 @@ class _RelationshipScreenState extends ConsumerState<RelationshipScreen> {
           ],
           const SizedBox(height: Space.s),
           Text(
-            'Connected in Closer on ${DateFormat('d MMMM yyyy').format(pair.pairedAt)}.',
+            'Connected in Duosy on ${DateFormat('d MMMM yyyy').format(pair.pairedAt)}.',
             style: context.tt.bodySmall?.copyWith(color: context.cc.muted),
           ),
 

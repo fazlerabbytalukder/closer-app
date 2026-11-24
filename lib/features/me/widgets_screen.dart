@@ -41,7 +41,7 @@ class _WidgetsScreenState extends ConsumerState<WidgetsScreen> {
       if (canPin) {
         await WidgetBridge.requestPin(receiver);
       } else {
-        showToast(context, 'Long-press your home screen → Widgets → Closer');
+        showToast(context, 'Long-press your home screen → Widgets → Duosy');
       }
     }
 

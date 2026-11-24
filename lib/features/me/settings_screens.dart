@@ -179,7 +179,7 @@ class PrivacyScreen extends ConsumerWidget {
         showToast(context, 'Nothing to export yet');
         return;
       }
-      await SharePlus.instance.share(ShareParams(files: files, text: 'Closer memories export'));
+      await SharePlus.instance.share(ShareParams(files: files, text: 'Duosy memories export'));
     }
 
     return Scaffold(
@@ -190,7 +190,7 @@ class PrivacyScreen extends ConsumerWidget {
           CloserCard(
             color: context.cc.secondaryTint,
             child: Text(
-              'Closer is private by design: no public profiles, no search, no strangers. Only you and $name can see what you share. '
+              'Duosy is private by design: no public profiles, no search, no strangers. Only you and $name can see what you share. '
               'Photo location data is removed. Data is encrypted in transit and at rest (not end-to-end).',
               style: context.tt.bodyMedium,
             ),
@@ -229,7 +229,7 @@ class PrivacyScreen extends ConsumerWidget {
               final yes = await confirm(
                 context,
                 title: 'Sign out?',
-                body: 'Your widgets will show “Open Closer to connect” until you sign in again.',
+                body: 'Your widgets will show “Open Duosy to connect” until you sign in again.',
                 ok: 'Sign out',
               );
               if (!yes || !context.mounted) return;
@@ -289,7 +289,7 @@ class HelpScreen extends StatelessWidget {
           ),
           if (AppConfig.monetizationEnabled)
             const _Faq(
-              q: 'Is Closer Plus shared?',
+              q: 'Is Duosy Plus shared?',
               a: 'Yes. One subscription covers both of you. If you unpair, Plus stays with whoever bought it.',
             ),
           const _Faq(
@@ -309,7 +309,7 @@ class HelpScreen extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.star_outline_rounded),
-            title: const Text('Rate Closer'),
+            title: const Text('Rate Duosy'),
             onTap: () => launchUrl(
               Uri.parse('https://play.google.com/store/apps/details?id=app.closer.widget'),
               mode: LaunchMode.externalApplication,
@@ -351,34 +351,34 @@ class WidgetHelpScreen extends StatelessWidget {
     (
       'Samsung (One UI)',
       [
-        'Settings → Apps → Closer → Battery → Unrestricted',
-        'Settings → Battery → Background usage limits → remove Closer from “Sleeping apps”',
+        'Settings → Apps → Duosy → Battery → Unrestricted',
+        'Settings → Battery → Background usage limits → remove Duosy from “Sleeping apps”',
       ],
     ),
     (
       'Xiaomi / Redmi / POCO (HyperOS, MIUI)',
       [
-        'Settings → Apps → Manage apps → Closer → Autostart: On',
+        'Settings → Apps → Manage apps → Duosy → Autostart: On',
         'Battery saver → No restrictions',
-        'In Recents, long-press Closer → lock it',
+        'In Recents, long-press Duosy → lock it',
       ],
     ),
     (
       'Oppo / Realme / OnePlus (ColorOS)',
-      ['Settings → Battery → Closer → Allow background activity', 'Settings → Apps → Closer → Auto launch: On'],
+      ['Settings → Battery → Duosy → Allow background activity', 'Settings → Apps → Duosy → Auto launch: On'],
     ),
     (
       'Vivo (Funtouch / OriginOS)',
       [
-        'Settings → Battery → Background power consumption → Closer: Allow',
-        'i Manager → App manager → Autostart → Closer: On',
+        'Settings → Battery → Background power consumption → Duosy: Allow',
+        'i Manager → App manager → Autostart → Duosy: On',
       ],
     ),
     (
       'Huawei / Honor (EMUI, MagicOS)',
-      ['Settings → Battery → App launch → Closer → Manage manually, enable all three'],
+      ['Settings → Battery → App launch → Duosy → Manage manually, enable all three'],
     ),
-    ('Google Pixel & others', ['Settings → Apps → Closer → App battery usage → Unrestricted']),
+    ('Google Pixel & others', ['Settings → Apps → Duosy → App battery usage → Unrestricted']),
   ];
 
   @override
@@ -424,7 +424,7 @@ class WidgetHelpScreen extends StatelessWidget {
             ),
           const SizedBox(height: Space.m),
           Text(
-            'Still stuck? Remove the widget and add it again, or restart your phone. Opening Closer always refreshes the widget.',
+            'Still stuck? Remove the widget and add it again, or restart your phone. Opening Duosy always refreshes the widget.',
             style: context.tt.bodyMedium?.copyWith(color: context.cc.muted),
           ),
         ],
@@ -487,7 +487,7 @@ class _ChatHeadsTileState extends ConsumerState<_ChatHeadsTile> with WidgetsBind
             ? 'Messages float over other apps, like Messenger'
             : _allowed
             ? 'Messages float over other apps · tap to chat'
-            : 'Bubbles are off for Closer · tap “Allow”',
+            : 'Bubbles are off for Duosy · tap “Allow”',
       ),
       value: on,
       secondary: on && !_allowed ? const TextButton(onPressed: ChatBubbles.openSettings, child: Text('Allow')) : null,

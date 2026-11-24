@@ -1,8 +1,8 @@
-# Closer
+# Duosy
 
 Your favourite person, right on your home screen. A Flutter app for two people (a couple or two best friends). Photos, notes and doodles appear on the partner's Android home-screen widget, alongside a daily question, a thinking-of-you tap, a shared streak plant, countdowns, memories and a "How well do you know me?" game.
 
-The full product plan is in `Closer — Design & Development Plan (Flutter, Android Google Play).md`.
+The full product plan is in `Duosy — Design & Development Plan (Flutter, Android Google Play).md`.
 
 ## Run it
 
@@ -15,7 +15,7 @@ flutter run --dart-define=CLOSER_BACKEND=firebase   # Firebase backend (needs se
 - send notes back and tap your heart,
 - answer the daily question and take their turn in games.
 
-This lets you exercise the whole loop on one emulator, including widget updates and notifications. In demo mode, "Closer Plus" can be switched on and off from the paywall without a real charge. The rewarded ad is a 5-second simulation.
+This lets you exercise the whole loop on one emulator, including widget updates and notifications. In demo mode, "Duosy Plus" can be switched on and off from the paywall without a real charge. The rewarded ad is a 5-second simulation.
 
 ## Layout
 

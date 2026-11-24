@@ -8,7 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-/// Closer Plus paywall (plan section 11).
+/// Duosy Plus paywall (plan section 11).
 ///
 /// Production: offerings from RevenueCat (`purchases_flutter`), products
 /// `closer_plus_monthly` / `closer_plus_yearly` with a 7-day trial; the
@@ -43,7 +43,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
         'memories' => 'Keep every memory',
         'packs' => 'Unlock every question pack',
         'themes' || 'stickers' => 'Make your widget yours',
-        _ => 'Closer Plus',
+        _ => 'Duosy Plus',
       };
 
   Future<void> _buy() async {
@@ -59,7 +59,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
     setState(() => _busy = false);
     if (ok) {
       hapticMedium();
-      showToast(context, 'Welcome to Closer Plus ✨ — ${ref.read(partnerNameProvider)} has it too');
+      showToast(context, 'Welcome to Duosy Plus ✨ — ${ref.read(partnerNameProvider)} has it too');
       context.pop();
     }
   }
@@ -130,7 +130,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
               child: Column(
                 children: [
                   if (plus) ...[
-                    Text('You and $name have Closer Plus 💖', style: context.tt.titleMedium),
+                    Text('You and $name have Duosy Plus 💖', style: context.tt.titleMedium),
                     const SizedBox(height: Space.m),
                     CloserButton(
                       label: 'Manage subscription',
