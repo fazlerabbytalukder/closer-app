@@ -17,6 +17,7 @@ import 'package:closer_app/features/me/relationship_screen.dart';
 import 'package:closer_app/features/me/settings_screens.dart';
 import 'package:closer_app/features/me/widgets_screen.dart';
 import 'package:closer_app/features/memories/memories_screen.dart';
+import 'package:closer_app/features/onboarding/intro_screens.dart';
 import 'package:closer_app/features/onboarding/onboarding_screens.dart';
 import 'package:closer_app/features/onboarding/pairing_screens.dart';
 import 'package:closer_app/features/pet/pet_screen.dart';
@@ -50,7 +51,7 @@ final pendingInviteProvider = NotifierProvider<PendingInvite, String?>(PendingIn
 
 final _rootKey = GlobalKey<NavigatorState>();
 
-const _publicRoutes = {'/welcome'};
+const _publicRoutes = {'/welcome', '/intro'};
 // Routes an unpaired user with a profile may stay on (not /profile itself,
 // or saving the profile would never move on).
 const _setupRoutes = {'/mode', '/invite', '/code'};
@@ -63,6 +64,8 @@ final routerProvider = Provider<GoRouter>((ref) {
     ..listen(authUidProvider, bump)
     ..listen(meProvider, bump)
     ..listen(onboardingFlagsProvider, bump)
+    ..listen(introSeenProvider, bump)
+    ..listen(splashGateProvider, bump)
     ..onDispose(refresh.dispose);
 
   final router = GoRouter(
@@ -80,12 +83,18 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (code != null) ref.read(pendingInviteProvider.notifier).set(code);
       }
 
+      // Branded splash stays up for a beat on cold start.
+      if (!ref.read(splashGateProvider) && loc == '/splash') return null;
       if (auth.isLoading || (auth.value != null && me.isLoading && !me.hasValue)) {
         return loc == '/splash' ? null : '/splash';
       }
       final uid = auth.value;
       final user = me.value;
       if (uid == null || user == null) {
+        // First run: intro pages before sign-in.
+        final introSeen = ref.read(introSeenProvider);
+        if (!introSeen) return loc == '/intro' ? null : '/intro';
+        if (loc == '/intro') return '/welcome';
         return _publicRoutes.contains(loc) ? null : '/welcome';
       }
       if (!user.hasProfile) return loc == '/profile' ? null : '/profile';
@@ -110,6 +119,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
+      GoRoute(path: '/intro', builder: (_, _) => const IntroScreen()),
       GoRoute(path: '/welcome', builder: (_, _) => const WelcomeScreen()),
       GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
       GoRoute(path: '/mode', builder: (_, _) => const ModeScreen()),

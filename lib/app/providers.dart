@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:closer_app/core/config.dart';
 import 'package:closer_app/core/data/closer_backend.dart';
 import 'package:closer_app/core/models/models.dart';
@@ -315,3 +317,40 @@ class OnboardingFlags extends Notifier<Set<String>> {
 }
 
 final onboardingFlagsProvider = NotifierProvider<OnboardingFlags, Set<String>>(OnboardingFlags.new);
+
+/// Whether the pre-sign-in intro (onboarding 1-3) has been seen. Kept apart
+/// from [OnboardingFlags] so signing out does not replay it.
+class IntroSeen extends Notifier<bool> {
+  static const _key = 'intro_seen';
+
+  @override
+  bool build() => ref.watch(prefsProvider).getBool(_key) ?? false;
+
+  Future<void> markSeen() async {
+    state = true;
+    await ref.read(prefsProvider).setBool(_key, true);
+  }
+}
+
+final introSeenProvider = NotifierProvider<IntroSeen, bool>(IntroSeen.new);
+
+/// Flips to true once the branded splash has been on screen long enough to
+/// read, so a fast auth check does not flash it away.
+class SplashGate extends Notifier<bool> {
+  static const minDuration = Duration(milliseconds: 2200);
+
+  /// Set by `main()` before startup work, so time spent initialising (with
+  /// the splash already on screen) counts towards [minDuration].
+  static DateTime started = DateTime.now();
+
+  @override
+  bool build() {
+    final left = minDuration - DateTime.now().difference(started);
+    if (left <= Duration.zero) return true;
+    final timer = Timer(left, () => state = true);
+    ref.onDispose(timer.cancel);
+    return false;
+  }
+}
+
+final splashGateProvider = NotifierProvider<SplashGate, bool>(SplashGate.new);

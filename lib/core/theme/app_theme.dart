@@ -2,53 +2,54 @@ import 'package:closer_app/core/models/models.dart';
 import 'package:closer_app/core/theme/gloss.dart';
 import 'package:flutter/material.dart';
 
-/// Brand tokens, modelled on the "Dual Space" design system:
-/// royal-blue primary scale, near-black navy dark mode, pink accent.
+/// Brand tokens from the Duosy Figma file: violet primary, candy pink and
+/// mint accents, lavender page background, deep indigo night mode.
 abstract final class Brand {
-  // Primary blue scale (Figma "primary color-50…900").
-  static const blue50 = Color(0xFFE8F1FF);
-  static const blue100 = Color(0xFFB7D3FF);
-  static const blue300 = Color(0xFF649FFF);
-  static const blue500 = Color(0xFF1770FF);
-  static const blue700 = Color(0xFF1050B5);
+  // Primary violet scale (the old "blue" names are kept so call sites follow).
+  static const blue50 = Color(0xFFEFE9FF);
+  static const blue100 = Color(0xFFC6B6FF);
+  static const blue300 = Color(0xFFA98BFF);
+  static const blue500 = Color(0xFF6A3DF0);
+  static const blue700 = Color(0xFF4A22C4);
 
-  /// Primary button gradient (Figma: #6878EA → #0722D8).
-  static const royalLight = Color(0xFF6878EA);
-  static const royal = Color(0xFF0722D8);
+  /// Primary button gradient.
+  static const royalLight = Color(0xFF8A4DFF);
+  static const royal = Color(0xFF6A3DF0);
 
-  /// Hero / premium gradient (Figma "Button Color": #1737E2 → #00FDFF).
-  static const heroStart = Color(0xFF1737E2);
-  static const cyan = Color(0xFF00C6FF);
+  /// Hero gradient (Figma: #3D4BFF → #7A45F0 → #E45CB0).
+  static const heroStart = Color(0xFF7A45F0);
+  static const cyan = Color(0xFF5FE0C8);
 
   static const blue = blue500;
   static const blueTint = blue50;
-  static const pink = Color(0xFFFF2D6F);
-  static const pinkTint = Color(0xFFFFE4EC);
-  static const purple = Color(0xFF6A3DE8);
-  static const purpleTint = Color(0xFFEEE8FF);
-  static const green = Color(0xFF22C55E);
-  static const greenTint = Color(0xFFDDF7E7);
-  static const amber = Color(0xFFFFB020);
+  static const pink = Color(0xFFFF5C9E);
+  static const pinkTint = Color(0xFFFFE3F0);
+  static const purple = Color(0xFF6A3DF0);
+  static const purpleTint = Color(0xFFEFE9FF);
+  static const mint = Color(0xFF8CF0DA);
+  static const green = Color(0xFF1FAF9F);
+  static const greenTint = Color(0xFFDDFBF4);
+  static const amber = Color(0xFFFFB347);
 
   // Legacy names, re-pointed at the new palette so older call sites follow.
   static const lavender = blue50;
-  static const indigo = Color(0xFF2343E6);
-  static const indigoDeep = royal;
+  static const indigo = blue500;
+  static const indigoDeep = blue700;
   static const peach = Color(0xFFFFD9C4);
 
-  static const ink = Color(0xFF0F1221);
-  static const grey700 = Color(0xFF4A5068);
-  static const grey500 = Color(0xFF7D849B);
-  static const grey200 = Color(0xFFDDE3EF);
-  static const grey100 = Color(0xFFEFF3FA);
+  static const ink = Color(0xFF1E1B3A);
+  static const grey700 = Color(0xFF5A5380);
+  static const grey500 = Color(0xFF8A84A8);
+  static const grey200 = Color(0xFFE6E0F5);
+  static const grey100 = Color(0xFFF5F1FF);
 
-  /// Light page background — a whisper of primary-50.
-  static const cream = Color(0xFFF1F5FD);
+  /// Light page background.
+  static const cream = Color(0xFFFBF8FF);
 
-  // Dark mode (Figma home screen #0F1221 with navy tiles).
-  static const darkBg = Color(0xFF0F1221);
-  static const darkSurface = Color(0xFF1A1E2F);
-  static const darkSurfaceHigh = Color(0xFF242A3E);
+  // Dark mode (Figma onboarding #17142E with #2A2659 tiles).
+  static const darkBg = Color(0xFF17142E);
+  static const darkSurface = Color(0xFF221E42);
+  static const darkSurfaceHigh = Color(0xFF2A2659);
 }
 
 /// 8-pt spacing scale.
@@ -72,8 +73,8 @@ abstract final class Radii {
 
 /// Soft, blue-tinted elevation used by cards and tiles in light mode.
 abstract final class Shadows {
-  static const card = [BoxShadow(color: Color(0x141737E2), blurRadius: 24, offset: Offset(0, 8))];
-  static const soft = [BoxShadow(color: Color(0x0F1737E2), blurRadius: 12, offset: Offset(0, 4))];
+  static const card = [BoxShadow(color: Color(0x1F6A3DF0), blurRadius: 24, offset: Offset(0, 8))];
+  static const soft = [BoxShadow(color: Color(0x146A3DF0), blurRadius: 12, offset: Offset(0, 4))];
 }
 
 /// Brand colours that Material's ColorScheme does not cover. Couple mode
@@ -105,8 +106,8 @@ class CloserColors extends ThemeExtension<CloserColors> {
       plant: Brand.green,
       plantTint: dark ? Brand.green.withValues(alpha: 0.18) : Brand.greenTint,
       card: dark ? Brand.darkSurface : Colors.white,
-      muted: dark ? const Color(0xFF8E96AD) : Brand.grey500,
-      gradient: couple ? const [Brand.heroStart, Color(0xFFFF5C9A)] : const [Brand.heroStart, Brand.cyan],
+      muted: dark ? const Color(0xFFC6B6FF) : Brand.grey700,
+      gradient: couple ? const [Color(0xFF7B5CFF), Color(0xFFFF4F9A)] : const [Color(0xFF3D4BFF), Brand.heroStart],
     );
   }
 
@@ -167,7 +168,11 @@ extension CloserThemeX on BuildContext {
 }
 
 abstract final class AppTheme {
-  static const fontFamily = 'PlusJakartaSans';
+  /// Body font (Figma: Nunito 600/700/800).
+  static const fontFamily = 'Nunito';
+
+  /// Heading font (Figma: Fredoka SemiBold) for titles and big numbers.
+  static const displayFamily = 'Fredoka';
 
   /// Flat design: a soft lift at rest, none when pressed or disabled.
   static final _buttonElevation = WidgetStateProperty.resolveWith<double>((states) {
@@ -179,42 +184,47 @@ abstract final class AppTheme {
     final dark = brightness == Brightness.dark;
     final cc = CloserColors.forMode(mode, brightness);
     final scheme = ColorScheme.fromSeed(seedColor: Brand.blue, brightness: brightness).copyWith(
-      primary: dark ? const Color(0xFF5E8BFF) : Brand.indigo,
+      primary: dark ? Brand.blue300 : Brand.indigo,
       onPrimary: Colors.white,
-      primaryContainer: dark ? const Color(0xFF1C2A5C) : Brand.blue50,
+      primaryContainer: dark ? const Color(0xFF332A6E) : Brand.blue50,
       onPrimaryContainer: dark ? Brand.blue100 : Brand.royal,
       secondary: cc.accent,
       onSecondary: Colors.white,
       surface: dark ? Brand.darkBg : Brand.cream,
-      onSurface: dark ? const Color(0xFFF2F4FA) : Brand.ink,
-      onSurfaceVariant: dark ? const Color(0xFFB4BACB) : Brand.grey700,
+      onSurface: dark ? const Color(0xFFF7F4FF) : Brand.ink,
+      onSurfaceVariant: dark ? Brand.blue100 : Brand.grey700,
       surfaceContainerLowest: dark ? Brand.darkBg : Colors.white,
       surfaceContainerLow: dark ? Brand.darkSurface : Colors.white,
       surfaceContainer: dark ? Brand.darkSurface : Brand.grey100,
       surfaceContainerHigh: dark ? Brand.darkSurfaceHigh : Brand.grey200,
-      outline: dark ? const Color(0xFF3A4159) : const Color(0xFFC5CDDD),
-      outlineVariant: dark ? const Color(0xFF283048) : Brand.grey200,
+      outline: dark ? const Color(0xFF433C7A) : const Color(0xFFD3CBEA),
+      outlineVariant: dark ? const Color(0xFF2F2A5C) : Brand.grey200,
       error: const Color(0xFFEF4444),
     );
 
-    // Type scale from the design file: H1 32 / H2 28 / H3 24 / H4 20,
-    // headings SemiBold, body 18-12 Regular/Medium.
+    // Figma type: Fredoka 600 for headings, titles and big numbers; Nunito
+    // 600-800 for everything else (rows and buttons 800, descriptions 600-700).
+    const display = AppTheme.displayFamily;
+    const body = AppTheme.fontFamily;
     const base = TextTheme(
-      displaySmall: TextStyle(fontSize: 32, fontWeight: FontWeight.w700, height: 1.2, letterSpacing: -0.4),
-      headlineMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.w600, height: 1.2, letterSpacing: -0.3),
-      headlineSmall: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, height: 1.25, letterSpacing: -0.2),
-      titleLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, height: 1.3),
-      titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, height: 1.35),
-      titleSmall: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, height: 1.35),
-      bodyLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w400, height: 1.375),
-      bodyMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w400, height: 1.36),
-      bodySmall: TextStyle(fontSize: 12, fontWeight: FontWeight.w400, height: 1.4),
-      labelLarge: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-      labelMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-      labelSmall: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+      displayLarge: TextStyle(fontFamily: display, fontSize: 56, fontWeight: FontWeight.w600, height: 1.05),
+      displayMedium: TextStyle(fontFamily: display, fontSize: 44, fontWeight: FontWeight.w600, height: 1.1),
+      displaySmall: TextStyle(fontFamily: display, fontSize: 32, fontWeight: FontWeight.w600, height: 1.15),
+      headlineLarge: TextStyle(fontFamily: display, fontSize: 30, fontWeight: FontWeight.w600, height: 1.15),
+      headlineMedium: TextStyle(fontFamily: display, fontSize: 28, fontWeight: FontWeight.w600, height: 1.15),
+      headlineSmall: TextStyle(fontFamily: display, fontSize: 24, fontWeight: FontWeight.w600, height: 1.2),
+      titleLarge: TextStyle(fontFamily: display, fontSize: 20, fontWeight: FontWeight.w600, height: 1.25),
+      titleMedium: TextStyle(fontFamily: display, fontSize: 17, fontWeight: FontWeight.w600, height: 1.3),
+      titleSmall: TextStyle(fontFamily: body, fontSize: 15, fontWeight: FontWeight.w800, height: 1.3),
+      bodyLarge: TextStyle(fontFamily: body, fontSize: 16, fontWeight: FontWeight.w600, height: 1.45),
+      bodyMedium: TextStyle(fontFamily: body, fontSize: 14, fontWeight: FontWeight.w600, height: 1.45),
+      bodySmall: TextStyle(fontFamily: body, fontSize: 12, fontWeight: FontWeight.w600, height: 1.4),
+      labelLarge: TextStyle(fontFamily: body, fontSize: 16, fontWeight: FontWeight.w800),
+      labelMedium: TextStyle(fontFamily: body, fontSize: 14, fontWeight: FontWeight.w800),
+      labelSmall: TextStyle(fontFamily: body, fontSize: 12, fontWeight: FontWeight.w700),
     );
     const controlShape = RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(Radii.control)));
-    final text = base.apply(fontFamily: fontFamily, bodyColor: scheme.onSurface, displayColor: scheme.onSurface);
+    final text = base.apply(bodyColor: scheme.onSurface, displayColor: scheme.onSurface);
 
     return ThemeData(
       useMaterial3: true,

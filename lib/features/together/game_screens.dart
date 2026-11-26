@@ -213,7 +213,7 @@ class _GamePlayScreenState extends ConsumerState<GamePlayScreen> {
                     .scale(duration: 600.ms, curve: Curves.elasticOut),
                 Text(verdict, style: context.tt.titleLarge?.copyWith(color: Colors.white)),
                 const SizedBox(height: Space.s),
-                Text('How well do you know me? · closer.app', style: context.tt.labelSmall?.copyWith(color: Colors.white60)),
+                Text('How well do you know me? · Duosy', style: context.tt.labelSmall?.copyWith(color: Colors.white60)),
               ],
             ),
           ),

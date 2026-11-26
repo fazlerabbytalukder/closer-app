@@ -16,21 +16,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
-class SplashScreen extends StatelessWidget {
-  const SplashScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Icon(Icons.favorite_rounded, size: 64, color: context.cc.accent)
-            .animate(onPlay: (c) => c.repeat(reverse: true))
-            .scaleXY(begin: 0.9, end: 1.08, duration: 700.ms, curve: Curves.easeInOut),
-      ),
-    );
-  }
-}
-
 /// Welcome + Google sign-in.
 class WelcomeScreen extends ConsumerStatefulWidget {
   const WelcomeScreen({super.key});
@@ -394,7 +379,7 @@ class _WidgetTutorialScreenState extends ConsumerState<WidgetTutorialScreen> {
               const SizedBox(height: Space.m),
             ],
             const _Step(n: 1, text: 'Long-press an empty spot on your home screen'),
-            const _Step(n: 2, text: 'Tap “Widgets” and search for “Closer”'),
+            const _Step(n: 2, text: 'Tap “Widgets” and search for “Duosy”'),
             const _Step(n: 3, text: 'Drag the photo widget onto your home screen'),
             const SizedBox(height: Space.l),
             CloserButton(

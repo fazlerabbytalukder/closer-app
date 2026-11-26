@@ -97,7 +97,7 @@ class _QuestionScreenState extends ConsumerState<QuestionScreen> {
                         .animate()
                         .flipV(begin: -0.5, duration: 600.ms, curve: Curves.easeOutBack),
                     const SizedBox(height: Space.m),
-                    Text('closer.app', style: context.tt.labelSmall?.copyWith(color: Colors.white60)),
+                    Text('Duosy', style: context.tt.labelSmall?.copyWith(color: Colors.white60)),
                   ],
                 ],
               ),
