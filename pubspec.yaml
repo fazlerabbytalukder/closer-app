@@ -99,6 +99,7 @@ flutter:
     - assets/branding/logo.png
     - assets/onboarding/
     - assets/home/
+    - assets/together/
 
   fonts:
     # Figma: Fredoka SemiBold for headings, Nunito 600/700/800 for everything else.
