@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 
 import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -17,33 +18,33 @@ class SoftBackground extends StatelessWidget {
   }
 }
 
-/// Full-bleed gradient hero with rounded bottom corners — the header style
-/// of the design system's home screens (deep royal blue fading to cyan,
-/// with soft decorative circles).
+/// Home header (Figma "home screen"): solid violet with rounded bottom
+/// corners, a pink glow behind the mascots and the outlined name pattern.
 class HeroBackdrop extends StatelessWidget {
-  const HeroBackdrop({super.key, this.radius = 28});
+  const HeroBackdrop({super.key, this.radius = 40});
 
   final double radius;
 
   @override
   Widget build(BuildContext context) {
-    final g = context.cc.gradient;
     return ClipRRect(
       borderRadius: BorderRadius.vertical(bottom: Radius.circular(radius)),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Brand.royal, g.first, g.last],
-            stops: const [0, 0.55, 1],
-          ),
-        ),
+      child: const ColoredBox(
+        color: Brand.royal,
         child: Stack(
           children: [
-            Positioned(right: -60, top: -40, child: _Bubble(size: 200, alpha: 0.10)),
-            Positioned(left: -50, bottom: -70, child: _Bubble(size: 180, alpha: 0.08)),
-            Positioned(right: 70, bottom: 20, child: _Bubble(size: 60, alpha: 0.10)),
+            Positioned.fill(child: DuosyPattern(color: Color(0x29FFFFFF))),
+            Positioned(
+              right: -140,
+              top: -20,
+              width: 440,
+              height: 440,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(colors: [Color(0xBFFF9AD5), Color(0x00FF9AD5)], stops: [0, 0.66]),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -51,26 +52,53 @@ class HeroBackdrop extends StatelessWidget {
   }
 }
 
-class _Bubble extends StatelessWidget {
-  const _Bubble({required this.size, required this.alpha});
+/// Rows of outlined "Duosy" words tilted 10° — the brand pattern behind the
+/// splash, onboarding and the home header.
+class DuosyPattern extends StatelessWidget {
+  const DuosyPattern({required this.color, super.key, this.fontSize = 66});
 
-  final double size;
-  final double alpha;
+  final Color color;
+  final double fontSize;
 
   @override
   Widget build(BuildContext context) {
+    final stroke = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..color = color;
+    final style = TextStyle(
+      fontFamily: AppTheme.displayFamily,
+      fontWeight: FontWeight.w600,
+      fontSize: fontSize,
+      height: 1.7,
+      foreground: stroke,
+    );
     return IgnorePointer(
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.white.withValues(alpha: alpha),
+      child: ClipRect(
+        child: OverflowBox(
+          maxWidth: 1400,
+          maxHeight: 1600,
+          child: Transform.rotate(
+            angle: -10 * math.pi / 180,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < 12; i++)
+                  Transform.translate(
+                    offset: Offset(i.isEven ? 0 : -100, 0),
+                    child: Text('Duosy Duosy Duosy Duosy Duosy', maxLines: 1, softWrap: false, style: style),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 }
+
+/// Soft violet lift under white cards (Figma: #6A3DF0 @ 28%, blurred).
+const softCardShadow = [BoxShadow(color: Color(0x2E6A3DF0), blurRadius: 26, offset: Offset(0, 14), spreadRadius: -10)];
 
 /// Frosted pill (header icon groups, small tags) — reads well on top of the
 /// gradient hero.
@@ -192,18 +220,20 @@ class CheckDot extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: done ? Brand.green : Colors.transparent,
-        border: done ? null : Border.all(color: context.cs.outlineVariant, width: 2),
+        color: done ? Brand.purple : Colors.transparent,
+        border: done ? null : Border.all(color: Brand.blue100, width: 2),
       ),
       child: done ? Icon(Icons.check_rounded, color: Colors.white, size: size * 0.66) : null,
     );
   }
 }
 
-/// List row: icon tile, title + subtitle, trailing check (or custom).
+/// List row (Figma "Today's rituals"): tinted icon tile, title + subtitle,
+/// trailing check (or custom).
 class RitualTile extends StatelessWidget {
   const RitualTile({
-    required this.emoji,
+    required this.icon,
+    required this.iconColor,
     required this.title,
     required this.subtitle,
     super.key,
@@ -213,7 +243,8 @@ class RitualTile extends StatelessWidget {
     this.trailing,
   });
 
-  final String emoji;
+  final IconData icon;
+  final Color iconColor;
   final String title;
   final String subtitle;
   final bool done;
@@ -224,36 +255,40 @@ class RitualTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
+    final radius = BorderRadius.circular(24);
     return DecoratedBox(
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(Radii.tile), boxShadow: dark ? null : Shadows.soft),
+      decoration: BoxDecoration(borderRadius: radius, boxShadow: dark ? null : softCardShadow),
       child: Material(
         color: context.cc.card,
-        borderRadius: BorderRadius.circular(Radii.tile),
+        borderRadius: radius,
         child: InkWell(
-          borderRadius: BorderRadius.circular(Radii.tile),
+          borderRadius: radius,
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 16, 12),
+            padding: const EdgeInsets.fromLTRB(14, 12, 15, 12),
             child: Row(
               children: [
                 Container(
-                  width: 44,
-                  height: 44,
+                  width: 46,
+                  height: 46,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: tint ?? context.cs.surfaceContainer,
-                    borderRadius: BorderRadius.circular(12),
+                    color: dark ? iconColor.withValues(alpha: 0.18) : (tint ?? context.cs.surfaceContainer),
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  child: Text(emoji, style: const TextStyle(fontSize: 22)),
+                  child: Icon(icon, size: 22, color: iconColor),
                 ),
-                const SizedBox(width: Space.m - 4),
+                const SizedBox(width: 13),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: context.tt.titleSmall?.copyWith(
+                          fontSize: 15.5,
                           decoration: done ? TextDecoration.lineThrough : null,
                           decorationColor: context.cc.muted,
                         ),
@@ -263,11 +298,12 @@ class RitualTile extends StatelessWidget {
                         subtitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: context.tt.bodySmall?.copyWith(color: context.cc.muted),
+                        style: context.tt.bodyMedium?.copyWith(color: context.cc.muted, fontSize: 13.5),
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
                 trailing ?? CheckDot(done: done),
               ],
             ),
@@ -278,10 +314,13 @@ class RitualTile extends StatelessWidget {
   }
 }
 
-/// Small white stat tile (icon, label, big value, unit).
+/// White stat tile on the header edge (Figma: 110 × 143, round icon badge,
+/// label, big Fredoka value, unit).
 class StatTile extends StatelessWidget {
   const StatTile({
-    required this.emoji,
+    required this.icon,
+    required this.iconColor,
+    required this.tint,
     required this.label,
     required this.value,
     required this.unit,
@@ -289,7 +328,9 @@ class StatTile extends StatelessWidget {
     this.onTap,
   });
 
-  final String emoji;
+  final IconData icon;
+  final Color iconColor;
+  final Color tint;
   final String label;
   final String value;
   final String unit;
@@ -298,30 +339,39 @@ class StatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
+    final radius = BorderRadius.circular(28);
     return Container(
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(Radii.tile), boxShadow: dark ? null : Shadows.card),
+      decoration: BoxDecoration(borderRadius: radius, boxShadow: dark ? null : softCardShadow),
       child: Material(
         color: context.cc.card,
-        borderRadius: BorderRadius.circular(Radii.tile),
+        borderRadius: radius,
         child: InkWell(
-          borderRadius: BorderRadius.circular(Radii.tile),
+          borderRadius: radius,
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
+            padding: const EdgeInsets.fromLTRB(8, 14, 8, 14),
             child: Column(
               children: [
-                Text(emoji, style: const TextStyle(fontSize: 30)),
-                const SizedBox(height: 6),
-                Text(label, style: context.tt.bodySmall?.copyWith(color: context.cc.muted)),
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: dark ? iconColor.withValues(alpha: 0.18) : tint,
+                  ),
+                  child: Icon(icon, size: 21, color: iconColor),
+                ),
+                const SizedBox(height: 8),
+                Text(label, style: context.tt.labelMedium?.copyWith(color: context.cc.muted)),
                 FittedBox(
                   fit: BoxFit.scaleDown,
-                  child: Text(value, style: context.tt.headlineSmall),
+                  child: Text(value, style: context.tt.headlineMedium?.copyWith(height: 1.15)),
                 ),
                 Text(
                   unit,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: context.tt.bodySmall?.copyWith(color: context.cc.muted, fontSize: 11),
+                  style: context.tt.bodyMedium?.copyWith(color: context.cc.muted, fontWeight: FontWeight.w700),
                 ),
               ],
             ),

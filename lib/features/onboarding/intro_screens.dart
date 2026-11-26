@@ -1,7 +1,6 @@
-import 'dart:math' as math;
-
 import 'package:closer_app/app/providers.dart';
 import 'package:closer_app/core/theme/app_theme.dart';
+import 'package:closer_app/core/ui/soft_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -816,45 +815,12 @@ class _PrivateArt extends StatelessWidget {
 // Shared bits
 // ---------------------------------------------------------------------------
 
-/// Rows of outlined "Duosy" words tilted 10°, behind every intro screen.
+/// Rows of outlined "Duosy" words, behind every intro screen.
 class _NamePattern extends StatelessWidget {
   const _NamePattern();
 
   @override
-  Widget build(BuildContext context) {
-    final stroke = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2
-      ..color = _C.patternStroke;
-    final style = TextStyle(
-      fontFamily: _fredoka,
-      fontWeight: FontWeight.w600,
-      fontSize: 66,
-      height: 1.7,
-      foreground: stroke,
-    );
-    return IgnorePointer(
-      child: ClipRect(
-        child: OverflowBox(
-          maxWidth: 1400,
-          maxHeight: 1600,
-          child: Transform.rotate(
-            angle: -10 * math.pi / 180,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (var i = 0; i < 12; i++)
-                  Transform.translate(
-                    offset: Offset(i.isEven ? 0 : -100, 0),
-                    child: Text('Duosy Duosy Duosy Duosy Duosy', maxLines: 1, softWrap: false, style: style),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const DuosyPattern(color: _C.patternStroke);
 }
 
 /// Soft radial glow (Figma radial gradients that fade out at 66–68%).

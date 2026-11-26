@@ -48,7 +48,7 @@ class HomeScreen extends ConsumerWidget {
           children: [
             _Hero(me: me, partner: partner, pair: pair, name: name),
             Padding(
-              padding: const EdgeInsets.fromLTRB(Space.m, Space.m, Space.m, 120),
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 130),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -57,14 +57,14 @@ class HomeScreen extends ConsumerWidget {
                   const _LoveInbox(),
                   const _GoodnightCard(),
                   if (installed == 0) ...[
-                    const SizedBox(height: Space.m),
+                    const SizedBox(height: 16),
                     _WidgetNudge(onTap: () => context.push('/widgets')),
                   ],
-                  SectionHeader('Latest from $name'),
+                  _Title('Latest from $name'),
                   _LatestCard(latest: latest, name: name),
-                  const SizedBox(height: Space.m),
+                  const SizedBox(height: 18),
                   _HeartTap(name: name),
-                  const SizedBox(height: Space.m),
+                  const SizedBox(height: 18),
                   const _QuestionCard(),
                   const _OnThisDay(),
                 ],
@@ -83,7 +83,9 @@ bool _isToday(DateTime? t) {
   return t.year == n.year && t.month == n.month && t.day == n.day;
 }
 
-/// Purple greeting header with the bear buddy and three stat tiles.
+/// Violet greeting header (Figma "home screen"): glass couple pill and
+/// shortcuts, big greeting, the two mascots and three stat tiles that sit
+/// on the header's bottom edge.
 class _Hero extends ConsumerWidget {
   const _Hero({required this.me, required this.partner, required this.pair, required this.name});
 
@@ -110,122 +112,138 @@ class _Hero extends ConsumerWidget {
     final wilted = pair.plant.health == PlantHealth.wilted;
 
     return Stack(
+      clipBehavior: Clip.none,
       children: [
-        Positioned(left: 0, right: 0, top: 0, height: top + 232, child: const HeroBackdrop()),
+        Positioned(left: 0, right: 0, top: 0, height: top + 247, child: const HeroBackdrop()),
+        // Mascots peek out on the right, just behind the stat tiles.
+        Positioned(
+          right: -6,
+          top: top + 36,
+          child: Image.asset('assets/home/header_mascots.png', width: 144, height: 159)
+              .animate(onPlay: (c) => c.repeat(reverse: true))
+              .moveY(begin: 0, end: -6, duration: 1800.ms, curve: Curves.easeInOut),
+        ),
         Padding(
-          padding: EdgeInsets.fromLTRB(Space.m, top + Space.s, Space.m, 0),
+          padding: EdgeInsets.fromLTRB(20, top + 12, 20, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(
                 children: [
-                  Flexible(
-                    child: _Glass(
-                      onTap: () => context.push('/relationship'),
-                      padding: const EdgeInsets.fromLTRB(4, 4, 14, 4),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          AvatarPair(
-                            me: me.displayName,
-                            partner: partner?.displayName ?? '',
-                            mePhoto: me.photoUrl,
-                            partnerPhoto: partner?.photoUrl,
-                            size: 32,
-                            ring: Colors.white,
-                          ),
-                          const SizedBox(width: Space.s),
-                          Flexible(
-                            child: Text(
-                              'You & $name',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: context.tt.labelLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: _Glass(
+                        onTap: () => context.push('/relationship'),
+                        padding: const EdgeInsets.fromLTRB(6, 5, 16, 5),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            AvatarPair(
+                              me: me.displayName,
+                              partner: partner?.displayName ?? '',
+                              mePhoto: me.photoUrl,
+                              partnerPhoto: partner?.photoUrl,
+                              size: 32,
+                              ring: Colors.white,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: 10),
+                            Flexible(
+                              child: Text(
+                                'You & $name',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: context.tt.labelLarge?.copyWith(color: Colors.white, fontSize: 15),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: Space.s),
+                  const SizedBox(width: 12),
                   _Glass(
                     tooltip: 'Set your mood',
                     onTap: () => context.push('/mood'),
                     child: me.mood == null
-                        ? const Icon(Icons.mood_rounded, color: Colors.white, size: 22)
+                        ? const Icon(Icons.sentiment_satisfied_alt_outlined, color: Colors.white, size: 22)
                         : Text(me.mood!.emoji, style: const TextStyle(fontSize: 19, height: 1.1)),
                   ),
-                  const SizedBox(width: Space.s),
+                  const SizedBox(width: 8),
                   _Glass(
                     tooltip: 'Widgets',
                     onTap: () => context.push('/widgets'),
-                    child: const Icon(Icons.widgets_rounded, color: Colors.white, size: 21),
+                    child: const Icon(Icons.dashboard_customize_outlined, color: Colors.white, size: 21),
                   ),
-                  const SizedBox(width: Space.s),
+                  const SizedBox(width: 8),
                   const _ChatButton(),
                 ],
               ),
               SizedBox(
-                height: 128,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            '$greeting, $first',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: context.tt.headlineSmall?.copyWith(color: Colors.white),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            [
-                              if (mood != null) '$name feels ${mood.emoji} ${mood.label.toLowerCase()}',
-                              if (status != null && status.text.isNotEmpty) status.text,
-                              if (mood == null && (status == null || status.text.isEmpty))
-                                'Ready for a good day with $name?',
-                            ].join(' · '),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: context.tt.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: 0.9)),
-                          ),
-                        ],
+                height: 119,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 120),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '$greeting, $first',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.tt.headlineLarge?.copyWith(color: Colors.white, fontSize: 38, height: 1.1),
                       ),
-                    ),
-                    Buddy(size: 104, mood: wilted ? BuddyMood.sad : BuddyMood.fromEmoji(mood?.emoji))
-                        .animate(onPlay: (c) => c.repeat(reverse: true))
-                        .moveY(begin: 0, end: -6, duration: 1600.ms, curve: Curves.easeInOut),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(
+                        [
+                          if (mood != null) '$name feels ${mood.emoji} ${mood.label.toLowerCase()}',
+                          if (status != null && status.text.isNotEmpty) status.text,
+                          if (mood == null && (status == null || status.text.isEmpty))
+                            'Ready for a good day with $name?',
+                        ].join(' · '),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.tt.bodyLarge?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               Row(
                 children: [
                   Expanded(
                     child: StatTile(
-                      emoji: '🔥',
+                      icon: Icons.local_fire_department_outlined,
+                      iconColor: const Color(0xFFD6246E),
+                      tint: Brand.pinkTint,
                       label: 'Streak',
                       value: '${pair.streak.count}',
                       unit: pair.streak.count == 1 ? 'day' : 'days',
                       onTap: () => context.push('/plant'),
                     ),
                   ),
-                  const SizedBox(width: Space.s + 2),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: StatTile(
-                      emoji: wilted ? '🥀' : '🌱',
+                      icon: Icons.spa_outlined,
+                      iconColor: Brand.green,
+                      tint: Brand.greenTint,
                       label: 'Plant',
                       value: '${pair.plant.stage}',
                       unit: wilted ? 'needs love' : 'of 8 grown',
                       onTap: () => context.push('/plant'),
                     ),
                   ),
-                  const SizedBox(width: Space.s + 2),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: StatTile(
-                      emoji: c?.emoji ?? '📅',
+                      icon: Icons.calendar_month_outlined,
+                      iconColor: Brand.purple,
+                      tint: Brand.purpleTint,
                       label: c == null ? 'Next date' : 'Countdown',
                       value: c == null ? '+' : (days == 0 ? 'Today' : '$days'),
                       unit: c == null ? 'add one' : (days == 0 ? c.title : (days == 1 ? 'day left' : 'days left')),
@@ -242,36 +260,61 @@ class _Hero extends ConsumerWidget {
   }
 }
 
+/// Section title on the home feed (Figma: Fredoka 22).
+class _Title extends StatelessWidget {
+  const _Title(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 28, bottom: 12),
+      child: Text(text, style: context.tt.titleLarge?.copyWith(fontSize: 22)),
+    );
+  }
+}
+
 /// Daily rituals that keep the streak alive.
-typedef _Ritual = ({String emoji, String title, String subtitle, bool done, Color tint, VoidCallback onTap});
+typedef _Ritual = ({
+  IconData icon,
+  Color iconColor,
+  String title,
+  String subtitle,
+  bool done,
+  Color tint,
+  VoidCallback onTap,
+});
 
 List<_Ritual> _ritualsFor(BuildContext context, WidgetRef ref, AppUser me, Pair pair, String name) {
   final q = ref.watch(todayQuestionProvider).value;
   final tap = ref.watch(latestTapProvider).value;
-  final cc = context.cc;
   return [
     (
-      emoji: '📸',
+      icon: Icons.photo_camera_outlined,
+      iconColor: const Color(0xFFD6246E),
       title: 'Send a photo',
       subtitle: 'Land on $name’s home screen',
       done: _isToday(pair.latestItemByUser[me.uid]?.sentAt),
-      tint: cc.accentTint,
+      tint: Brand.pinkTint,
       onTap: () => context.push('/send'),
     ),
     (
-      emoji: '☀️',
+      icon: Icons.wb_sunny_outlined,
+      iconColor: const Color(0xFF9A6200),
       title: 'Answer today’s question',
       subtitle: q == null ? 'A new one every morning' : q.text,
       done: q?.myAnswer != null,
-      tint: cc.secondaryTint,
+      tint: const Color(0xFFFFF1CC),
       onTap: () => context.push('/question'),
     ),
     (
-      emoji: '💗',
+      icon: Icons.favorite_border_rounded,
+      iconColor: Brand.purple,
       title: 'Send a heart tap',
       subtitle: 'A soft buzz that says “thinking of you”',
       done: tap != null && tap.senderId == me.uid && _isToday(tap.createdAt),
-      tint: cc.plantTint,
+      tint: Brand.purpleTint,
       onTap: () async {
         hapticMedium();
         final ok = await runAction(context, () => ref.read(backendProvider).sendTap());
@@ -281,6 +324,7 @@ List<_Ritual> _ritualsFor(BuildContext context, WidgetRef ref, AppUser me, Pair 
   ];
 }
 
+/// Pink "Today's progress" card with the mascot peeking in.
 class _ProgressCard extends ConsumerWidget {
   const _ProgressCard({required this.me, required this.pair, required this.name});
 
@@ -293,51 +337,51 @@ class _ProgressCard extends ConsumerWidget {
     final rituals = _ritualsFor(context, ref, me, pair, name);
     final done = rituals.where((r) => r.done).length;
     final next = rituals.where((r) => !r.done).firstOrNull;
+    const ink = Brand.ink;
     return Container(
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(Radii.card),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Brand.indigo, Brand.indigoDeep],
-        ),
-        boxShadow: const [BoxShadow(color: Color(0x401737E2), blurRadius: 24, offset: Offset(0, 12))],
+        color: const Color(0xFFFF9CCB),
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: const [
+          BoxShadow(color: Color(0x66FF5C9E), blurRadius: 30, offset: Offset(0, 18), spreadRadius: -12),
+        ],
       ),
       child: Stack(
         children: [
           Positioned(
-            left: -14,
-            bottom: -30,
-            child: Buddy(
-              size: 112,
-              withBody: true,
-              color: const Color(0xFF8FB0FF),
-              mood: done == rituals.length ? BuddyMood.love : BuddyMood.happy,
-            ),
+            right: -6,
+            bottom: -18,
+            child: Image.asset('assets/home/progress_mascot.png', width: 116, height: 127),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(112, Space.m, Space.m, Space.m),
+            padding: const EdgeInsets.fromLTRB(18, 18, 104, 18),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
                     Expanded(
-                      child: Text('Today’s progress', style: context.tt.titleSmall?.copyWith(color: Colors.white)),
+                      child: Text('Today’s progress', style: context.tt.titleLarge?.copyWith(color: ink, fontSize: 18)),
                     ),
-                    Text('$done/${rituals.length}', style: context.tt.titleSmall?.copyWith(color: Colors.white)),
+                    Text('$done/${rituals.length}', style: context.tt.titleLarge?.copyWith(color: ink, fontSize: 18)),
                   ],
                 ),
-                const SizedBox(height: Space.s + 2),
-                SegmentedProgress(done: done, total: rituals.length),
-                const SizedBox(height: Space.s + 4),
+                const SizedBox(height: 14),
+                SegmentedProgress(
+                  done: done,
+                  total: rituals.length,
+                  height: 8,
+                  fill: Brand.purple,
+                  track: Colors.white.withValues(alpha: 0.6),
+                ),
+                const SizedBox(height: 12),
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
                   children: [
-                    _DarkChip(done == rituals.length ? 'All done 🎉' : '${rituals.length - done} left'),
-                    if (next != null) _DarkChip('Next: ${next.title}'),
+                    _WhiteChip(done == rituals.length ? 'All done 🎉' : '${rituals.length - done} left'),
+                    if (next != null) _WhiteChip('Next: ${next.title}'),
                   ],
                 ),
               ],
@@ -349,21 +393,17 @@ class _ProgressCard extends ConsumerWidget {
   }
 }
 
-class _DarkChip extends StatelessWidget {
-  const _DarkChip(this.label);
+class _WhiteChip extends StatelessWidget {
+  const _WhiteChip(this.label);
 
   final String label;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(100),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-      ),
-      child: Text(label, style: context.tt.labelSmall?.copyWith(color: Colors.white, fontSize: 11)),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(100)),
+      child: Text(label, style: context.tt.labelMedium?.copyWith(color: Brand.ink, fontSize: 13)),
     );
   }
 }
@@ -381,14 +421,118 @@ class _Rituals extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SectionHeader('Today’s rituals'),
+        const _Title('Today’s rituals'),
         for (final (i, r) in rituals.indexed) ...[
-          if (i > 0) const SizedBox(height: Space.s + 2),
-          RitualTile(emoji: r.emoji, title: r.title, subtitle: r.subtitle, done: r.done, tint: r.tint, onTap: r.onTap),
+          if (i > 0) const SizedBox(height: 10),
+          RitualTile(
+            icon: r.icon,
+            iconColor: r.iconColor,
+            title: r.title,
+            subtitle: r.subtitle,
+            done: r.done,
+            tint: r.tint,
+            onTap: r.onTap,
+          ),
         ],
       ],
     );
   }
+}
+
+/// Flat tinted row with a white icon tile and a chevron (letters, widget
+/// nudge). [dashed] draws the dotted outline from the design.
+class _NoticeCard extends StatelessWidget {
+  const _NoticeCard({
+    required this.icon,
+    required this.iconColor,
+    required this.color,
+    required this.title,
+    required this.onTap,
+    this.subtitle,
+    this.dashed = false,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final Color color;
+  final String title;
+  final String? subtitle;
+  final VoidCallback onTap;
+  final bool dashed;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final radius = BorderRadius.circular(24);
+    final body = Material(
+      color: dark ? iconColor.withValues(alpha: 0.14) : color,
+      borderRadius: radius,
+      child: InkWell(
+        borderRadius: radius,
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 14, 16, 14),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: dark ? context.cc.card : Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: iconColor, size: 22),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: context.tt.titleSmall?.copyWith(fontSize: 15.5)),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(subtitle!, style: context.tt.bodyMedium?.copyWith(color: context.cc.muted, fontSize: 13.5)),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.chevron_right_rounded, color: context.cs.onSurface),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (!dashed) return body;
+    return CustomPaint(
+      foregroundPainter: const _DashedBorderPainter(color: Brand.blue300, radius: 24),
+      child: body,
+    );
+  }
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  const _DashedBorderPainter({required this.color, required this.radius});
+
+  final Color color;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rrect = RRect.fromRectAndRadius((Offset.zero & size).deflate(0.75), Radius.circular(radius));
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    for (final metric in (Path()..addRRect(rrect)).computeMetrics()) {
+      for (var d = 0.0; d < metric.length; d += 9) {
+        canvas.drawPath(metric.extractPath(d, d + 5), paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedBorderPainter old) => old.color != color || old.radius != radius;
 }
 
 class _WidgetNudge extends StatelessWidget {
@@ -398,22 +542,13 @@ class _WidgetNudge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CloserCard(
+    return _NoticeCard(
+      icon: Icons.phone_iphone_rounded,
+      iconColor: Brand.purple,
+      color: const Color(0xFFF3EEFF),
+      title: 'Add the Duosy widget to your home screen so you never miss a thing',
+      dashed: true,
       onTap: onTap,
-      color: context.cc.secondaryTint,
-      child: Row(
-        children: [
-          const Text('📱', style: TextStyle(fontSize: 28)),
-          const SizedBox(width: Space.m),
-          Expanded(
-            child: Text(
-              'Add the Duosy widget to your home screen so you never miss a thing',
-              style: context.tt.titleSmall,
-            ),
-          ),
-          const Icon(Icons.chevron_right_rounded),
-        ],
-      ),
     );
   }
 }
@@ -447,7 +582,6 @@ class _LatestCard extends ConsumerWidget {
         ),
       );
     }
-    final cs = context.cs;
     final who = l.secret ? 'Secret admirer' : name;
     return Semantics(
       button: true,
@@ -455,12 +589,9 @@ class _LatestCard extends ConsumerWidget {
       child: GestureDetector(
         onTap: () => context.push('/reply'),
         child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(Radii.card),
-            boxShadow: const [BoxShadow(color: Color(0x2A2A1B66), blurRadius: 28, offset: Offset(0, 12))],
-          ),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(36), boxShadow: softCardShadow),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(Radii.card),
+            borderRadius: BorderRadius.circular(36),
             child: AspectRatio(
               aspectRatio: 1,
               child: Stack(
@@ -474,34 +605,31 @@ class _LatestCard extends ConsumerWidget {
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
                         stops: [0, 0.25, 0.55, 1],
-                        colors: [Color(0x33000000), Color(0x00000000), Color(0x00000000), Color(0xB3000000)],
+                        colors: [Color(0x26000000), Color(0x00000000), Color(0x00000000), Color(0x59000000)],
                       ),
                     ),
                   ),
                   Positioned(
-                    top: Space.m - 4,
-                    left: Space.m - 4,
+                    top: 14,
+                    left: 14,
                     child: _GlassChip(
                       children: [
                         Container(
                           width: 24,
                           height: 24,
                           alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(colors: context.cc.gradient),
-                            border: Border.all(color: Colors.white, width: 1.5),
-                          ),
+                          decoration: const BoxDecoration(shape: BoxShape.circle, color: Brand.purple),
                           child: Text(
                             l.secret ? '🕵️' : (name.isEmpty ? '?' : name.characters.first.toUpperCase()),
                             style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
                           ),
                         ),
                         const SizedBox(width: 6),
-                        Text(who, style: context.tt.labelMedium?.copyWith(color: Colors.white, fontSize: 13)),
+                        const SizedBox(width: 2),
+                        Text(who, style: context.tt.labelMedium?.copyWith(color: Brand.ink, fontSize: 13)),
                         Text(
                           '  ·  ${timeAgo(l.sentAt)}',
-                          style: context.tt.bodySmall?.copyWith(color: Colors.white.withValues(alpha: 0.8)),
+                          style: context.tt.labelMedium?.copyWith(color: Brand.grey700, fontSize: 13),
                         ),
                       ],
                     ),
@@ -522,7 +650,7 @@ class _LatestCard extends ConsumerWidget {
                                     l.caption,
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
-                                    style: context.tt.titleMedium?.copyWith(color: Colors.white, height: 1.25),
+                                    style: context.tt.titleLarge?.copyWith(color: Colors.white, height: 1.2),
                                   ),
                                 ),
                         ),
@@ -533,16 +661,13 @@ class _LatestCard extends ConsumerWidget {
                             customBorder: const StadiumBorder(),
                             onTap: () => context.push('/reply'),
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.reply_rounded, size: 18, color: cs.primary),
+                                  const Icon(Icons.reply_rounded, size: 20, color: Brand.purple),
                                   const SizedBox(width: 6),
-                                  Text(
-                                    'Reply',
-                                    style: context.tt.labelLarge?.copyWith(color: cs.primary, fontSize: 14),
-                                  ),
+                                  Text('Reply', style: context.tt.labelLarge?.copyWith(color: Brand.purple)),
                                 ],
                               ),
                             ),
@@ -574,11 +699,10 @@ class _GlassChip extends StatelessWidget {
       child: BackdropFilter(
         filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: Container(
-          padding: const EdgeInsets.fromLTRB(4, 4, 12, 4),
+          padding: const EdgeInsets.fromLTRB(5, 5, 14, 5),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.18),
+            color: Colors.white.withValues(alpha: 0.82),
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
           ),
           child: Row(mainAxisSize: MainAxisSize.min, children: children),
         ),
@@ -638,28 +762,17 @@ class _HeartTapState extends ConsumerState<_HeartTap> with SingleTickerProviderS
 
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(Radii.card),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: dark ? [cc.accentTint, pink.withValues(alpha: 0.16)] : const [Color(0xFFF1EDFF), Color(0xFFFFE6EF)],
-        ),
-        border: Border.all(color: Colors.white.withValues(alpha: dark ? 0.08 : 0.9), width: 1.5),
-        boxShadow: dark
-            ? null
-            : [BoxShadow(color: pink.withValues(alpha: 0.18), blurRadius: 24, offset: const Offset(0, 10))],
+        color: cc.card,
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: dark ? null : softCardShadow,
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(Radii.card),
+        borderRadius: BorderRadius.circular(32),
         child: Stack(
           children: [
             // Floating confetti: little hearts and sparkles drifting softly.
-            ..._decor(const Offset(0.50, 0.12), '💕', 14, 0),
-            ..._decor(const Offset(0.60, 0.70), '✨', 12, 600),
-            ..._decor(const Offset(0.04, 0.80), '♡', 16, 1200, color: pink),
-            ..._decor(const Offset(0.93, 0.08), '✦', 12, 300, color: cc.accent),
             Padding(
-              padding: const EdgeInsets.fromLTRB(Space.m, Space.m, Space.s, Space.m),
+              padding: const EdgeInsets.fromLTRB(18, 18, 12, 18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -670,24 +783,27 @@ class _HeartTapState extends ConsumerState<_HeartTap> with SingleTickerProviderS
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              padding: const EdgeInsets.fromLTRB(10, 5, 12, 5),
                               decoration: BoxDecoration(
-                                color: (dark ? Colors.white : pink).withValues(alpha: dark ? 0.1 : 0.16),
+                                color: dark ? Brand.pink.withValues(alpha: 0.16) : Brand.pinkTint,
                                 borderRadius: BorderRadius.circular(999),
                               ),
-                              child: Text(
-                                '💌 Love tap',
-                                style: context.tt.labelSmall?.copyWith(
-                                  color: dark ? Colors.white70 : const Color(0xFFE0557F),
-                                  fontWeight: FontWeight.w700,
-                                ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.mail_outline_rounded, size: 15, color: Color(0xFFB0124F)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Love tap',
+                                    style: context.tt.labelMedium?.copyWith(
+                                      color: dark ? Colors.white70 : const Color(0xFFB0124F),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: Space.s),
-                            Text(
-                              'Thinking of ${widget.name}? 🥰',
-                              style: context.tt.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                            ),
+                            const SizedBox(height: 10),
+                            Text('Thinking of ${widget.name}?', style: context.tt.titleLarge?.copyWith(fontSize: 22)),
                             const SizedBox(height: 6),
                             if (fromPartner)
                               _Bubble(
@@ -696,8 +812,8 @@ class _HeartTapState extends ConsumerState<_HeartTap> with SingleTickerProviderS
                               ).animate().fadeIn(duration: 300.ms).slideX(begin: -0.1, end: 0, curve: Curves.easeOutBack)
                             else
                               Text(
-                                'Tap the heart, or send a little message 👇',
-                                style: context.tt.bodyMedium?.copyWith(color: cc.muted),
+                                'Tap the heart, or send a little message',
+                                style: context.tt.bodyLarge?.copyWith(color: cc.muted),
                               ),
                           ],
                         ),
@@ -705,7 +821,7 @@ class _HeartTapState extends ConsumerState<_HeartTap> with SingleTickerProviderS
                       _heartButton(cc, pink),
                     ],
                   ),
-                  const SizedBox(height: Space.s),
+                  const SizedBox(height: 12),
                   _kindChips(dark, pink),
                 ],
               ),
@@ -719,25 +835,22 @@ class _HeartTapState extends ConsumerState<_HeartTap> with SingleTickerProviderS
   /// "I can't stop thinking about you" one-tap messages.
   Widget _kindChips(bool dark, Color pink) {
     return SizedBox(
-      height: 36,
+      height: 40,
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
           for (final k in TapKind.all.where((k) => k != TapKind.heart))
             Padding(
-              padding: const EdgeInsets.only(right: 6),
+              padding: const EdgeInsets.only(right: 8),
               child: Material(
-                color: dark ? Colors.white.withValues(alpha: 0.1) : Colors.white.withValues(alpha: 0.85),
-                shape: StadiumBorder(side: BorderSide(color: pink.withValues(alpha: 0.35))),
+                color: dark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFF3EEFF),
+                shape: const StadiumBorder(),
                 child: InkWell(
                   customBorder: const StadiumBorder(),
                   onTap: () => _tap(k),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                    child: Text(
-                      '${k.emoji} ${k.label}',
-                      style: context.tt.labelMedium?.copyWith(fontWeight: FontWeight.w700),
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                    child: Text(k.label, style: context.tt.labelMedium),
                   ),
                 ),
               ),
@@ -746,25 +859,6 @@ class _HeartTapState extends ConsumerState<_HeartTap> with SingleTickerProviderS
       ),
     );
   }
-
-  /// A small symbol at a relative position that bobs gently forever.
-  List<Widget> _decor(Offset at, String glyph, double size, int delayMs, {Color? color}) => [
-    Positioned.fill(
-      child: Align(
-        alignment: Alignment(at.dx * 2 - 1, at.dy * 2 - 1),
-        child: IgnorePointer(
-          child:
-              Text(
-                    glyph,
-                    style: TextStyle(fontSize: size, color: color?.withValues(alpha: 0.55)),
-                  )
-                  .animate(onPlay: (c) => c.repeat(reverse: true), delay: delayMs.ms)
-                  .moveY(begin: 0, end: -6, duration: 1800.ms, curve: Curves.easeInOut)
-                  .fade(begin: 0.45, end: 0.9, duration: 1800.ms),
-        ),
-      ),
-    ),
-  ];
 
   Widget _heartButton(CloserColors cc, Color pink) {
     return SizedBox(
@@ -778,7 +872,7 @@ class _HeartTapState extends ConsumerState<_HeartTap> with SingleTickerProviderS
           Container(
                 width: 80,
                 height: 80,
-                decoration: BoxDecoration(shape: BoxShape.circle, color: pink.withValues(alpha: 0.25)),
+                decoration: BoxDecoration(shape: BoxShape.circle, color: Brand.pink.withValues(alpha: 0.18)),
               )
               .animate(onPlay: (c) => c.repeat())
               .scale(
@@ -816,12 +910,12 @@ class _HeartTapState extends ConsumerState<_HeartTap> with SingleTickerProviderS
                           height: 72,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            gradient: LinearGradient(
+                            gradient: const LinearGradient(
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
-                              colors: [pink, cc.accent],
+                              colors: [Color(0xFFFF8FC4), Brand.pink],
                             ),
-                            border: Border.all(color: Colors.white, width: 3),
+                            border: Border.all(color: Brand.pinkTint, width: 6),
                             boxShadow: [
                               BoxShadow(
                                 color: pink.withValues(alpha: 0.45),
@@ -887,6 +981,7 @@ class _Bubble extends StatelessWidget {
   }
 }
 
+/// Lavender "Question of the day" card.
 class _QuestionCard extends ConsumerWidget {
   const _QuestionCard();
 
@@ -905,23 +1000,50 @@ class _QuestionCard extends ConsumerWidget {
         : partnerAnswered
         ? '$name answered. Your turn!'
         : 'Answer to unlock $name’s answer';
-    return CloserCard(
-      onTap: () => context.push('/question'),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final radius = BorderRadius.circular(32);
+    return Material(
+      color: dark ? Brand.purple.withValues(alpha: 0.16) : Brand.purpleTint,
+      borderRadius: radius,
+      child: InkWell(
+        borderRadius: radius,
+        onTap: () => context.push('/question'),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 22),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CounterChip(label: 'Question of the day', icon: Icons.wb_sunny_rounded, color: context.cc.secondary),
-              const Spacer(),
-              if (q.revealed) const Text('🎉') else if (partnerAnswered && !answered) const Text('⏳'),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(12, 6, 14, 6),
+                    decoration: BoxDecoration(
+                      color: dark ? context.cc.card : Colors.white,
+                      borderRadius: BorderRadius.circular(100),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.wb_sunny_outlined, size: 15, color: Brand.purple),
+                        const SizedBox(width: 6),
+                        Text('Question of the day', style: context.tt.labelMedium?.copyWith(color: Brand.purple)),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+                  if (q.revealed)
+                    const Text('🎉')
+                  else if (partnerAnswered && !answered)
+                    const Icon(Icons.hourglass_empty_rounded, color: Brand.purple, size: 22),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Text(q.text, style: context.tt.headlineSmall?.copyWith(fontSize: 26, height: 1.15)),
+              const SizedBox(height: 8),
+              Text(status, style: context.tt.bodyLarge?.copyWith(color: context.cc.muted)),
             ],
           ),
-          const SizedBox(height: Space.s + 4),
-          Text(q.text, style: context.tt.titleLarge),
-          const SizedBox(height: Space.s),
-          Text(status, style: context.tt.bodyMedium?.copyWith(color: context.cc.muted)),
-        ],
+        ),
       ),
     );
   }
@@ -942,14 +1064,14 @@ class _ChatButton extends ConsumerWidget {
       child: _Glass(
         tooltip: unread > 0 ? 'Chat, $unread unread' : 'Chat',
         onTap: () => context.push('/chat'),
-        child: const Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 20),
+        child: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white, size: 21),
       ),
     );
   }
 }
 
-/// Frosted-glass control on the gradient header: a 42 px circle, or a pill
-/// when [padding] is given.
+/// Frosted-glass control on the violet header (Figma: white 18% fill, 40%
+/// outline): a 44 px circle, or a pill when [padding] is given.
 class _Glass extends StatelessWidget {
   const _Glass({required this.child, required this.onTap, this.padding, this.tooltip});
 
@@ -961,9 +1083,8 @@ class _Glass extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final round = padding == null;
-    final shape = round
-        ? const CircleBorder(side: BorderSide(color: Color(0x4DFFFFFF)))
-        : const StadiumBorder(side: BorderSide(color: Color(0x4DFFFFFF)));
+    const side = BorderSide(color: Color(0x66FFFFFF));
+    final shape = round ? const CircleBorder(side: side) : const StadiumBorder(side: side);
     Widget body = ClipPath(
       clipper: ShapeBorderClipper(shape: shape),
       child: BackdropFilter(
@@ -978,7 +1099,7 @@ class _Glass extends StatelessWidget {
               onTap();
             },
             child: round
-                ? SizedBox.square(dimension: 42, child: Center(child: child))
+                ? SizedBox.square(dimension: 44, child: Center(child: child))
                 : Padding(padding: padding!, child: child),
           ),
         ),
@@ -1050,39 +1171,26 @@ class _LoveInbox extends ConsumerWidget {
     final name = ref.watch(partnerNameProvider);
     final letters = fresh.where((c) => c.kind == CapsuleKind.letter).toList();
     final surprises = fresh.where((c) => c.kind == CapsuleKind.surprise).length;
-    final (emoji, title, route) = letters.isNotEmpty
-        ? ('💌', 'A letter from $name just opened', '/letters/${letters.first.id}')
+    final (title, route) = letters.isNotEmpty
+        ? ('A letter from $name just opened', '/letters/${letters.first.id}')
         : surprises > 0
-        ? ('🎁', '$name sent you a surprise', '/surprises')
-        : ('💗', 'Today’s reason from $name is here', '/reasons');
+        ? ('$name sent you a surprise', '/surprises')
+        : ('Today’s reason from $name is here', '/reasons');
     final more = fresh.length - 1;
+    final icon = letters.isNotEmpty
+        ? Icons.mail_outline_rounded
+        : surprises > 0
+        ? Icons.card_giftcard_rounded
+        : Icons.favorite_border_rounded;
     return Padding(
-      padding: const EdgeInsets.only(top: Space.m),
-      child: CloserCard(
+      padding: const EdgeInsets.only(top: 16),
+      child: _NoticeCard(
+        icon: icon,
+        iconColor: Brand.green,
+        color: Brand.greenTint,
+        title: title,
+        subtitle: more > 0 ? 'Tap to open · $more more waiting' : 'Tap to open',
         onTap: () => context.push(route),
-        gradient: const LinearGradient(colors: [Color(0xFFFFE6EF), Color(0xFFFFF3D6)]),
-        child: Row(
-          children: [
-            Text(
-              emoji,
-              style: const TextStyle(fontSize: 34),
-            ).animate(onPlay: (c) => c.repeat(reverse: true)).scaleXY(begin: 1, end: 1.12, duration: 700.ms),
-            const SizedBox(width: Space.m),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: context.tt.titleMedium?.copyWith(color: Brand.ink)),
-                  Text(
-                    more > 0 ? 'Tap to open · $more more waiting' : 'Tap to open',
-                    style: context.tt.bodyMedium?.copyWith(color: Brand.grey700),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right_rounded, color: Brand.grey700),
-          ],
-        ),
       ),
     );
   }
