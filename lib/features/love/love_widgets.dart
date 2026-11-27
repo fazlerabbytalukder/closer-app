@@ -4,6 +4,7 @@ import 'package:closer_app/app/providers.dart';
 import 'package:closer_app/core/models/models.dart';
 import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:closer_app/core/ui/components.dart';
+import 'package:closer_app/core/ui/soft_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,127 +25,6 @@ String opensIn(DateTime at, DateTime now) {
   if (days < 7) return 'Opens ${DateFormat('EEEE').format(at)} at $time';
   if (days < 60) return 'Opens in $days days';
   return 'Opens ${DateFormat('d MMM yyyy').format(at)}';
-}
-
-/// A sealed (or ready) envelope with a wax seal.
-class EnvelopeCard extends StatelessWidget {
-  const EnvelopeCard({
-    required this.title,
-    required this.subtitle,
-    super.key,
-    this.ready = false,
-    this.opened = false,
-    this.onTap,
-    this.height = 120,
-  });
-
-  final String title;
-  final String subtitle;
-  final bool ready;
-  final bool opened;
-  final VoidCallback? onTap;
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    final paper = opened ? const Color(0xFFFFFBF5) : const Color(0xFFFFF1E6);
-    Widget card = Material(
-      color: paper,
-      borderRadius: BorderRadius.circular(Radii.card),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(Radii.card),
-        onTap: onTap,
-        child: SizedBox(
-          height: height,
-          child: Stack(
-            children: [
-              // Envelope flap.
-              Positioned.fill(child: CustomPaint(painter: _FlapPainter(opened: opened))),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(Space.m, Space.m, Space.m, Space.m),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 46,
-                      height: 46,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: const RadialGradient(colors: [Color(0xFFE5506F), Color(0xFFB8304F)]),
-                        boxShadow: [BoxShadow(color: const Color(0xFFB8304F).withValues(alpha: 0.4), blurRadius: 8, offset: const Offset(0, 3))],
-                      ),
-                      child: Text(opened ? '💌' : (ready ? '✨' : '🔒'), style: const TextStyle(fontSize: 20)),
-                    ),
-                    const SizedBox(width: Space.m),
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: context.tt.titleMedium?.copyWith(color: Brand.ink, fontFamily: 'Nunito'),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            subtitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: context.tt.bodySmall?.copyWith(
-                              color: ready ? const Color(0xFFB8304F) : Brand.grey700,
-                              fontWeight: ready ? FontWeight.w700 : FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (onTap != null) const Icon(Icons.chevron_right_rounded, color: Brand.grey500),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-    if (ready && !opened) {
-      card = card
-          .animate(onPlay: (c) => c.repeat(reverse: true))
-          .shimmer(duration: 1800.ms, color: Colors.white.withValues(alpha: 0.6))
-          .scaleXY(begin: 1, end: 1.015, duration: 900.ms, curve: Curves.easeInOut);
-    }
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(Radii.card),
-        boxShadow: const [BoxShadow(color: Color(0x1A8A4B2E), blurRadius: 18, offset: Offset(0, 8))],
-      ),
-      child: card,
-    );
-  }
-}
-
-class _FlapPainter extends CustomPainter {
-  _FlapPainter({required this.opened});
-
-  final bool opened;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFFE8C9B0).withValues(alpha: opened ? 0.25 : 0.45)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.4;
-    final path = Path()
-      ..moveTo(10, 10)
-      ..lineTo(size.width / 2, size.height * (opened ? 0.25 : 0.55))
-      ..lineTo(size.width - 10, 10);
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(_FlapPainter old) => old.opened != opened;
 }
 
 /// A wobbling gift box that invites a tap.
@@ -179,41 +59,60 @@ class PhotoField extends StatelessWidget {
   final String label;
 
   Future<void> _pick() async {
-    final x = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 2000, maxHeight: 2000, imageQuality: 92);
+    final x = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 2000,
+      maxHeight: 2000,
+      imageQuality: 92,
+    );
     if (x != null) onChanged(x.path);
   }
 
   @override
   Widget build(BuildContext context) {
     final p = path;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     if (p == null) {
-      return OutlinedButton.icon(
+      // Lavender pill with violet text (Duosy secondary button).
+      return PillButton(
+        label: label,
+        icon: Icons.add_photo_alternate_outlined,
+        height: 52,
+        glow: false,
+        color: SoftTone.violet.fill(context),
+        foreground: dark ? Colors.white : Brand.royal,
         onPressed: _pick,
-        icon: const Icon(Icons.add_photo_alternate_rounded),
-        label: Text(label),
       );
     }
-    return Stack(
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(Radii.small + 4),
-          child: AspectRatio(aspectRatio: 4 / 3, child: Image.file(File(p), fit: BoxFit.cover)),
-        ),
-        Positioned(
-          top: 6,
-          right: 6,
-          child: IconButton.filledTonal(
-            tooltip: 'Remove photo',
-            icon: const Icon(Icons.close_rounded),
-            onPressed: () => onChanged(null),
+    // The photo in a white card, with round white remove / change buttons.
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: context.cc.card,
+        borderRadius: BorderRadius.circular(26),
+        boxShadow: dark ? null : softCardShadow,
+      ),
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: AspectRatio(
+              aspectRatio: 4 / 3,
+              child: Image.file(File(p), fit: BoxFit.cover),
+            ),
           ),
-        ),
-        Positioned(
-          bottom: 6,
-          right: 6,
-          child: IconButton.filledTonal(tooltip: 'Change photo', icon: const Icon(Icons.edit_rounded), onPressed: _pick),
-        ),
-      ],
+          Positioned(
+            top: 10,
+            right: 10,
+            child: CircleIconButton(icon: Icons.close_rounded, tooltip: 'Remove photo', onTap: () => onChanged(null)),
+          ),
+          Positioned(
+            bottom: 10,
+            right: 10,
+            child: CircleIconButton(icon: Icons.edit_outlined, tooltip: 'Change photo', onTap: _pick),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -44,21 +44,50 @@ class NoteCard extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: LinearGradient(colors: bg.colors, begin: Alignment.topLeft, end: Alignment.bottomRight),
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Center(
-            child: Text(
-              text.isEmpty ? 'Write something sweet…' : text,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: noteFonts[style.font],
-                fontSize: _fontSizeFor(text, 34),
-                fontWeight: FontWeight.w700,
-                height: 1.2,
-                color: text.isEmpty ? bg.ink.withValues(alpha: 0.45) : bg.ink,
-              ),
-            ),
-          ),
+        child: LayoutBuilder(
+          builder: (context, c) {
+            final s = c.maxWidth;
+            const deco = Color(0x2EFFFFFF);
+            return Stack(
+              children: [
+                // Same soft circles as the rendered PNG (NoteRenderer).
+                Positioned(
+                  left: s * 0.12 - s * 0.07,
+                  top: s * 0.14 - s * 0.07,
+                  child: Container(
+                    width: s * 0.14,
+                    height: s * 0.14,
+                    decoration: const BoxDecoration(color: deco, shape: BoxShape.circle),
+                  ),
+                ),
+                Positioned(
+                  left: s * 0.9 - s * 0.1,
+                  top: s * 0.86 - s * 0.1,
+                  child: Container(
+                    width: s * 0.2,
+                    height: s * 0.2,
+                    decoration: const BoxDecoration(color: deco, shape: BoxShape.circle),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Center(
+                    child: Text(
+                      text.isEmpty ? 'Write something sweet…' : text,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: noteFonts[style.font],
+                        fontSize: _fontSizeFor(text, 34),
+                        fontWeight: FontWeight.w700,
+                        height: 1.2,
+                        color: text.isEmpty ? bg.ink.withValues(alpha: 0.7) : bg.ink,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );

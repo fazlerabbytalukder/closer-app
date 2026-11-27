@@ -425,10 +425,16 @@ class VioletPageHeader extends StatelessWidget {
     this.child,
     this.backdropHeight = 104,
     this.actions = const [],
+    this.leadingIcon = Icons.arrow_back_rounded,
+    this.leadingTooltip,
   });
 
   final String title;
   final Widget? child;
+
+  /// The round button before the title: back arrow by default, or a close ✕.
+  final IconData leadingIcon;
+  final String? leadingTooltip;
 
   /// Extra buttons at the end of the title row (e.g. Delete).
   final List<Widget> actions;
@@ -453,17 +459,17 @@ class VioletPageHeader extends StatelessWidget {
                 Row(
                   children: [
                     Tooltip(
-                      message: MaterialLocalizations.of(context).backButtonTooltip,
+                      message: leadingTooltip ?? MaterialLocalizations.of(context).backButtonTooltip,
                       child: Material(
                         color: Colors.white.withValues(alpha: 0.22),
                         shape: CircleBorder(side: BorderSide(color: Colors.white.withValues(alpha: 0.45))),
                         child: InkWell(
                           customBorder: const CircleBorder(),
                           onTap: () => Navigator.of(context).maybePop(),
-                          child: const SizedBox(
+                          child: SizedBox(
                             width: 40,
                             height: 40,
-                            child: Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20),
+                            child: Icon(leadingIcon, color: Colors.white, size: 20),
                           ),
                         ),
                       ),
@@ -490,18 +496,119 @@ class VioletPageHeader extends StatelessWidget {
   }
 }
 
+/// Frosted round icon button for the violet header (Figma: the packs and
+/// history buttons on "Everyday").
+class HeaderIconButton extends StatelessWidget {
+  const HeaderIconButton({required this.icon, required this.tooltip, required this.onTap, super.key});
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 8),
+      child: Tooltip(
+        message: tooltip,
+        child: Material(
+          color: Colors.white.withValues(alpha: 0.22),
+          shape: CircleBorder(side: BorderSide(color: Colors.white.withValues(alpha: 0.45))),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onTap,
+            child: SizedBox(width: 40, height: 40, child: Icon(icon, color: Colors.white, size: 20)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The two mascots with "Hey~" peeking up from the bottom edge of the screen
+/// (Figma "question packs", "from sam", "open letter"). Place it last in a
+/// page Column; it sits flush on the bottom and is cut off below.
+class PeekingMascots extends StatelessWidget {
+  const PeekingMascots({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 150,
+      child: ClipRect(
+        child: OverflowBox(
+          alignment: Alignment.topCenter,
+          maxHeight: 188,
+          // The full pair (630 x 696, nothing cropped), so 170 wide is 188
+          // tall. The header art is cut on its right edge.
+          child: Image.asset('assets/onboarding/ob3_mascots.png', width: 170, height: 188),
+        ),
+      ),
+    );
+  }
+}
+
 /// Light page header (Figma "your plant screen"): white round back button,
 /// large dark title and optional white round action buttons, on the page
 /// background. Pads for the status bar itself.
 class PlainPageHeader extends StatelessWidget {
-  const PlainPageHeader({required this.title, super.key, this.actions = const []});
+  const PlainPageHeader({required this.title, super.key, this.actions = const [], this.boxed = false});
 
   final String title;
   final List<Widget> actions;
 
+  /// White pill bar holding a small lavender back button and the title
+  /// (Figma "letters countdown screen").
+  final bool boxed;
+
   @override
   Widget build(BuildContext context) {
     final top = MediaQuery.paddingOf(context).top;
+    if (boxed) {
+      final dark = Theme.of(context).brightness == Brightness.dark;
+      return Padding(
+        padding: EdgeInsets.fromLTRB(20, top + 12, 20, 8),
+        child: Container(
+          height: 56,
+          padding: const EdgeInsets.fromLTRB(8, 8, 12, 8),
+          decoration: BoxDecoration(
+            color: context.cc.card,
+            borderRadius: BorderRadius.circular(999),
+            boxShadow: dark ? null : softCardShadow,
+          ),
+          child: Row(
+            children: [
+              Tooltip(
+                message: MaterialLocalizations.of(context).backButtonTooltip,
+                child: Material(
+                  color: SoftTone.violet.fill(context),
+                  shape: const CircleBorder(),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: () => Navigator.of(context).maybePop(),
+                    child: SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: Icon(Icons.arrow_back_rounded, size: 20, color: context.cs.primary),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.tt.headlineSmall?.copyWith(fontSize: 21),
+                ),
+              ),
+              ...actions,
+            ],
+          ),
+        ),
+      );
+    }
     return Padding(
       padding: EdgeInsets.fromLTRB(20, top + 12, 20, 8),
       child: Row(
@@ -533,22 +640,27 @@ class CircleIconButton extends StatelessWidget {
 
   final IconData icon;
   final String tooltip;
-  final VoidCallback onTap;
+
+  /// Null shows the button faded and ignores taps.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     return Tooltip(
       message: tooltip,
-      child: DecoratedBox(
-        decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: dark ? null : softCardShadow),
-        child: Material(
-          color: context.cc.card,
-          shape: const CircleBorder(),
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: onTap,
-            child: SizedBox(width: 44, height: 44, child: Icon(icon, size: 22, color: context.cs.primary)),
+      child: Opacity(
+        opacity: onTap == null ? 0.5 : 1,
+        child: DecoratedBox(
+          decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: dark ? null : softCardShadow),
+          child: Material(
+            color: context.cc.card,
+            shape: const CircleBorder(),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: onTap,
+              child: SizedBox(width: 44, height: 44, child: Icon(icon, size: 22, color: context.cs.primary)),
+            ),
           ),
         ),
       ),
@@ -662,6 +774,8 @@ class PillButton extends StatelessWidget {
     this.height = 56,
     this.glow = true,
     this.loading = false,
+    this.color = Brand.royal,
+    this.foreground = Colors.white,
   });
 
   final String label;
@@ -673,16 +787,20 @@ class PillButton extends StatelessWidget {
   /// Shows a spinner and ignores taps.
   final bool loading;
 
+  /// Fill when enabled (violet by default; deep pink on love screens).
+  final Color color;
+
+  /// Text and icon colour when enabled (violet on the lavender variant).
+  final Color foreground;
+
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final small = height < 44;
     final enabled = onPressed != null && !loading;
     // Figma disabled state: pale lavender pill with muted violet text.
-    final fg = enabled || loading
-        ? Colors.white
-        : (dark ? Colors.white.withValues(alpha: 0.5) : const Color(0xFF8C7BD6));
-    final bg = enabled || loading ? Brand.royal : (dark ? Brand.royal.withValues(alpha: 0.3) : const Color(0xFFDCD3FB));
+    final fg = enabled || loading ? foreground : (dark ? Colors.white.withValues(alpha: 0.5) : const Color(0xFF8C7BD6));
+    final bg = enabled || loading ? color : (dark ? Brand.royal.withValues(alpha: 0.3) : const Color(0xFFDCD3FB));
     final style = (small ? context.tt.labelLarge : context.tt.titleMedium)?.copyWith(
       fontWeight: FontWeight.w800,
       color: fg,
@@ -692,7 +810,14 @@ class PillButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         boxShadow: !glow || dark || !enabled
             ? null
-            : const [BoxShadow(color: Color(0x596A3DF0), blurRadius: 24, offset: Offset(0, 12), spreadRadius: -6)],
+            : [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.35),
+                  blurRadius: 24,
+                  offset: const Offset(0, 12),
+                  spreadRadius: -6,
+                ),
+              ],
       ),
       child: SizedBox(
         width: double.infinity,

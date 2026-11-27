@@ -3,6 +3,7 @@ import 'package:closer_app/core/models/models.dart';
 import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:closer_app/core/ui/actions.dart';
 import 'package:closer_app/core/ui/components.dart';
+import 'package:closer_app/core/ui/soft_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -73,12 +74,12 @@ class _ReactionBarState extends ConsumerState<ReactionBar> {
           alignment: Alignment.center,
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              padding: EdgeInsets.symmetric(horizontal: widget.onDark ? 6 : 10, vertical: 4),
+              // Light: white pill with a soft violet shadow (Figma).
               decoration: BoxDecoration(
-                color: (widget.onDark ? Colors.white : context.cs.surfaceContainerHighest).withValues(
-                  alpha: widget.onDark ? 0.12 : 0.6,
-                ),
+                color: widget.onDark ? Colors.white.withValues(alpha: 0.12) : context.cc.card,
                 borderRadius: BorderRadius.circular(999),
+                boxShadow: widget.onDark || Theme.of(context).brightness == Brightness.dark ? null : softCardShadow,
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
