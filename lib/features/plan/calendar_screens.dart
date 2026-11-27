@@ -561,6 +561,62 @@ class _EventEditScreenState extends ConsumerState<EventEditScreen> {
     if (ok) context.pop();
   }
 
+  /// "Remind us" choices as a soft bottom sheet: one card per option, the
+  /// current one ringed and ticked, then "Custom…".
+  Future<void> _pickRemind(List<int> values, int current) async {
+    IconData iconFor(int m) => switch (m) {
+      0 => Icons.notifications_active_outlined,
+      < 60 => Icons.timer_outlined,
+      < Countdown.minutesPerDay => Icons.schedule_rounded,
+      < 7 * Countdown.minutesPerDay => Icons.today_outlined,
+      _ => Icons.date_range_outlined,
+    };
+    SoftTone toneFor(int m) => switch (m) {
+      0 => SoftTone.pink,
+      < Countdown.minutesPerDay => SoftTone.mint,
+      < 7 * Countdown.minutesPerDay => SoftTone.violet,
+      _ => SoftTone.blue,
+    };
+    final picked = await showSoftSheet<int>(
+      context,
+      header: SoftSheetHeader(
+        icon: const Icon(Icons.notifications_none_rounded),
+        tone: SoftTone.yellow,
+        title: 'Remind us',
+        subtitle: _isAllDay
+            ? 'You both get a notification, and again on the day.'
+            : 'You both get a notification, and again at the time.',
+      ),
+      children: [
+        for (final m in values)
+          Builder(
+            builder: (ctx) => SoftOptionTile(
+              icon: iconFor(m),
+              tone: toneFor(m),
+              title: Countdown.describeRemind(m, hasTime: !_isAllDay),
+              selected: m == current,
+              onTap: () => Navigator.pop(ctx, m),
+            ),
+          ),
+        Builder(
+          builder: (ctx) => SoftOptionTile(
+            icon: Icons.tune_rounded,
+            tone: SoftTone.yellow,
+            title: 'Custom…',
+            subtitle: 'Pick minutes, hours or days',
+            onTap: () => Navigator.pop(ctx, _customRemind),
+          ),
+        ),
+      ],
+    );
+    if (picked == null || !mounted) return;
+    if (picked == _customRemind) {
+      await _pickCustomRemind();
+    } else {
+      setState(() => _remind = picked);
+    }
+  }
+
   Future<void> _pickCustomRemind() async {
     final picked = await showDialog<int>(
       context: context,
@@ -920,34 +976,19 @@ class _EventEditScreenState extends ConsumerState<EventEditScreen> {
                 ),
                 const SizedBox(height: 12),
                 _SoftCard(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 12, 16),
+                  onTap: () => _pickRemind(remindValues, remind),
                   child: Row(
                     children: [
                       Expanded(
                         child: Text('Remind us', style: context.tt.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
                       ),
-                      DropdownButton<int>(
-                        value: remind,
-                        underline: const SizedBox.shrink(),
-                        borderRadius: BorderRadius.circular(16),
-                        icon: Icon(Icons.expand_more_rounded, color: context.cs.primary),
+                      Text(
+                        Countdown.describeRemind(remind, hasTime: !_isAllDay),
                         style: context.tt.labelLarge?.copyWith(color: context.cs.primary, fontWeight: FontWeight.w800),
-                        items: [
-                          for (final m in remindValues)
-                            DropdownMenuItem(
-                              value: m,
-                              child: Text(Countdown.describeRemind(m, hasTime: !_isAllDay)),
-                            ),
-                          const DropdownMenuItem(value: _customRemind, child: Text('Custom…')),
-                        ],
-                        onChanged: (v) async {
-                          if (v == _customRemind) {
-                            await _pickCustomRemind();
-                          } else if (v != null) {
-                            setState(() => _remind = v);
-                          }
-                        },
                       ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.expand_more_rounded, color: context.cs.primary),
                     ],
                   ),
                 ),
@@ -977,14 +1018,14 @@ class _EventEditScreenState extends ConsumerState<EventEditScreen> {
 /// White pill choice with a leading emoji or icon; solid violet when chosen.
 class _ChoicePill extends StatelessWidget {
   const _ChoicePill({
-    required this.leading,
     required this.label,
     required this.selected,
     required this.onTap,
+    this.leading,
     this.expand = false,
   });
 
-  final Widget leading;
+  final Widget? leading;
   final String label;
   final bool selected;
   final bool expand;
@@ -1014,11 +1055,13 @@ class _ChoicePill extends StatelessWidget {
                 mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  IconTheme.merge(
-                    data: IconThemeData(color: fg),
-                    child: leading,
-                  ),
-                  const SizedBox(width: 6),
+                  if (leading case final l?) ...[
+                    IconTheme.merge(
+                      data: IconThemeData(color: fg),
+                      child: l,
+                    ),
+                    const SizedBox(width: 6),
+                  ],
                   Text(
                     label,
                     style: context.tt.labelLarge?.copyWith(color: fg, fontWeight: FontWeight.w800),
@@ -1081,7 +1124,6 @@ class _ToggleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
     return InkWell(
       onTap: onChanged == null ? null : () => onChanged!(!value),
       child: Padding(
@@ -1097,19 +1139,7 @@ class _ToggleRow extends StatelessWidget {
                 ],
               ),
             ),
-            Switch(
-              value: value,
-              onChanged: onChanged,
-              thumbColor: const WidgetStatePropertyAll(Colors.white),
-              trackColor: WidgetStateProperty.resolveWith(
-                (s) => s.contains(WidgetState.selected)
-                    ? Brand.royal
-                    : (dark ? context.cs.surfaceContainerHigh : const Color(0xFFE4DDFB)),
-              ),
-              trackOutlineColor: WidgetStateProperty.resolveWith(
-                (s) => s.contains(WidgetState.selected) ? Colors.transparent : const Color(0xFFD2C7F7),
-              ),
-            ),
+            SoftSwitch(value: value, onChanged: onChanged),
           ],
         ),
       ),
@@ -1222,48 +1252,71 @@ class _CustomRemindDialogState extends State<_CustomRemindDialog> {
   @override
   Widget build(BuildContext context) {
     final minutes = _minutes;
-    return AlertDialog(
-      title: const Text('Remind us before'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextField(
-            controller: _amount,
-            autofocus: true,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'How long before'),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: Space.m),
-          SegmentedButton<String>(
-            segments: [for (final u in _units.keys) ButtonSegment(value: u, label: Text(u))],
-            selected: {_unit},
-            showSelectedIcon: false,
-            onSelectionChanged: (v) => setState(() => _unit = v.first),
-          ),
-          if (minutes == null && _amount.text.trim().isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: Space.s),
-              child: Text(
-                'Pick something up to 60 days',
-                style: context.tt.bodySmall?.copyWith(color: context.cs.error),
-              ),
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 28),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(22, 26, 22, 14),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SoftSheetHeader(
+              icon: Icon(Icons.tune_rounded),
+              tone: SoftTone.yellow,
+              title: 'Remind us before',
+              subtitle: 'How long before should we both get a nudge?',
+              centered: true,
             ),
-        ],
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        FilledButton(
-          // Compact pill for dialogs; the theme default (56 tall) is for full-width actions.
-          style: FilledButton.styleFrom(
-            minimumSize: const Size(80, 40),
-            padding: const EdgeInsets.symmetric(horizontal: Space.l),
-          ),
-          onPressed: minutes == null ? null : () => Navigator.pop(context, minutes),
-          child: const Text('Set'),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _amount,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              textAlign: TextAlign.center,
+              style: context.tt.headlineSmall?.copyWith(fontSize: 26),
+              decoration: softFieldDecoration(context, hint: 'How long before'),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                for (final (i, u) in _units.keys.indexed) ...[
+                  if (i > 0) const SizedBox(width: 8),
+                  Expanded(
+                    child: _ChoicePill(
+                      label: u,
+                      selected: _unit == u,
+                      expand: true,
+                      onTap: () => setState(() => _unit = u),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            if (minutes == null && _amount.text.trim().isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Text(
+                  'Pick something up to 60 days',
+                  textAlign: TextAlign.center,
+                  style: context.tt.bodySmall?.copyWith(color: context.cs.error, fontWeight: FontWeight.w700),
+                ),
+              ),
+            const SizedBox(height: 20),
+            PillButton(
+              label: 'Set',
+              height: 52,
+              onPressed: minutes == null ? null : () => Navigator.pop(context, minutes),
+            ),
+            const SizedBox(height: 6),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel', style: context.tt.labelLarge?.copyWith(fontWeight: FontWeight.w800)),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

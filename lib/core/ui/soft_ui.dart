@@ -948,6 +948,69 @@ Future<bool?> showSoftDialog(
   );
 }
 
+/// Compact switch from the Figma screens: a 40 × 24 lavender track (violet
+/// when on) with a large white knob and a soft shadow.
+class SoftSwitch extends StatelessWidget {
+  const SoftSwitch({required this.value, required this.onChanged, super.key});
+
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+
+  static const _width = 40.0;
+  static const _height = 24.0;
+  static const _knob = 20.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final enabled = onChanged != null;
+    final track = value ? Brand.royal : (dark ? context.cs.surfaceContainerHigh : const Color(0xFFE4DDFB));
+    return Semantics(
+      toggled: value,
+      enabled: enabled,
+      child: GestureDetector(
+        onTap: enabled ? () => onChanged!(!value) : null,
+        // A bigger tap target than the drawn switch.
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Opacity(
+            opacity: enabled ? 1 : 0.5,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              curve: Curves.easeOutCubic,
+              width: _width,
+              height: _height,
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: track,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: value ? Colors.transparent : (dark ? Colors.transparent : const Color(0xFFD2C7F7)),
+                ),
+              ),
+              child: AnimatedAlign(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+                child: Container(
+                  width: _knob - 2,
+                  height: _knob - 2,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [BoxShadow(color: Color(0x332A1A6E), blurRadius: 4, offset: Offset(0, 1))],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Transparent, roomy app bar for the main tabs.
 PreferredSizeWidget softAppBar(BuildContext context, String title, {List<Widget>? actions}) {
   return AppBar(

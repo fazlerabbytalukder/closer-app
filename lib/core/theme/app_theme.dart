@@ -180,6 +180,45 @@ abstract final class AppTheme {
     return 2;
   });
 
+  /// Gap between the date/time picker buttons and the dialog edge. The
+  /// pickers only pad their button row by 8px, so the buttons draw their
+  /// own outer margin to sit clear of the rounded corner.
+  static const _pickerButtonGap = EdgeInsetsDirectional.only(end: 10, bottom: 14);
+
+  /// Picker "Cancel": muted text, bottom gap matching the OK pill.
+  static ButtonStyle _pickerCancel(TextTheme text, CloserColors cc) =>
+      TextButton.styleFrom(
+        foregroundColor: cc.muted,
+        textStyle: text.labelLarge,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        splashFactory: NoSplash.splashFactory,
+        overlayColor: Colors.transparent,
+      ).copyWith(
+        backgroundBuilder: (_, _, child) => Padding(padding: const EdgeInsets.only(bottom: 14), child: child),
+      );
+
+  /// Picker "OK": solid violet pill drawn inside an outer margin.
+  static ButtonStyle _pickerConfirm(TextTheme text) =>
+      TextButton.styleFrom(
+        foregroundColor: Colors.white,
+        textStyle: text.labelLarge,
+        shape: const StadiumBorder(),
+        padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 12),
+        splashFactory: NoSplash.splashFactory,
+        overlayColor: Colors.transparent,
+      ).copyWith(
+        backgroundBuilder: (_, states, child) => Padding(
+          padding: _pickerButtonGap,
+          child: DecoratedBox(
+            decoration: ShapeDecoration(
+              shape: const StadiumBorder(),
+              color: states.contains(WidgetState.pressed) ? Brand.blue700 : Brand.royal,
+            ),
+            child: child,
+          ),
+        ),
+      );
+
   static ThemeData build(Brightness brightness, PairMode mode) {
     final dark = brightness == Brightness.dark;
     final cc = CloserColors.forMode(mode, brightness);
@@ -325,6 +364,96 @@ abstract final class AppTheme {
       dialogTheme: DialogThemeData(
         backgroundColor: scheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Radii.card)),
+      ),
+      // Date picker in the Duosy style: white card, violet header, bold
+      // days, solid violet selected day, pink ring on today, violet pill OK.
+      datePickerTheme: DatePickerThemeData(
+        backgroundColor: cc.card,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        headerBackgroundColor: Brand.royal,
+        headerForegroundColor: Colors.white,
+        headerHelpStyle: text.labelMedium?.copyWith(color: Colors.white.withValues(alpha: 0.8)),
+        headerHeadlineStyle: text.headlineMedium?.copyWith(color: Colors.white, fontSize: 30),
+        dividerColor: Colors.transparent,
+        weekdayStyle: text.labelMedium?.copyWith(color: cc.muted),
+        dayStyle: text.bodyMedium?.copyWith(fontWeight: FontWeight.w800),
+        dayForegroundColor: WidgetStateProperty.resolveWith((s) {
+          if (s.contains(WidgetState.selected)) return Colors.white;
+          if (s.contains(WidgetState.disabled)) return scheme.onSurface.withValues(alpha: 0.3);
+          return scheme.onSurface;
+        }),
+        dayBackgroundColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? Brand.royal : Colors.transparent,
+        ),
+        dayOverlayColor: WidgetStatePropertyAll(Brand.royal.withValues(alpha: 0.1)),
+        todayForegroundColor: WidgetStateProperty.resolveWith((s) {
+          if (s.contains(WidgetState.selected)) return Colors.white;
+          return dark ? Brand.blue300 : Brand.royal;
+        }),
+        todayBackgroundColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? Brand.royal : Colors.transparent,
+        ),
+        todayBorder: const BorderSide(color: Brand.pink, width: 1.8),
+        yearStyle: text.bodyLarge?.copyWith(fontWeight: FontWeight.w800),
+        yearForegroundColor: WidgetStateProperty.resolveWith((s) {
+          if (s.contains(WidgetState.selected)) return Colors.white;
+          if (s.contains(WidgetState.disabled)) return scheme.onSurface.withValues(alpha: 0.3);
+          return scheme.onSurface;
+        }),
+        yearBackgroundColor: WidgetStateProperty.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? Brand.royal : Colors.transparent,
+        ),
+        yearOverlayColor: WidgetStatePropertyAll(Brand.royal.withValues(alpha: 0.1)),
+        cancelButtonStyle: _pickerCancel(text, cc),
+        confirmButtonStyle: _pickerConfirm(text),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: dark ? scheme.surfaceContainerHigh : Brand.blue50,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: const BorderSide(color: Brand.royal, width: 1.6),
+          ),
+        ),
+      ),
+      // Time picker to match: lavender hour/minute boxes, violet dial hand,
+      // violet AM/PM choice and the same Cancel / OK buttons.
+      timePickerTheme: TimePickerThemeData(
+        backgroundColor: cc.card,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        helpTextStyle: text.labelMedium?.copyWith(color: cc.muted),
+        hourMinuteShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        hourMinuteColor: WidgetStateColor.resolveWith(
+          (s) => s.contains(WidgetState.selected)
+              ? (dark ? Brand.royal.withValues(alpha: 0.35) : Brand.blue50)
+              : (dark ? scheme.surfaceContainerHigh : const Color(0xFFF5F2FF)),
+        ),
+        hourMinuteTextColor: WidgetStateColor.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? (dark ? Colors.white : Brand.royal) : scheme.onSurface,
+        ),
+        hourMinuteTextStyle: text.displayMedium?.copyWith(fontSize: 48),
+        dayPeriodShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        dayPeriodBorderSide: BorderSide(color: scheme.outline),
+        dayPeriodColor: WidgetStateColor.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? Brand.royal : Colors.transparent,
+        ),
+        dayPeriodTextColor: WidgetStateColor.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? Colors.white : scheme.onSurface,
+        ),
+        dayPeriodTextStyle: text.labelLarge,
+        dialBackgroundColor: dark ? scheme.surfaceContainerHigh : const Color(0xFFF5F2FF),
+        dialHandColor: Brand.royal,
+        dialTextColor: WidgetStateColor.resolveWith(
+          (s) => s.contains(WidgetState.selected) ? Colors.white : scheme.onSurface,
+        ),
+        dialTextStyle: text.bodyLarge?.copyWith(fontWeight: FontWeight.w800),
+        entryModeIconColor: dark ? Brand.blue300 : Brand.royal,
+        cancelButtonStyle: _pickerCancel(text, cc),
+        confirmButtonStyle: _pickerConfirm(text),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
