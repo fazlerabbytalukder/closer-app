@@ -5,6 +5,7 @@ import 'package:closer_app/core/services/widget_contract.dart';
 import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:closer_app/core/ui/actions.dart';
 import 'package:closer_app/core/ui/components.dart';
+import 'package:closer_app/core/ui/soft_ui.dart';
 import 'package:closer_app/features/me/widget_previews.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -76,73 +77,96 @@ class _WidgetsScreenState extends ConsumerState<WidgetsScreen> {
       ),
     ];
 
+    final dark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('My widgets')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(Space.m, Space.s, Space.m, Space.xl),
+        padding: const EdgeInsets.only(bottom: Space.xl),
         children: [
-          Text('Keep $name on your home screen 💞', style: context.tt.headlineSmall),
-          const SizedBox(height: 4),
-          Text(
-            'Everything you two send shows up here instantly, no app to open.',
-            style: context.tt.bodyMedium?.copyWith(color: context.cc.muted),
-          ),
-          const SizedBox(height: Space.m),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: FakeHomeScreen(key: ValueKey(shown), themeId: shown),
-          ),
-          const SizedBox(height: Space.l),
-          _Heading(icon: Icons.palette_rounded, title: 'Theme', trailing: paletteFor(shown).name),
-          const SizedBox(height: Space.s),
-          SizedBox(
-            height: 96,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: WidgetThemes.all.length,
-              separatorBuilder: (_, _) => const SizedBox(width: Space.s),
-              itemBuilder: (context, i) {
-                final id = WidgetThemes.all[i];
-                return _ThemeSwatch(
-                  palette: paletteFor(id),
-                  selected: current == id,
-                  previewing: _preview == id && _preview != current,
-                  locked: WidgetThemes.plus.contains(id) && !plus,
-                  onTap: () {
-                    HapticFeedback.selectionClick().ignore();
-                    setState(() => _preview = id == current ? null : id);
-                  },
-                );
-              },
+          const VioletPageHeader(title: 'My widgets', backdropHeight: 76),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text('Keep $name on your home screen 💞', style: context.tt.headlineSmall?.copyWith(fontSize: 24)),
+                const SizedBox(height: 4),
+                Text(
+                  'Everything you two send shows up here instantly, no app to open.',
+                  style: context.tt.bodyMedium?.copyWith(color: context.cc.muted),
+                ),
+                const SizedBox(height: Space.m),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: FakeHomeScreen(key: ValueKey(shown), themeId: shown),
+                ),
+                const SizedBox(height: Space.l),
+                Container(
+                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+                  decoration: BoxDecoration(
+                    color: context.cc.card,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: dark ? null : softCardShadow,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _Heading(icon: Icons.palette_outlined, title: 'Theme', trailing: paletteFor(shown).name),
+                      const SizedBox(height: Space.s),
+                      SizedBox(
+                        height: 80,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: WidgetThemes.all.length,
+                          separatorBuilder: (_, _) => const SizedBox(width: 4),
+                          itemBuilder: (context, i) {
+                            final id = WidgetThemes.all[i];
+                            return _ThemeSwatch(
+                              palette: paletteFor(id),
+                              selected: current == id,
+                              previewing: _preview == id && _preview != current,
+                              locked: WidgetThemes.plus.contains(id) && !plus,
+                              onTap: () {
+                                HapticFeedback.selectionClick().ignore();
+                                setState(() => _preview = id == current ? null : id);
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOutCubic,
+                  child: _preview != null && _preview != current
+                      ? Padding(
+                          padding: const EdgeInsets.only(top: Space.s),
+                          child: _applyButton(_preview!, plus),
+                        )
+                      : const SizedBox(width: double.infinity),
+                ),
+                const SizedBox(height: Space.l),
+                const _Heading(icon: Icons.add_to_home_screen_rounded, title: 'Add a widget'),
+                const SizedBox(height: Space.s),
+                GridView.count(
+                  crossAxisCount: 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: Space.s + 4,
+                  crossAxisSpacing: Space.s + 4,
+                  childAspectRatio: 0.6,
+                  children: [
+                    for (final (i, w) in widgets.indexed)
+                      _WidgetCard(info: w).animate().fadeIn(delay: (60 * i).ms, duration: 300.ms).slideY(begin: 0.08),
+                  ],
+                ),
+                const SizedBox(height: Space.m),
+                const AdBanner(),
+              ],
             ),
           ),
-          AnimatedSize(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutCubic,
-            child: _preview != null && _preview != current
-                ? Padding(
-                    padding: const EdgeInsets.only(top: Space.s),
-                    child: _applyButton(_preview!, plus),
-                  )
-                : const SizedBox(width: double.infinity),
-          ),
-          const SizedBox(height: Space.l),
-          const _Heading(icon: Icons.add_to_home_screen_rounded, title: 'Add a widget'),
-          const SizedBox(height: Space.s),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: Space.s + 4,
-            crossAxisSpacing: Space.s + 4,
-            childAspectRatio: 0.66,
-            children: [
-              for (final (i, w) in widgets.indexed)
-                _WidgetCard(info: w).animate().fadeIn(delay: (60 * i).ms, duration: 300.ms).slideY(begin: 0.08),
-            ],
-          ),
-          const SizedBox(height: Space.m),
-          const AdBanner(),
         ],
       ),
     );
@@ -201,11 +225,11 @@ class _Heading extends StatelessWidget {
         Container(
           width: 30,
           height: 30,
-          decoration: BoxDecoration(color: context.cc.accentTint, borderRadius: BorderRadius.circular(10)),
-          child: Icon(icon, size: 17, color: context.cc.accent),
+          decoration: BoxDecoration(color: SoftTone.pink.fill(context), shape: BoxShape.circle),
+          child: Icon(icon, size: 17, color: SoftTone.pink.icon),
         ),
         const SizedBox(width: Space.s),
-        Text(title, style: context.tt.titleMedium),
+        Text(title, style: context.tt.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
         const Spacer(),
         if (trailing != null) Text(trailing!, style: context.tt.labelLarge?.copyWith(color: context.cc.muted)),
       ],
@@ -237,53 +261,76 @@ class _WidgetCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CloserCard(
-      onTap: info.onAdd,
-      padding: const EdgeInsets.all(10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(child: info.preview),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: Text(info.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: context.tt.titleSmall),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: context.cs.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(6),
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    // Figma: white card, preview filling the width, title + size chip,
+    // two-line description and a solid violet "+ Add" pill.
+    return Container(
+      decoration: BoxDecoration(
+        color: context.cc.card,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: dark ? null : softCardShadow,
+      ),
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(22),
+          onTap: info.onAdd,
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                info.preview,
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          info.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.tt.titleSmall?.copyWith(fontWeight: FontWeight.w800, height: 1.15),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: SoftTone.violet.fill(context),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          info.sizes,
+                          style: context.tt.labelSmall?.copyWith(
+                            color: SoftTone.violet.icon,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                child: Text(info.sizes, style: context.tt.labelSmall?.copyWith(color: context.cc.muted, fontSize: 9)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 2),
-          Expanded(
-            child: Text(
-              info.subtitle,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: context.tt.bodySmall?.copyWith(color: context.cc.muted),
+                const SizedBox(height: 3),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Text(
+                      info.subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.tt.bodySmall?.copyWith(color: context.cc.muted, height: 1.25),
+                    ),
+                  ),
+                ),
+                PillButton(label: 'Add', icon: Icons.add_rounded, height: 36, glow: false, onPressed: info.onAdd),
+              ],
             ),
           ),
-          SizedBox(
-            width: double.infinity,
-            height: 32,
-            child: FilledButton.icon(
-              style: FilledButton.styleFrom(
-                padding: EdgeInsets.zero,
-                visualDensity: VisualDensity.compact,
-                shape: const StadiumBorder(),
-              ),
-              onPressed: info.onAdd,
-              icon: const Icon(Icons.add_rounded, size: 18),
-              label: const Text('Add'),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -343,21 +390,21 @@ class _ThemeSwatch extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: SizedBox(
-          width: 70,
+          width: 58,
           child: Column(
             children: [
               AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.all(3),
+                padding: const EdgeInsets.all(2.5),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(color: ring ? context.cc.accent : Colors.transparent, width: 2.5),
+                  borderRadius: BorderRadius.circular(17),
+                  border: Border.all(color: ring ? context.cs.primary : Colors.transparent, width: 2),
                 ),
                 child: Container(
-                  width: 58,
-                  height: 58,
+                  width: 42,
+                  height: 42,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(13),
                     color: palette.bg,
                     gradient: g == null
                         ? null
@@ -373,7 +420,7 @@ class _ThemeSwatch extends StatelessWidget {
                       Icon(
                         selected ? Icons.check_rounded : Icons.favorite_rounded,
                         color: palette.text.withValues(alpha: selected ? 1 : 0.85),
-                        size: 24,
+                        size: 20,
                       ),
                       if (locked)
                         const Positioned(

@@ -420,51 +420,56 @@ class FakeHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Figma "widgets screen": lavender home screen, dark time + date on one
+    // line, and a frosted white dock with violet app icons on white tiles.
+    const ink = Color(0xFF1E1B3A);
+    const violet = Color(0xFF6A3DF0);
     Widget app(IconData i) => Container(
-      width: 42,
-      height: 42,
+      width: 40,
+      height: 40,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.28),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(13),
+        boxShadow: const [BoxShadow(color: Color(0x1A6A3DF0), blurRadius: 8, offset: Offset(0, 3))],
       ),
-      child: Icon(i, color: Colors.white, size: 21),
+      child: Icon(i, color: violet, size: 19),
     );
     final now = DateTime.now();
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 3),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.85), width: 3),
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFB9C6FF), Color(0xFFE7C6F5), Color(0xFFFFC2D4)],
+          colors: [Color(0xFFE2D6FF), Color(0xFFEBDCFD), Color(0xFFF6DCF3)],
         ),
-        boxShadow: const [BoxShadow(color: Color(0x261737E2), blurRadius: 30, offset: Offset(0, 14))],
+        boxShadow: const [BoxShadow(color: Color(0x2E6A3DF0), blurRadius: 26, offset: Offset(0, 14), spreadRadius: -8)],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Status bar.
-          Row(
-            children: [
-              Text(
-                DateFormat('H:mm').format(now),
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12),
-              ),
-              const Spacer(),
-              const Icon(Icons.signal_cellular_alt_rounded, color: Colors.white, size: 13),
-              const SizedBox(width: 3),
-              const Icon(Icons.wifi_rounded, color: Colors.white, size: 13),
-              const SizedBox(width: 3),
-              const Icon(Icons.battery_full_rounded, color: Colors.white, size: 13),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            DateFormat('EEEE, d MMMM').format(now),
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 11),
+          // Status line: time and date.
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Row(
+              children: [
+                Text(
+                  DateFormat('H:mm').format(now),
+                  style: const TextStyle(color: ink, fontWeight: FontWeight.w800, fontSize: 12),
+                ),
+                const SizedBox(width: 18),
+                Expanded(
+                  child: Text(
+                    DateFormat('EEEE, d MMMM').format(now),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: ink, fontWeight: FontWeight.w800, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 12),
           Row(
@@ -482,12 +487,12 @@ class FakeHomeScreen extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.22),
-              borderRadius: BorderRadius.circular(22),
+              color: Colors.white.withValues(alpha: 0.55),
+              borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,

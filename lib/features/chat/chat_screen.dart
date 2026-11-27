@@ -8,6 +8,7 @@ import 'package:closer_app/core/services/screen_guard.dart';
 import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:closer_app/core/ui/actions.dart';
 import 'package:closer_app/core/ui/components.dart';
+import 'package:closer_app/core/ui/soft_ui.dart';
 import 'package:closer_app/core/ui/voice.dart';
 import 'package:closer_app/features/chat/chat_heads.dart';
 import 'package:closer_app/features/chat/snap_widgets.dart';
@@ -100,43 +101,36 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
 
   Future<void> _pickTtl() async {
     final current = _ttl;
-    final picked = await showModalBottomSheet<ChatTtl>(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(Space.m, Space.m, Space.m, Space.xs),
-                child: Text('⏱️ Disappearing messages', style: ctx.tt.titleLarge),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(Space.m, 0, Space.m, Space.s),
-                child: Text(
-                  'For new messages, for both of you. Either of you can change it.',
-                  style: ctx.tt.bodySmall?.copyWith(color: ctx.cc.muted),
-                ),
-              ),
-              for (final t in ChatTtl.values)
-                ListTile(
-                  leading: Icon(
-                    t == ChatTtl.never
-                        ? Icons.timer_off_outlined
-                        : (t == ChatTtl.viewed ? Icons.visibility_outlined : Icons.timer_outlined),
-                    color: t == current ? ctx.cc.accent : null,
-                  ),
-                  title: Text(t == ChatTtl.fallback ? '${t.label} (default)' : t.label),
-                  subtitle: Text(t.description),
-                  trailing: t == current ? Icon(Icons.check_circle_rounded, color: ctx.cc.accent) : null,
-                  onTap: () => Navigator.pop(ctx, t),
-                ),
-            ],
-          ),
-        ),
+    // One colour per option, as in the Figma rows.
+    SoftTone toneFor(ChatTtl t) => switch (t) {
+      ChatTtl.viewed => SoftTone.blue,
+      ChatTtl.never => SoftTone.yellow,
+      _ when t == ChatTtl.fallback => SoftTone.pink,
+      _ => SoftTone.mint,
+    };
+    final picked = await showSoftSheet<ChatTtl>(
+      context,
+      header: const SoftSheetHeader(
+        icon: Icon(Icons.timer_outlined),
+        tone: SoftTone.pink,
+        title: 'Disappearing messages',
+        subtitle: 'For new messages, for both of you. Either of you can change it.',
       ),
+      children: [
+        for (final t in ChatTtl.values)
+          Builder(
+            builder: (ctx) => SoftOptionTile(
+              icon: t == ChatTtl.never
+                  ? Icons.timer_off_outlined
+                  : (t == ChatTtl.viewed ? Icons.visibility_outlined : Icons.timer_outlined),
+              tone: toneFor(t),
+              title: t == ChatTtl.fallback ? '${t.label} (default)' : t.label,
+              subtitle: t.description,
+              selected: t == current,
+              onTap: () => Navigator.pop(ctx, t),
+            ),
+          ),
+      ],
     );
     if (picked == null || picked == current || !mounted) return;
     final ok = await runAction(context, () => _backend.setChatTtl(picked));
@@ -205,25 +199,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
   }
 
   Future<void> _pickPhoto() async {
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_camera_rounded),
-              title: const Text('Camera'),
-              onTap: () => Navigator.pop(ctx, ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_rounded),
-              title: const Text('Gallery'),
-              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
-            ),
-          ],
-        ),
+    final source = await showSoftSheet<ImageSource>(
+      context,
+      header: SoftSheetHeader(
+        icon: const Icon(Icons.image_outlined),
+        title: 'Send a photo',
+        subtitle: 'It shows up in your chat with $_partnerName.',
       ),
+      children: _sourceOptions(),
     );
     if (source == null) return;
     final x = await ImagePicker().pickImage(source: source, maxWidth: 2000, maxHeight: 2000, imageQuality: 90);
@@ -234,29 +217,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
   }
 
   Future<void> _pickSnap() async {
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: Text('👻 Disappearing snap', style: ctx.tt.titleMedium),
-              subtitle: const Text('Opens once or twice, then it’s gone'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_camera_rounded),
-              title: const Text('Camera'),
-              onTap: () => Navigator.pop(ctx, ImageSource.camera),
-            ),
-            ListTile(
-              leading: const Icon(Icons.photo_library_rounded),
-              title: const Text('Gallery'),
-              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
-            ),
-          ],
-        ),
+    final source = await showSoftSheet<ImageSource>(
+      context,
+      header: SoftSheetHeader(
+        icon: CustomPaint(size: const Size(22, 24), painter: _GhostPainter(SoftTone.violet.icon)),
+        title: 'Disappearing snap',
+        subtitle: 'Opens once or twice, then it’s gone.',
       ),
+      children: _sourceOptions(),
     );
     if (source == null) return;
     final x = await ImagePicker().pickImage(source: source, maxWidth: 2000, maxHeight: 2000, imageQuality: 90);
@@ -265,6 +233,27 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     if (views == null || !mounted) return;
     await _send(ChatDraft(type: MessageType.snap, localPath: x.path, viewLimit: views, replyTo: _replyTo));
   }
+
+  /// Camera / Gallery choices shared by the photo and snap sheets.
+  List<Widget> _sourceOptions() => [
+    Builder(
+      builder: (ctx) => SoftOptionTile(
+        icon: Icons.photo_camera_outlined,
+        title: 'Camera',
+        subtitle: 'Take a new photo',
+        onTap: () => Navigator.pop(ctx, ImageSource.camera),
+      ),
+    ),
+    Builder(
+      builder: (ctx) => SoftOptionTile(
+        icon: Icons.photo_library_outlined,
+        tone: SoftTone.pink,
+        title: 'Gallery',
+        subtitle: 'Pick one from your photos',
+        onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+      ),
+    ),
+  ];
 
   Future<void> _openSnap(ChatMessage m, String? me, String name) async {
     if (m.senderId == me) {
@@ -308,19 +297,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     await prefs.setBool(ChatHeads.prefKey, true);
     if (!await ChatBubbles.areAllowed()) {
       if (!mounted) return;
-      final go = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Turn on chat heads'),
-          content: const Text(
+      final go = await showSoftDialog(
+        context,
+        icon: const Icon(Icons.bubble_chart_outlined),
+        title: 'Turn on chat heads',
+        body:
             'Allow Duosy to show bubbles so your chat floats over other apps. '
             'In the settings, choose “All conversations can bubble”.',
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Not now')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Open settings')),
-          ],
-        ),
+        ok: 'Open settings',
       );
       if (go ?? false) await ChatBubbles.openSettings();
       return;
@@ -474,73 +458,95 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     );
     ref.listen(messagesProvider, (_, _) => _markRead());
 
+    final dark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: !widget.inBubble,
-        titleSpacing: widget.inBubble ? Space.m : 0,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2),
-            child: ActionChip(
-              tooltip: 'Disappearing messages: ${ttl.label}',
-              avatar: Icon(
-                ttl == ChatTtl.never ? Icons.timer_off_outlined : Icons.timer_outlined,
-                size: 16,
-                color: context.cc.accent,
-              ),
-              label: Text(ttl.short),
-              visualDensity: VisualDensity.compact,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              shape: const StadiumBorder(),
-              onPressed: _pickTtl,
-            ),
-          ),
-          if (widget.inBubble)
-            IconButton(
-              tooltip: 'Open in Duosy',
-              icon: const Icon(Icons.open_in_full_rounded),
-              onPressed: () => launchUrl(Uri.parse('closer://chat'), mode: LaunchMode.externalApplication),
-            )
-          else if (_canPopOut)
-            IconButton(
-              tooltip: 'Pop out as a chat head',
-              icon: const Icon(Icons.bubble_chart_outlined),
-              onPressed: () => _popOut(name, partner?.photoUrl),
-            ),
-        ],
-        title: Row(
-          children: [
-            Avatar(name: partner?.displayName ?? name, photo: partner?.photoUrl, size: 36),
-            const SizedBox(width: Space.s),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(name, style: context.tt.titleMedium, overflow: TextOverflow.ellipsis),
-                  AnimatedSwitcher(
-                    duration: 200.ms,
-                    child: typing
-                        ? Text(
-                            'typing…',
-                            key: const ValueKey('t'),
-                            style: context.tt.bodySmall?.copyWith(color: context.cc.accent),
-                          )
-                        : partner?.mood != null
-                        ? Text(
-                            '${partner!.mood!.emoji} ${partner.mood!.label}',
-                            key: const ValueKey('m'),
-                            style: context.tt.bodySmall?.copyWith(color: context.cc.muted),
-                          )
-                        : const SizedBox.shrink(key: ValueKey('n')),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
       body: Column(
         children: [
+          // Floating white header pill (Figma "chat screen").
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+              child: Container(
+                padding: EdgeInsets.fromLTRB(widget.inBubble ? 14 : 8, 8, 8, 8),
+                decoration: BoxDecoration(
+                  color: context.cc.card,
+                  borderRadius: BorderRadius.circular(999),
+                  boxShadow: dark ? null : _floatShadow,
+                ),
+                child: Row(
+                  children: [
+                    if (!widget.inBubble) ...[
+                      _RoundIconButton(
+                        icon: Icons.arrow_back_rounded,
+                        tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                        onTap: () => Navigator.of(context).maybePop(),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    Avatar(name: partner?.displayName ?? name, photo: partner?.photoUrl, size: 42),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: context.tt.titleLarge?.copyWith(fontSize: 19, height: 1.1),
+                          ),
+                          AnimatedSwitcher(
+                            duration: 200.ms,
+                            child: typing
+                                ? Text(
+                                    'typing…',
+                                    key: const ValueKey('t'),
+                                    style: context.tt.bodySmall?.copyWith(
+                                      color: context.cs.primary,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  )
+                                : partner?.mood != null
+                                ? Text(
+                                    '${partner!.mood!.emoji} ${partner.mood!.label}',
+                                    key: const ValueKey('m'),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: context.tt.bodySmall?.copyWith(
+                                      color: context.cc.muted,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  )
+                                : const SizedBox.shrink(key: ValueKey('n')),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    _TtlChip(ttl: ttl, onTap: _pickTtl),
+                    if (widget.inBubble) ...[
+                      const SizedBox(width: 6),
+                      _RoundIconButton(
+                        icon: Icons.open_in_full_rounded,
+                        tooltip: 'Open in Duosy',
+                        onTap: () => launchUrl(Uri.parse('closer://chat'), mode: LaunchMode.externalApplication),
+                      ),
+                    ] else if (_canPopOut) ...[
+                      const SizedBox(width: 6),
+                      _RoundIconButton(
+                        icon: Icons.bubble_chart_outlined,
+                        tooltip: 'Pop out as a chat head',
+                        onTap: () => _popOut(name, partner?.photoUrl),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
           Expanded(
             child: messages.isEmpty
                 ? EmptyState(
@@ -550,7 +556,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
                   )
                 : ListView.builder(
                     reverse: true,
-                    padding: const EdgeInsets.fromLTRB(Space.s + 4, Space.s, Space.s + 4, Space.s),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                     itemCount: messages.length + (typing ? 1 : 0) + 1,
                     itemBuilder: (context, i) {
                       if (typing && i == 0) return const _TypingBubble();
@@ -592,8 +598,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
           ),
           if (_replyTo != null)
             Container(
-              color: context.cc.card,
-              padding: const EdgeInsets.fromLTRB(Space.m, Space.s, Space.xs, 0),
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              padding: const EdgeInsets.fromLTRB(14, 8, 4, 8),
+              decoration: BoxDecoration(
+                color: context.cc.card,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: dark ? null : _floatShadow,
+              ),
               child: Row(
                 children: [
                   Container(width: 3, height: 36, color: context.cc.accent),
@@ -623,28 +634,36 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
                 ],
               ),
             ),
-          Material(
-            color: context.cc.card,
-            child: SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(Space.xs, Space.xs, Space.xs, Space.xs),
+          // Floating white composer pill (Figma): photo + ghost icons,
+          // lavender field and a solid violet mic / send button.
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: context.cc.card,
+                  borderRadius: BorderRadius.circular(32),
+                  boxShadow: dark ? null : _floatShadow,
+                ),
                 child: _recording
                     ? RecordingBar(recorder: _recorder, onCancel: _cancelRecording, onDone: _finishRecording)
                     : Row(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
-                          IconButton(
+                          _ComposerIcon(
                             tooltip: 'Send a photo',
-                            icon: const Icon(Icons.add_photo_alternate_rounded),
-                            onPressed: _sending ? null : _pickPhoto,
+                            onTap: _sending ? null : _pickPhoto,
+                            child: Icon(Icons.image_outlined, color: context.cs.primary, size: 23),
                           ),
                           if (_text.text.trim().isEmpty)
-                            IconButton(
+                            _ComposerIcon(
                               tooltip: 'Send a disappearing snap',
-                              icon: const Text('👻', style: TextStyle(fontSize: 20)),
-                              onPressed: _sending ? null : _pickSnap,
+                              onTap: _sending ? null : _pickSnap,
+                              child: CustomPaint(size: const Size(20, 22), painter: _GhostPainter(context.cs.primary)),
                             ),
+                          const SizedBox(width: 4),
                           Expanded(
                             child: TextField(
                               controller: _text,
@@ -653,38 +672,49 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
                               maxLines: 5,
                               maxLength: ChatMessage.maxText,
                               textCapitalization: TextCapitalization.sentences,
+                              style: context.tt.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
                               decoration: InputDecoration(
                                 hintText: 'Message $name',
+                                hintStyle: context.tt.bodyLarge?.copyWith(
+                                  color: context.cc.muted,
+                                  fontWeight: FontWeight.w600,
+                                ),
                                 counterText: '',
                                 isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(24),
+                                  borderRadius: BorderRadius.circular(26),
+                                  borderSide: BorderSide.none,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(26),
+                                  borderSide: BorderSide.none,
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(26),
                                   borderSide: BorderSide.none,
                                 ),
                                 filled: true,
+                                fillColor: dark ? context.cs.surfaceContainerHigh : const Color(0xFFF1EDFF),
                               ),
                             ),
                           ),
-                          const SizedBox(width: 4),
-                          if (_text.text.trim().isEmpty)
-                            IconButton.filledTonal(
-                              tooltip: 'Record a voice message',
-                              icon: const Icon(Icons.mic_rounded),
-                              onPressed: _sending ? null : _startRecording,
-                            )
-                          else
-                            IconButton.filled(
-                              tooltip: 'Send',
-                              icon: _sending
-                                  ? const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                    )
-                                  : const Icon(Icons.send_rounded),
-                              onPressed: _sending ? null : _sendText,
-                            ),
+                          const SizedBox(width: 6),
+                          _SendCircle(
+                            tooltip: _text.text.trim().isEmpty ? 'Record a voice message' : 'Send',
+                            onTap: _sending ? null : (_text.text.trim().isEmpty ? _startRecording : _sendText),
+                            child: _sending && _text.text.trim().isNotEmpty
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  )
+                                : Icon(
+                                    _text.text.trim().isEmpty ? Icons.mic_none_rounded : Icons.send_rounded,
+                                    color: Colors.white,
+                                    size: 23,
+                                  ),
+                          ),
                         ],
                       ),
               ),
@@ -713,12 +743,18 @@ class _DaySeparator extends StatelessWidget {
         ? 'Yesterday'
         : DateFormat(day.year == now.year ? 'EEEE d MMMM' : 'd MMMM yyyy').format(day);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: Space.s),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       child: Center(
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
           decoration: BoxDecoration(color: context.cc.card, borderRadius: BorderRadius.circular(999)),
-          child: Text(label, style: context.tt.labelSmall?.copyWith(color: context.cc.muted)),
+          child: Text(
+            label,
+            style: context.tt.labelSmall?.copyWith(
+              color: context.cs.onSurface.withValues(alpha: 0.75),
+              fontWeight: FontWeight.w800,
+            ),
+          ),
         ),
       ),
     );
@@ -795,10 +831,25 @@ class _TtlBanner extends StatelessWidget {
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            child: Text(
-              '⏱️ $text',
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.middle,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 5),
+                      child: Icon(
+                        ttl == ChatTtl.never ? Icons.timer_off_outlined : Icons.timer_outlined,
+                        size: 15,
+                        color: context.cc.muted,
+                      ),
+                    ),
+                  ),
+                  TextSpan(text: text),
+                ],
+              ),
               textAlign: TextAlign.center,
-              style: context.tt.labelSmall?.copyWith(color: context.cc.muted),
+              style: context.tt.labelMedium?.copyWith(color: context.cc.muted, fontWeight: FontWeight.w700),
             ),
           ),
         ),
@@ -883,7 +934,7 @@ class _TypingBubble extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(color: context.cc.card, borderRadius: BorderRadius.circular(18)),
+        decoration: BoxDecoration(color: context.cc.card, borderRadius: BorderRadius.circular(22)),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -938,12 +989,9 @@ class _BubbleState extends State<_Bubble> {
     final m = widget.message;
     final mine = widget.mine;
     final fg = mine ? Colors.white : context.cs.onSurface;
-    final radius = BorderRadius.only(
-      topLeft: const Radius.circular(18),
-      topRight: const Radius.circular(18),
-      bottomLeft: Radius.circular(!mine && widget.tail ? 4 : 18),
-      bottomRight: Radius.circular(mine && widget.tail ? 4 : 18),
-    );
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    // Figma: fully rounded bubbles, no tail.
+    final radius = BorderRadius.circular(22);
     final time = DateFormat('HH:mm').format(m.createdAt);
 
     Widget content;
@@ -954,7 +1002,10 @@ class _BubbleState extends State<_Bubble> {
       );
     } else {
       content = switch (m.type) {
-        MessageType.text => Text(m.text, style: context.tt.bodyLarge?.copyWith(color: fg, height: 1.3)),
+        MessageType.text => Text(
+          m.text,
+          style: context.tt.bodyLarge?.copyWith(color: fg, height: 1.3, fontWeight: FontWeight.w700),
+        ),
         MessageType.voice => VoicePlayer(
           mediaPath: m.mediaPath,
           durationMs: m.durationMs,
@@ -989,14 +1040,20 @@ class _BubbleState extends State<_Bubble> {
       constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.75),
       padding: m.type == MessageType.photo && !m.isDeleted
           ? const EdgeInsets.all(4)
-          : const EdgeInsets.fromLTRB(14, 9, 14, 9),
+          : const EdgeInsets.fromLTRB(16, 11, 16, 11),
       decoration: BoxDecoration(
         borderRadius: radius,
-        color: mine ? null : context.cc.card,
-        gradient: mine
-            ? LinearGradient(colors: context.cc.gradient, begin: Alignment.topLeft, end: Alignment.bottomRight)
-            : null,
-        boxShadow: const [BoxShadow(color: Color(0x0F000000), blurRadius: 4, offset: Offset(0, 1))],
+        color: mine ? Brand.royal : context.cc.card,
+        boxShadow: dark
+            ? null
+            : [
+                BoxShadow(
+                  color: mine ? const Color(0x336A3DF0) : const Color(0x146A3DF0),
+                  blurRadius: 14,
+                  offset: const Offset(0, 5),
+                  spreadRadius: -4,
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1052,7 +1109,7 @@ class _BubbleState extends State<_Bubble> {
       child: AnimatedContainer(
         duration: _drag == 0 ? 200.ms : Duration.zero,
         transform: Matrix4.translationValues(_drag, 0, 0),
-        padding: EdgeInsets.only(top: 2, bottom: widget.tail ? 6 : 1),
+        padding: EdgeInsets.only(top: 2, bottom: widget.tail ? 10 : 2),
         child: Column(
           crossAxisAlignment: mine ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
@@ -1082,17 +1139,31 @@ class _BubbleState extends State<_Bubble> {
             ),
             if (widget.tail)
               Padding(
-                padding: const EdgeInsets.only(top: 2, left: 4, right: 4),
+                padding: const EdgeInsets.only(top: 4, left: 4, right: 4),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(time, style: context.tt.labelSmall?.copyWith(color: context.cc.muted, fontSize: 10)),
+                    Text(
+                      time,
+                      style: context.tt.labelSmall?.copyWith(
+                        color: context.cs.onSurface.withValues(alpha: 0.7),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     if (mine && m.pending) ...[
                       const SizedBox(width: 3),
                       Icon(Icons.schedule_rounded, size: 11, color: context.cc.muted),
                     ] else if (mine && widget.seen) ...[
-                      const SizedBox(width: 4),
-                      Text('Seen', style: context.tt.labelSmall?.copyWith(color: context.cc.accent, fontSize: 10)),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Seen',
+                        style: context.tt.labelSmall?.copyWith(
+                          color: const Color(0xFFC2185B),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                     ],
                   ],
                 ),
@@ -1119,4 +1190,165 @@ class _BubbleState extends State<_Bubble> {
         )
         .ignore();
   }
+}
+
+/// Soft violet shadow under the floating header and composer pills.
+const _floatShadow = [BoxShadow(color: Color(0x266A3DF0), blurRadius: 24, offset: Offset(0, 10), spreadRadius: -6)];
+
+/// Lavender round button in the header (back, pop-out).
+class _RoundIconButton extends StatelessWidget {
+  const _RoundIconButton({required this.icon, required this.tooltip, required this.onTap});
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: dark ? context.cs.surfaceContainerHigh : const Color(0xFFF1EDFF),
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: SizedBox(width: 42, height: 42, child: Icon(icon, size: 21, color: context.cs.primary)),
+        ),
+      ),
+    );
+  }
+}
+
+/// Pink "⏱ 24h" chip: the disappearing-messages setting.
+class _TtlChip extends StatelessWidget {
+  const _TtlChip({required this.ttl, required this.onTap});
+
+  final ChatTtl ttl;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    const ink = Color(0xFFC2185B);
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Tooltip(
+      message: 'Disappearing messages: ${ttl.label}',
+      child: Material(
+        color: dark ? ink.withValues(alpha: 0.22) : const Color(0xFFFFE3F0),
+        shape: const StadiumBorder(),
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  ttl == ChatTtl.never ? Icons.timer_off_outlined : Icons.timer_outlined,
+                  size: 17,
+                  color: dark ? const Color(0xFFFF9CCB) : ink,
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  ttl.short,
+                  style: context.tt.labelLarge?.copyWith(
+                    color: dark ? const Color(0xFFFF9CCB) : ink,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Plain icon button inside the composer pill.
+class _ComposerIcon extends StatelessWidget {
+  const _ComposerIcon({required this.tooltip, required this.onTap, required this.child});
+
+  final String tooltip;
+  final VoidCallback? onTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: Opacity(
+          opacity: onTap == null ? 0.4 : 1,
+          child: SizedBox(width: 44, height: 48, child: Center(child: child)),
+        ),
+      ),
+    );
+  }
+}
+
+/// Solid violet circle: record a voice message, or send.
+class _SendCircle extends StatelessWidget {
+  const _SendCircle({required this.tooltip, required this.onTap, required this.child});
+
+  final String tooltip;
+  final VoidCallback? onTap;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: onTap == null ? Brand.royal.withValues(alpha: 0.5) : Brand.royal,
+        shape: const CircleBorder(),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: SizedBox(width: 48, height: 48, child: Center(child: child)),
+        ),
+      ),
+    );
+  }
+}
+
+/// Outline ghost (Figma's snap icon): domed head, wavy hem, two eyes.
+class _GhostPainter extends CustomPainter {
+  const _GhostPainter(this.color);
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final stroke = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.9
+      ..strokeJoin = StrokeJoin.round
+      ..strokeCap = StrokeCap.round;
+    final body = Path()
+      ..moveTo(w * 0.1, h * 0.92)
+      ..lineTo(w * 0.1, h * 0.45)
+      ..arcToPoint(Offset(w * 0.9, h * 0.45), radius: Radius.circular(w * 0.4))
+      ..lineTo(w * 0.9, h * 0.92)
+      ..quadraticBezierTo(w * 0.8, h * 0.8, w * 0.7, h * 0.92)
+      ..quadraticBezierTo(w * 0.6, h * 0.8, w * 0.5, h * 0.92)
+      ..quadraticBezierTo(w * 0.4, h * 0.8, w * 0.3, h * 0.92)
+      ..quadraticBezierTo(w * 0.2, h * 0.8, w * 0.1, h * 0.92)
+      ..close();
+    canvas.drawPath(body, stroke);
+    final eye = Paint()..color = color;
+    canvas
+      ..drawCircle(Offset(w * 0.37, h * 0.43), w * 0.065, eye)
+      ..drawCircle(Offset(w * 0.63, h * 0.43), w * 0.065, eye);
+  }
+
+  @override
+  bool shouldRepaint(_GhostPainter old) => old.color != color;
 }

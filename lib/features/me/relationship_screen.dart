@@ -4,7 +4,7 @@ import 'package:closer_app/core/services/widget_bridge.dart';
 import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:closer_app/core/ui/actions.dart';
 import 'package:closer_app/core/ui/components.dart';
-import 'package:closer_app/features/onboarding/pairing_screens.dart' show RelationLabelChips;
+import 'package:closer_app/core/ui/soft_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -38,7 +38,9 @@ class _RelationshipScreenState extends ConsumerState<RelationshipScreen> {
   }) async {
     final ok = await runAction(
       context,
-      () => ref.read(backendProvider).updateRelationship(
+      () => ref
+          .read(backendProvider)
+          .updateRelationship(
             mode: mode,
             anniversary: anniversary,
             clearAnniversary: clearAnniversary,
@@ -58,7 +60,8 @@ class _RelationshipScreenState extends ConsumerState<RelationshipScreen> {
     final yes = await confirm(
       context,
       title: toCouple ? 'Switch to couple?' : 'Switch to best friends?',
-      body: 'This changes it for both of you: colours, question packs and how the app talks about you two. '
+      body:
+          'This changes it for both of you: colours, question packs and how the app talks about you two. '
           '$partnerName will see the change too.',
       ok: 'Switch',
     );
@@ -84,7 +87,9 @@ class _RelationshipScreenState extends ConsumerState<RelationshipScreen> {
     final couple = pair.mode == PairMode.couple;
     final ok = await runAction(
       context,
-      () => ref.read(backendProvider).saveCountdown(
+      () => ref
+          .read(backendProvider)
+          .saveCountdown(
             Countdown(
               id: '',
               title: couple ? 'Our anniversary' : 'Our friendiversary',
@@ -106,7 +111,10 @@ class _RelationshipScreenState extends ConsumerState<RelationshipScreen> {
     final myLabel = ref.watch(myLabelForPartnerProvider);
     final theirLabel = ref.watch(partnerLabelForMeProvider);
     if (pair == null || me == null) {
-      return Scaffold(appBar: AppBar(title: const Text('Relationship')), body: const Center(child: CircularProgressIndicator()));
+      return Scaffold(
+        appBar: AppBar(title: const Text('Relationship')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
     }
     final realName = (partner?.displayName.isNotEmpty ?? false) ? partner!.displayName : 'your person';
     final nick = pair.nicknames[me.uid] ?? '';
@@ -117,193 +125,250 @@ class _RelationshipScreenState extends ConsumerState<RelationshipScreen> {
     final couple = pair.mode == PairMode.couple;
     final days = pair.daysTogether(DateTime.now());
     final countdowns = ref.watch(countdownsProvider).value ?? const <Countdown>[];
-    final hasAnnivCountdown = countdowns.any((c) => c.repeatsYearly && pair.anniversary != null &&
-        c.date.month == pair.anniversary!.month && c.date.day == pair.anniversary!.day);
+    final hasAnnivCountdown = countdowns.any(
+      (c) =>
+          c.repeatsYearly &&
+          pair.anniversary != null &&
+          c.date.month == pair.anniversary!.month &&
+          c.date.day == pair.anniversary!.day,
+    );
+
+    final shownName = nick.isNotEmpty ? nick : realName;
+    final dark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Relationship')),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(Space.m, 0, Space.m, Space.xl),
+        padding: const EdgeInsets.only(bottom: Space.xl),
         children: [
           // ------------------------------------------------------ header
-          CloserCard(
-            gradient: LinearGradient(colors: context.cc.gradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
-            padding: const EdgeInsets.all(Space.l),
+          VioletPageHeader(
+            title: 'Relationship',
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 18),
+              decoration: BoxDecoration(
+                color: context.cc.card,
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: dark ? null : softCardShadow,
+              ),
+              child: Column(
+                children: [
+                  AvatarPair(
+                    me: me.displayName,
+                    partner: realName,
+                    mePhoto: me.photoUrl,
+                    partnerPhoto: partner?.photoUrl,
+                    size: 56,
+                    ring: context.cc.card,
+                  ),
+                  const SizedBox(height: 12),
+                  Text('You & $shownName', style: context.tt.titleLarge?.copyWith(fontSize: 24)),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.favorite_border_rounded, size: 14, color: context.cc.muted),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          [
+                            if (myLabel != null) myLabel.title else (couple ? 'Couple' : 'Best friends'),
+                            if (days != null)
+                              '${couple ? 'together' : 'friends'} for $days day${days == 1 ? '' : 's'}'
+                            else
+                              'connected ${DateFormat('d MMM yyyy').format(pair.pairedAt)}',
+                          ].join(' · '),
+                          textAlign: TextAlign.center,
+                          style: context.tt.bodySmall?.copyWith(color: context.cc.muted),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                AvatarPair(
-                  me: me.displayName,
-                  partner: realName,
-                  mePhoto: me.photoUrl,
-                  partnerPhoto: partner?.photoUrl,
-                  size: 64,
-                ),
-                const SizedBox(height: Space.m),
-                Text(
-                  'You & ${nick.isNotEmpty ? nick : realName}',
-                  style: context.tt.titleLarge?.copyWith(color: Colors.white),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  [
-                    if (myLabel != null) '${myLabel.emoji} ${myLabel.title}' else (couple ? '💑 Couple' : '👯 Best friends'),
-                    if (days != null) '${couple ? 'together' : 'friends'} for $days day${days == 1 ? '' : 's'}'
-                    else 'connected ${DateFormat('d MMM yyyy').format(pair.pairedAt)}',
-                  ].join(' · '),
-                  textAlign: TextAlign.center,
-                  style: context.tt.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: 0.9)),
-                ),
-              ],
-            ),
-          ),
-
-          // ------------------------------------------------- type
-          const SectionHeader('Relationship type'),
-          Row(
-            children: [
-              Expanded(
-                child: _TypeTile(
-                  emoji: '💑',
-                  title: 'Couple',
-                  selected: couple,
-                  color: Brand.pink,
-                  onTap: () => _changeMode(pair, PairMode.couple, realName),
-                ),
-              ),
-              const SizedBox(width: Space.m),
-              Expanded(
-                child: _TypeTile(
-                  emoji: '👯',
-                  title: 'Best friends',
-                  selected: !couple,
-                  color: Brand.purple,
-                  onTap: () => _changeMode(pair, PairMode.friends, realName),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: Space.s),
-          Text(
-            'Shared with $realName. It sets the colours, the question packs and how Duosy talks about you two.',
-            style: context.tt.bodySmall?.copyWith(color: context.cc.muted),
-          ),
-
-          // ------------------------------------------------- labels
-          SectionHeader('$realName is my…'),
-          RelationLabelChips(
-            mode: pair.mode,
-            selected: myLabel?.id,
-            onSelected: (id) {
-              if (id != myLabel?.id) _update(label: id, done: 'Saved');
-            },
-          ),
-          const SizedBox(height: Space.s),
-          Text(
-            theirLabel == null
-                ? '$realName hasn’t picked what you are to them yet.'
-                : '$realName calls you their ${theirLabel.title.toLowerCase()} ${theirLabel.emoji}',
-            style: context.tt.bodySmall?.copyWith(color: context.cc.muted),
-          ),
-
-          // ----------------------------------------------- nickname
-          const SectionHeader('Nickname'),
-          TextField(
-            controller: _nick,
-            maxLength: 24,
-            textCapitalization: TextCapitalization.words,
-            decoration: InputDecoration(
-              labelText: 'What do you call $realName?',
-              hintText: couple ? 'Babe, Sunshine, Honey…' : 'Bestie, Partner in crime…',
-              suffixIcon: nick.isEmpty
-                  ? null
-                  : IconButton(
-                      tooltip: 'Remove nickname',
-                      icon: const Icon(Icons.close_rounded),
-                      onPressed: () {
-                        _nick.clear();
-                        _update(nickname: '', done: 'Nickname removed');
-                      },
+                // ------------------------------------------------- type
+                const PageSectionTitle('Relationship type'),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _TypeTile(
+                        icon: Icons.favorite_border_rounded,
+                        tone: SoftTone.violet,
+                        title: 'Couple',
+                        selected: couple,
+                        onTap: () => _changeMode(pair, PairMode.couple, realName),
+                      ),
                     ),
-            ),
-            onChanged: (_) => setState(() {}),
-            onSubmitted: (v) => _update(nickname: v, done: 'Nickname saved'),
-          ),
-          if (_nick.text.trim() != nick)
-            Align(
-              alignment: Alignment.centerRight,
-              child: FilledButton(
-                onPressed: () {
-                  FocusScope.of(context).unfocus();
-                  _update(nickname: _nick.text, done: 'Nickname saved');
-                },
-                child: const Text('Save nickname'),
-              ),
-            ),
-          Text(
-            'Only you see it. It replaces their name in your app and on your widget.',
-            style: context.tt.bodySmall?.copyWith(color: context.cc.muted),
-          ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _TypeTile(
+                        icon: Icons.people_outline_rounded,
+                        tone: SoftTone.mint,
+                        title: 'Best friends',
+                        selected: !couple,
+                        onTap: () => _changeMode(pair, PairMode.friends, realName),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: Space.s),
+                _Hint(
+                  'Shared with $realName. It sets the colours, the question packs and how Duosy talks about you two.',
+                ),
 
-          // ------------------------------------------- anniversary
-          SectionHeader(couple ? 'Together since' : 'Friends since'),
-          CloserCard(
-            onTap: () => _pickDate(pair),
-            child: Row(
-              children: [
-                const Icon(Icons.favorite_border_rounded),
-                const SizedBox(width: Space.m),
-                Expanded(
-                  child: Text(
-                    pair.anniversary == null ? 'Add the date you got together' : DateFormat('EEEE d MMMM yyyy').format(pair.anniversary!),
-                    style: context.tt.titleMedium,
+                // ------------------------------------------------- labels
+                PageSectionTitle('$realName is my…'),
+                _LabelChips(
+                  mode: pair.mode,
+                  selected: myLabel?.id,
+                  onSelected: (id) {
+                    if (id != myLabel?.id) _update(label: id, done: 'Saved');
+                  },
+                ),
+                const SizedBox(height: Space.s),
+                _Hint(
+                  theirLabel == null
+                      ? '$realName hasn’t picked what you are to them yet.'
+                      : '$realName calls you their ${theirLabel.title.toLowerCase()} ${theirLabel.emoji}',
+                ),
+
+                // ----------------------------------------------- nickname
+                const PageSectionTitle('Nickname'),
+                TextField(
+                  controller: _nick,
+                  maxLength: 24,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: softFieldDecoration(
+                    context,
+                    hint: 'What do you call $realName?',
+                    max: 24,
+                    length: _nick.text.length,
+                    clear: nick.isEmpty
+                        ? null
+                        : IconButton(
+                            tooltip: 'Remove nickname',
+                            icon: const Icon(Icons.close_rounded),
+                            onPressed: () {
+                              _nick.clear();
+                              _update(nickname: '', done: 'Nickname removed');
+                            },
+                          ),
+                  ),
+                  onChanged: (_) => setState(() {}),
+                  onSubmitted: (v) => _update(nickname: v, done: 'Nickname saved'),
+                ),
+                if (_nick.text.trim() != nick)
+                  Padding(
+                    padding: const EdgeInsets.only(top: Space.s),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: FilledButton(
+                        onPressed: () {
+                          FocusScope.of(context).unfocus();
+                          _update(nickname: _nick.text, done: 'Nickname saved');
+                        },
+                        child: const Text('Save nickname'),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: Space.s),
+                const _Hint('Only you see it. It replaces their name in your app and on your widget.'),
+
+                // ------------------------------------------- anniversary
+                PageSectionTitle(couple ? 'Together since' : 'Friends since'),
+                _ToneCard(
+                  tone: SoftTone.mint,
+                  onTap: () => _pickDate(pair),
+                  child: Row(
+                    children: [
+                      const IconTile(icon: Icons.favorite_border_rounded, tone: SoftTone.mint),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          pair.anniversary == null
+                              ? 'Add the date you got together'
+                              : DateFormat('EEEE d MMMM yyyy').format(pair.anniversary!),
+                          style: context.tt.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                      if (pair.anniversary != null)
+                        IconButton(
+                          tooltip: 'Remove date',
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () => _update(clearAnniversary: true, done: 'Date removed'),
+                        )
+                      else
+                        const Padding(
+                          padding: EdgeInsets.only(right: 4),
+                          child: Icon(Icons.calendar_today_outlined, size: 20),
+                        ),
+                    ],
                   ),
                 ),
-                if (pair.anniversary != null)
-                  IconButton(
-                    tooltip: 'Remove date',
-                    icon: const Icon(Icons.close_rounded),
-                    onPressed: () => _update(clearAnniversary: true, done: 'Date removed'),
-                  )
-                else
-                  const Icon(Icons.edit_calendar_rounded),
+                if (pair.anniversary != null && !hasAnnivCountdown) ...[
+                  const SizedBox(height: Space.s),
+                  CloserButton(
+                    label: couple ? 'Count down to our anniversary' : 'Count down to our friendiversary',
+                    icon: Icons.event_repeat_rounded,
+                    kind: CloserButtonKind.secondary,
+                    onPressed: () => _addAnniversaryCountdown(pair),
+                  ),
+                ],
+                const SizedBox(height: Space.s),
+                _Hint('Connected in Duosy on ${DateFormat('d MMMM yyyy').format(pair.pairedAt)}.'),
+
+                // ---------------------------------------------- unpair
+                const PageSectionTitle('Connection'),
+                _ToneCard(
+                  tone: SoftTone.red,
+                  onTap: () async {
+                    final yes = await confirm(
+                      context,
+                      title: 'Unpair from $realName?',
+                      body:
+                          'Your shared memories, questions, countdowns and plant will be deleted. '
+                          'You can export memories first in Privacy & data. $realName will be notified.',
+                      ok: 'Unpair',
+                      destructive: true,
+                    );
+                    if (!yes || !context.mounted) return;
+                    final ok = await runAction(context, ref.read(backendProvider).unpair);
+                    if (ok) await WidgetBridge.clear();
+                  },
+                  child: Row(
+                    children: [
+                      const IconTile(icon: Icons.link_off_rounded, tone: SoftTone.red),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Unpair from $realName',
+                              style: context.tt.titleSmall?.copyWith(
+                                color: SoftTone.red.icon,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Deletes your shared memories, questions, countdowns and plant',
+                              style: context.tt.bodySmall?.copyWith(color: context.cc.muted),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
-          ),
-          if (pair.anniversary != null && !hasAnnivCountdown) ...[
-            const SizedBox(height: Space.s),
-            CloserButton(
-              label: couple ? 'Count down to our anniversary' : 'Count down to our friendiversary',
-              icon: Icons.event_repeat_rounded,
-              kind: CloserButtonKind.secondary,
-              onPressed: () => _addAnniversaryCountdown(pair),
-            ),
-          ],
-          const SizedBox(height: Space.s),
-          Text(
-            'Connected in Duosy on ${DateFormat('d MMMM yyyy').format(pair.pairedAt)}.',
-            style: context.tt.bodySmall?.copyWith(color: context.cc.muted),
-          ),
-
-          // ---------------------------------------------- unpair
-          const SectionHeader('Connection'),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.link_off_rounded, color: context.cs.error),
-            title: Text('Unpair from $realName', style: TextStyle(color: context.cs.error)),
-            subtitle: const Text('Deletes your shared memories, questions, countdowns and plant'),
-            onTap: () async {
-              final yes = await confirm(
-                context,
-                title: 'Unpair from $realName?',
-                body: 'Your shared memories, questions, countdowns and plant will be deleted. '
-                    'You can export memories first in Privacy & data. $realName will be notified.',
-                ok: 'Unpair',
-                destructive: true,
-              );
-              if (!yes || !context.mounted) return;
-              final ok = await runAction(context, ref.read(backendProvider).unpair);
-              if (ok) await WidgetBridge.clear();
-            },
           ),
         ],
       ),
@@ -311,19 +376,74 @@ class _RelationshipScreenState extends ConsumerState<RelationshipScreen> {
   }
 }
 
-class _TypeTile extends StatelessWidget {
-  const _TypeTile({
-    required this.emoji,
-    required this.title,
-    required this.selected,
-    required this.color,
-    required this.onTap,
-  });
+/// Muted helper line under a section.
+class _Hint extends StatelessWidget {
+  const _Hint(this.text);
 
-  final String emoji;
-  final String title;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(text, style: context.tt.bodySmall?.copyWith(color: context.cc.muted));
+  }
+}
+
+/// Tinted rounded card (Figma: mint "Together since", pink "Unpair").
+class _ToneCard extends StatelessWidget {
+  const _ToneCard({required this.tone, required this.child, this.onTap});
+
+  final SoftTone tone;
+  final Widget child;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: tone.fill(context),
+      borderRadius: BorderRadius.circular(Radii.card),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(Radii.card),
+        onTap: onTap,
+        child: Padding(padding: const EdgeInsets.all(14), child: child),
+      ),
+    );
+  }
+}
+
+/// "Sam is my…" labels as tinted pills, one colour per label.
+class _LabelChips extends StatelessWidget {
+  const _LabelChips({required this.mode, required this.selected, required this.onSelected});
+
+  final PairMode mode;
+  final String? selected;
+  final ValueChanged<String> onSelected;
+
+  static const _tones = [SoftTone.pink, SoftTone.blue, SoftTone.pink, SoftTone.yellow, SoftTone.mint, SoftTone.violet];
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final (i, l) in RelationLabel.forMode(mode).indexed)
+          _LabelPill(
+            label: '${l.emoji} ${l.title}',
+            tone: _tones[i % _tones.length],
+            selected: selected == l.id,
+            onTap: () => onSelected(l.id),
+          ),
+      ],
+    );
+  }
+}
+
+class _LabelPill extends StatelessWidget {
+  const _LabelPill({required this.label, required this.tone, required this.selected, required this.onTap});
+
+  final String label;
+  final SoftTone tone;
   final bool selected;
-  final Color color;
   final VoidCallback onTap;
 
   @override
@@ -331,22 +451,94 @@ class _TypeTile extends StatelessWidget {
     return Semantics(
       button: true,
       selected: selected,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(Radii.tile),
+      child: Material(
+        color: tone.fill(context),
+        shape: StadiumBorder(side: BorderSide(color: selected ? tone.icon : Colors.transparent, width: 1.6)),
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (selected) ...[Icon(Icons.check_rounded, size: 16, color: tone.icon), const SizedBox(width: 4)],
+                Text(label, style: context.tt.labelLarge?.copyWith(fontWeight: FontWeight.w700)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Couple / Best friends choice: white card with an icon badge; the chosen
+/// one is violet-tinted with a check in the corner.
+class _TypeTile extends StatelessWidget {
+  const _TypeTile({
+    required this.icon,
+    required this.tone,
+    required this.title,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final SoftTone tone;
+  final String title;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final accent = context.cs.primary;
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(vertical: Space.m),
+          padding: const EdgeInsets.symmetric(vertical: 18),
           decoration: BoxDecoration(
-            color: selected ? color.withValues(alpha: 0.12) : context.cc.card,
-            borderRadius: BorderRadius.circular(Radii.tile),
-            border: Border.all(color: selected ? color : context.cs.outlineVariant, width: 2),
+            color: selected ? SoftTone.violet.fill(context) : context.cc.card,
+            borderRadius: BorderRadius.circular(Radii.card),
+            border: Border.all(color: selected ? accent : Colors.transparent, width: 2),
+            boxShadow: dark || selected ? null : softCardShadow,
           ),
-          child: Column(
+          child: Stack(
+            clipBehavior: Clip.none,
             children: [
-              Text(emoji, style: const TextStyle(fontSize: 32)),
-              const SizedBox(height: 4),
-              Text(title, style: context.tt.titleSmall),
+              Center(
+                child: Column(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: selected ? context.cc.card : tone.fill(context),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(icon, size: 22, color: selected ? accent : tone.icon),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(title, style: context.tt.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+                  ],
+                ),
+              ),
+              if (selected)
+                Positioned(
+                  top: -8,
+                  right: 10,
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
+                    child: const Icon(Icons.check_rounded, size: 15, color: Colors.white),
+                  ),
+                ),
             ],
           ),
         ),

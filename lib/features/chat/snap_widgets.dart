@@ -6,6 +6,7 @@ import 'package:closer_app/core/data/closer_backend.dart';
 import 'package:closer_app/core/models/models.dart';
 import 'package:closer_app/core/services/screen_guard.dart';
 import 'package:closer_app/core/theme/app_theme.dart';
+import 'package:closer_app/core/ui/soft_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -45,47 +46,64 @@ Future<int?> showSnapSendSheet(BuildContext context, String localPath, String na
   return showModalBottomSheet<int>(
     context: context,
     isScrollControlled: true,
+    showDragHandle: true,
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(32))),
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setSheet) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(Space.m, Space.m, Space.m, Space.m),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('👻 Send a snap', style: ctx.tt.titleLarge),
-              const SizedBox(height: 4),
-              Text(
-                '$name can open it ${views == 1 ? 'once' : 'twice'} for ${ChatMessage.snapSeconds} seconds. '
-                'They can’t save it, and you’ll know if they screenshot it.',
-                textAlign: TextAlign.center,
-                style: ctx.tt.bodySmall?.copyWith(color: ctx.cc.muted),
+              SoftSheetHeader(
+                icon: const Text('👻', style: TextStyle(fontSize: 22)),
+                title: 'Send a snap',
+                subtitle:
+                    '$name can open it ${views == 1 ? 'once' : 'twice'} for ${ChatMessage.snapSeconds} seconds. '
+                    'They can’t save it, and you’ll know if they screenshot it.',
               ),
-              const SizedBox(height: Space.m),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(ctx).height * 0.42),
-                  child: Image.file(File(localPath), fit: BoxFit.contain),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: ctx.cc.card,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: Theme.of(ctx).brightness == Brightness.dark ? null : softCardShadow,
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(ctx).height * 0.4),
+                    child: Image.file(File(localPath), fit: BoxFit.contain),
+                  ),
                 ),
               ),
-              const SizedBox(height: Space.m),
-              SegmentedButton<int>(
-                segments: const [
-                  ButtonSegment(value: 1, label: Text('Opens once'), icon: Icon(Icons.looks_one_rounded)),
-                  ButtonSegment(value: 2, label: Text('Opens twice'), icon: Icon(Icons.looks_two_rounded)),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: SoftOptionTile(
+                      icon: Icons.looks_one_outlined,
+                      title: 'Opens once',
+                      selected: views == 1,
+                      onTap: () => setSheet(() => views = 1),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: SoftOptionTile(
+                      icon: Icons.looks_two_outlined,
+                      tone: SoftTone.pink,
+                      title: 'Opens twice',
+                      selected: views == 2,
+                      onTap: () => setSheet(() => views = 2),
+                    ),
+                  ),
                 ],
-                selected: {views},
-                onSelectionChanged: (s) => setSheet(() => views = s.first),
               ),
-              const SizedBox(height: Space.m),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  icon: const Icon(Icons.send_rounded),
-                  label: const Text('Send snap'),
-                  onPressed: () => Navigator.pop(ctx, views),
-                ),
-              ),
+              const SizedBox(height: 20),
+              PillButton(label: 'Send snap', icon: Icons.send_rounded, onPressed: () => Navigator.pop(ctx, views)),
             ],
           ),
         ),
@@ -204,7 +222,11 @@ class _SnapViewerState extends ConsumerState<SnapViewer> with SingleTickerProvid
                     const SizedBox(height: Space.s),
                     Text(
                       '👻 Snap from ${widget.name}',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, shadows: [Shadow(blurRadius: 6)]),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        shadows: [Shadow(blurRadius: 6)],
+                      ),
                     ),
                   ],
                 ),
