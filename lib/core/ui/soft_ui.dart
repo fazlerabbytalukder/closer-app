@@ -419,10 +419,19 @@ class SoftHeader extends StatelessWidget {
 /// Use it as the first item of a scroll view in a Scaffold without an
 /// AppBar; it pads for the status bar itself.
 class VioletPageHeader extends StatelessWidget {
-  const VioletPageHeader({required this.title, super.key, this.child, this.backdropHeight = 104});
+  const VioletPageHeader({
+    required this.title,
+    super.key,
+    this.child,
+    this.backdropHeight = 104,
+    this.actions = const [],
+  });
 
   final String title;
   final Widget? child;
+
+  /// Extra buttons at the end of the title row (e.g. Delete).
+  final List<Widget> actions;
 
   /// Height of the violet area below the status bar.
   final double backdropHeight;
@@ -468,6 +477,7 @@ class VioletPageHeader extends StatelessWidget {
                         style: context.tt.headlineSmall?.copyWith(color: Colors.white, fontSize: 26),
                       ),
                     ),
+                    ...actions,
                   ],
                 ),
                 if (child != null) ...[const SizedBox(height: 20), child!],
@@ -651,6 +661,7 @@ class PillButton extends StatelessWidget {
     this.icon,
     this.height = 56,
     this.glow = true,
+    this.loading = false,
   });
 
   final String label;
@@ -659,18 +670,27 @@ class PillButton extends StatelessWidget {
   final double height;
   final bool glow;
 
+  /// Shows a spinner and ignores taps.
+  final bool loading;
+
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final small = height < 44;
+    final enabled = onPressed != null && !loading;
+    // Figma disabled state: pale lavender pill with muted violet text.
+    final fg = enabled || loading
+        ? Colors.white
+        : (dark ? Colors.white.withValues(alpha: 0.5) : const Color(0xFF8C7BD6));
+    final bg = enabled || loading ? Brand.royal : (dark ? Brand.royal.withValues(alpha: 0.3) : const Color(0xFFDCD3FB));
     final style = (small ? context.tt.labelLarge : context.tt.titleMedium)?.copyWith(
       fontWeight: FontWeight.w800,
-      color: Colors.white,
+      color: fg,
     );
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
-        boxShadow: !glow || dark || onPressed == null
+        boxShadow: !glow || dark || !enabled
             ? null
             : const [BoxShadow(color: Color(0x596A3DF0), blurRadius: 24, offset: Offset(0, 12), spreadRadius: -6)],
       ),
@@ -678,24 +698,27 @@ class PillButton extends StatelessWidget {
         width: double.infinity,
         height: height,
         child: Material(
-          color: onPressed == null ? context.cs.surfaceContainerHigh : Brand.royal,
+          color: bg,
           shape: const StadiumBorder(),
           clipBehavior: Clip.antiAlias,
           child: InkWell(
-            onTap: onPressed,
+            onTap: enabled ? onPressed : null,
             child: Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (icon != null) ...[
-                    Icon(icon, size: small ? 18 : 20, color: Colors.white),
-                    const SizedBox(width: 6),
-                  ],
-                  Flexible(
-                    child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
-                  ),
-                ],
-              ),
+              child: loading
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                    )
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (icon != null) ...[Icon(icon, size: small ? 18 : 20, color: fg), const SizedBox(width: 6)],
+                        Flexible(
+                          child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
+                        ),
+                      ],
+                    ),
             ),
           ),
         ),
