@@ -15,7 +15,7 @@
   <h1>Someone wants to pair with you on Duosy</h1>
   <p class="muted">If Duosy is installed, this link opens the app. If not, install it and enter this code:</p>
   <div class="card"><div class="code" id="code">——————</div></div>
-  <p><a class="button" id="play" href="https://play.google.com/store/apps/details?id=app.closer.widget">Get Duosy on Google Play</a></p>
+  <p><a class="button" id="play" href="https://play.google.com/store/apps/details?id=com.duosy.app">Get Duosy on Google Play</a></p>
   <p class="muted">Codes expire after 48 hours.</p>
   <footer><a href="/privacy">Privacy</a><a href="/terms">Terms</a></footer>
 </main>
@@ -27,7 +27,7 @@
       document.getElementById('code').textContent = code;
       // Pass the code through the Play install referrer so the app can pre-fill it.
       var play = document.getElementById('play');
-      play.href = 'https://play.google.com/store/apps/details?id=app.closer.widget&referrer=' +
+      play.href = 'https://play.google.com/store/apps/details?id=com.duosy.app&referrer=' +
         encodeURIComponent('invite=' + code);
     }
   })();

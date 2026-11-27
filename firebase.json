@@ -74,5 +74,24 @@
       "enabled": true
     },
     "singleProjectMode": true
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "duosy-f5bc2",
+          "appId": "1:53294620585:android:c2193691d7380e02a9aeb8",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "duosy-f5bc2",
+          "configurations": {
+            "android": "1:53294620585:android:c2193691d7380e02a9aeb8"
+          }
+        }
+      }
+    }
   }
 }

@@ -1,4 +1,4 @@
-package app.closer.widget.widgets.ui
+package com.duosy.app.widgets.ui
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory

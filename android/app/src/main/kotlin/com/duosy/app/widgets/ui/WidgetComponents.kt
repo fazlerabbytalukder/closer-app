@@ -1,4 +1,4 @@
-package app.closer.widget.widgets.ui
+package com.duosy.app.widgets.ui
 
 import android.os.Build
 import androidx.compose.runtime.Composable
@@ -28,7 +28,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
-import app.closer.widget.R
+import com.duosy.app.R
 
 /** Responsive breakpoints shared by all widgets: S 2×2, M 4×2, L 4×4. */
 object WidgetSizes {

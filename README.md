@@ -29,7 +29,7 @@ This lets you exercise the whole loop on one emulator, including widget updates 
 | `lib/core/services/widget_contract.dart` | Keys shared with the Kotlin widgets |
 | `lib/app` | Router (`go_router` with onboarding redirects), providers (Riverpod), theme setup |
 | `lib/features` | Screens: onboarding, home, send, together, memories, me, premium |
-| `android/app/src/main/kotlin/app/closer/widget` | Glance widgets (photo, countdown, plant) + WorkManager refresh |
+| `android/app/src/main/kotlin/com/duosy/app` | Glance widgets (photo, countdown, plant) + WorkManager refresh |
 | `functions/` | Cloud Functions (TypeScript) |
 | `firestore.rules`, `storage.rules`, `firestore.indexes.json` | Security rules + indexes |
 | `schema/` | JSON Schemas shared by app and functions |
@@ -37,10 +37,12 @@ This lets you exercise the whole loop on one emulator, including widget updates 
 
 ## Firebase setup (to switch off demo mode)
 
-1. Create a Firebase project on the Blaze plan. Put Firestore in **eur3** (this cannot be changed later) and Storage in the EU. Put the project id in `.firebaserc`.
-2. Enable the Google sign-in provider.
-3. Add the Android app `app.closer.widget` with its SHA-1 and SHA-256 fingerprints (debug, upload and Play signing keys).
-4. Run `flutterfire configure`, then pass `DefaultFirebaseOptions.currentPlatform` to `Firebase.initializeApp` in `initCloserFirebase()` (`lib/core/data/firebase/firebase_setup.dart`, marked `TODO(setup)`).
+Done so far (project `duosy-f5bc2`, still on the Spark plan): Google sign-in enabled, Firestore in **eur3**, Android app `com.duosy.app` registered with the debug SHA-1/SHA-256, `flutterfire configure` run, Firestore rules and indexes deployed.
+
+1. Upgrade to the Blaze plan, then create the Storage bucket in `europe-west1`.
+2. Add the upload and Play signing SHA-1/SHA-256 fingerprints once the release keystore exists, then re-download `google-services.json`.
+3. Re-run `flutterfire configure` only if apps or fingerprints change.
+4. Deploy the `taps.expireAt` TTL policy with the indexes (needs billing).
 5. Install Node 22 and the Firebase CLI, then:
    ```
    cd functions && npm install && npm run build

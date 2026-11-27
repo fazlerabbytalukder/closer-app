@@ -1,4 +1,4 @@
-package app.closer.widget.widgets
+package com.duosy.app.widgets
 
 import android.content.SharedPreferences
 

@@ -1,10 +1,10 @@
-package app.closer.widget
+package com.duosy.app
 
 import android.app.Activity
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
-import app.closer.widget.work.WidgetRefreshWorker
+import com.duosy.app.work.WidgetRefreshWorker
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel

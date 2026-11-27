@@ -136,7 +136,7 @@ class _PaywallScreenState extends ConsumerState<PaywallScreen> {
                       label: 'Manage subscription',
                       kind: CloserButtonKind.secondary,
                       onPressed: () => launchUrl(
-                        Uri.parse('https://play.google.com/store/account/subscriptions?package=app.closer.widget'),
+                        Uri.parse('https://play.google.com/store/account/subscriptions?package=com.duosy.app'),
                         mode: LaunchMode.externalApplication,
                       ),
                     ),

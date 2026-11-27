@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "53294620585",
+    "project_id": "duosy-f5bc2",
+    "storage_bucket": "duosy-f5bc2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:53294620585:android:c2193691d7380e02a9aeb8",
+        "android_client_info": {
+          "package_name": "com.duosy.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "53294620585-9hfnnb982vr2j26g4nuh4pj9o45i98ch.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.duosy.app",
+            "certificate_hash": "62e236de3fcde86dc3119c7702d9041af47eb798"
+          }
+        },
+        {
+          "client_id": "53294620585-s4qo7njs01fe1tbdmq5sit0jbdo9d6qc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC78_Rx_z1-FZD0C14v86dDKg2Icw6DTlM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "53294620585-s4qo7njs01fe1tbdmq5sit0jbdo9d6qc.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,11 +1,11 @@
-package app.closer.widget.widgets.ui
+package com.duosy.app.widgets.ui
 
 import androidx.annotation.DrawableRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.glance.GlanceTheme
 import androidx.glance.unit.ColorProvider
-import app.closer.widget.R
+import com.duosy.app.R
 
 /**
  * Colours used by every Duosy widget.

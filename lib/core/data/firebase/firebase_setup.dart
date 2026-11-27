@@ -9,6 +9,7 @@
 // Use 10.0.2.2 as the host for the Android emulator, or your PC's Wi-Fi IP
 // (ipconfig → IPv4 Address) for a real phone on the same network.
 
+import 'package:closer_app/firebase_options.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -57,14 +58,10 @@ bool _emulatorsConnected = false;
 /// service at [emulatorHost]. Safe to call more than once.
 Future<void> initCloserFirebase() async {
   if (Firebase.apps.isEmpty) {
-    // TODO(setup): without the emulator, pass
-    // DefaultFirebaseOptions.currentPlatform once `flutterfire configure`
-    // has generated lib/firebase_options.dart.
-    if (useFirebaseEmulator) {
-      await Firebase.initializeApp(options: _emulatorOptions);
-    } else {
-      await Firebase.initializeApp();
-    }
+    // Real project: lib/firebase_options.dart from `flutterfire configure`.
+    await Firebase.initializeApp(
+      options: useFirebaseEmulator ? _emulatorOptions : DefaultFirebaseOptions.currentPlatform,
+    );
   }
   if (!useFirebaseEmulator || _emulatorsConnected) return;
   _emulatorsConnected = true;

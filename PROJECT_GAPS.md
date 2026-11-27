@@ -19,16 +19,16 @@ _চেক করা হয়েছে: ২৭ নভেম্বর ২০২�
 
 | # | সমস্যা | কোথায় | কী করতে হবে |
 |---|-----|--------|---------------|
-| ১ | Firebase প্রজেক্ট ID নেই | `.firebaserc` → `REPLACE_WITH_FIREBASE_PROJECT_ID` | Firebase প্রজেক্ট বানিয়ে ID বসানো (Blaze প্ল্যান লাগবে) |
-| ২ | `lib/firebase_options.dart` নেই | — | `flutterfire configure` চালানো |
-| ৩ | `android/app/google-services.json` নেই | — | `flutterfire configure` এটাও বানিয়ে দেবে |
-| ৪ | Google Services Gradle plugin যোগ করা নেই | `android/settings.gradle.kts`, `android/app/build.gradle.kts` | সাধারণত `flutterfire configure` নিজেই যোগ করে। না করলে হাতে `com.google.gms.google-services` যোগ করতে হবে |
-| ৫ | `Firebase.initializeApp()` কোনো option ছাড়া কল হয় | `lib/core/data/firebase/firebase_backend.dart:81`, `lib/core/data/firebase/fcm_background.dart:77,92` (`TODO(setup)`) | `DefaultFirebaseOptions.currentPlatform` পাস করা |
+| ১ | ~~Firebase প্রজেক্ট ID নেই~~ ✅ | `.firebaserc` | প্রজেক্ট `duosy-f5bc2`। এখনো **Spark** প্ল্যানে। Storage আর Functions-এর জন্য Blaze লাগবে |
+| ২ | ~~`lib/firebase_options.dart` নেই~~ ✅ | `lib/firebase_options.dart` | `flutterfire configure` দিয়ে বানানো |
+| ৩ | ~~`android/app/google-services.json` নেই~~ ✅ | `android/app/google-services.json` | debug SHA যোগ করার পর আবার download করা |
+| ৪ | ~~Google Services Gradle plugin নেই~~ ✅ | `android/settings.gradle.kts`, `android/app/build.gradle.kts` | `flutterfire configure` যোগ করেছে |
+| ৫ | ~~`Firebase.initializeApp()` option ছাড়া~~ ✅ | `lib/core/data/firebase/firebase_setup.dart` | `DefaultFirebaseOptions.currentPlatform` পাস হয় (emulator মোডে demo options) |
 | ৬ | ডিফল্ট ব্যাকএন্ড `local` (ডেমো) | `lib/core/data/backend_factory.dart` | `--dart-define=CLOSER_BACKEND=firebase` দিয়ে চালাতে হবে, অথবা রিলিজের জন্য ডিফল্ট বদলাতে হবে |
 | ৭ | ~~Cloud Functions install বা compile করা হয়নি~~ ✅ | `functions/` | `npm install` আর `npm run build` হয়ে গেছে, কোনো type error আসেনি (২৭ নভেম্বর ২০২৬)। Emulator-এ সব function লোড হয় |
 | ৮ | Functions-এ lint script নেই | `functions/package.json` | ঐচ্ছিক: eslint যোগ করা |
-| ৯ | Rules, indexes, functions আর hosting ডিপ্লয় হয়নি | `firestore.rules`, `storage.rules`, `firestore.indexes.json`, `web/` | `firebase deploy --only firestore:rules,firestore:indexes,storage,functions,hosting` |
-| ১০ | Google Sign-In-এর SHA-1/SHA-256 Firebase-এ যোগ করা নেই | Firebase console | `cd android && ./gradlew signingReport`। debug, upload আর Play signing — তিনটা key-ই লাগবে |
+| ৯ | Functions, Storage rules আর hosting ডিপ্লয় হয়নি | `storage.rules`, `functions/`, `web/` | Firestore rules আর indexes ডিপ্লয় হয়ে গেছে ✅। `taps.expireAt`-এর TTL policy, Storage আর Functions-এর জন্য Blaze লাগবে। Blaze নেওয়ার পর: `firebase deploy --only firestore:indexes,storage,functions,hosting` |
+| ১০ | Upload আর Play signing key-এর SHA যোগ করা নেই | Firebase console | Debug key-এর SHA-1 আর SHA-256 যোগ করা হয়েছে ✅। রিলিজ keystore বানানোর পর upload key আর Play signing key-এর SHA-ও যোগ করতে হবে |
 | ১১ | RevenueCat webhook secret সেট করা নেই | `functions/src/premium.ts` | `firebase functions:secrets:set REVENUECAT_WEBHOOK_AUTH` (শুধু monetization চালু করলে) |
 
 **ভালো খবর:** অ্যাপ যে ১৫টা callable function কল করে, তার সবগুলো
@@ -48,7 +48,7 @@ _চেক করা হয়েছে: ২৭ নভেম্বর ২০২�
 | ১৪ | Terms-এ placeholder | `web/terms.html:15` → `REPLACE_WITH_DATE` |
 | ১৫ | App Links-এর SHA-256 নেই | `web/.well-known/assetlinks.json` → `REPLACE_WITH_SHA256` |
 | ১৬ | ইনভাইট ডোমেইন `closer.app` কোডে লেখা, অথচ অ্যাপের নাম এখন "Duosy" | `functions/src/pairing.ts:39` (`INVITE_BASE_URL`), `android/app/src/main/AndroidManifest.xml:57`। নিজের ডোমেইন বা `<project>.web.app` ব্যবহার করতে হবে |
-| ১৭ | প্যাকেজ নাম এখনো `app.closer.widget` | `android/app/build.gradle.kts:23`। পাবলিশের **আগেই** ঠিক করতে হবে, পরে আর বদলানো যাবে না |
+| ১৭ | ~~প্যাকেজ নাম `app.closer.widget`~~ ✅ | `android/app/build.gradle.kts` | এখন `com.duosy.app`, Firebase-এ এই নামেই রেজিস্টার করা |
 | ১৮ | Play Console অ্যাকাউন্ট, store listing, Data safety form | কোডের বাইরের কাজ |
 
 ---

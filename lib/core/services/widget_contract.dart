@@ -2,7 +2,7 @@
 ///
 /// Flutter writes these keys with `HomeWidget.saveWidgetData` into the
 /// `HomeWidgetPreferences` SharedPreferences file; the Kotlin widgets read
-/// them (see `android/app/src/main/kotlin/app/closer/widget/widgets/
+/// them (see `android/app/src/main/kotlin/com/duosy/app/widgets/
 /// WidgetKeys.kt`, which must stay in sync with this file).
 ///
 /// All values are stored as **String** (or Boolean where noted) so Kotlin
@@ -64,10 +64,10 @@ abstract final class WidgetKeys {
 
 /// Fully-qualified receiver class names of the Glance widgets.
 abstract final class WidgetReceivers {
-  static const partnerPhoto = 'app.closer.widget.widgets.PartnerPhotoWidgetReceiver';
-  static const countdown = 'app.closer.widget.widgets.CountdownWidgetReceiver';
-  static const plant = 'app.closer.widget.widgets.PlantWidgetReceiver';
-  static const alwaysWithMe = 'app.closer.widget.widgets.AlwaysWithMeWidgetReceiver';
+  static const partnerPhoto = 'com.duosy.app.widgets.PartnerPhotoWidgetReceiver';
+  static const countdown = 'com.duosy.app.widgets.CountdownWidgetReceiver';
+  static const plant = 'com.duosy.app.widgets.PlantWidgetReceiver';
+  static const alwaysWithMe = 'com.duosy.app.widgets.AlwaysWithMeWidgetReceiver';
 
   static const all = [partnerPhoto, countdown, plant, alwaysWithMe];
 }

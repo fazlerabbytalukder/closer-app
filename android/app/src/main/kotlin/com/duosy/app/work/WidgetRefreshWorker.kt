@@ -1,4 +1,4 @@
-package app.closer.widget.work
+package com.duosy.app.work
 
 import android.content.Context
 import android.util.Log
@@ -14,10 +14,10 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import app.closer.widget.widgets.AlwaysWithMeWidget
-import app.closer.widget.widgets.CountdownWidget
-import app.closer.widget.widgets.PartnerPhotoWidget
-import app.closer.widget.widgets.PlantWidget
+import com.duosy.app.widgets.AlwaysWithMeWidget
+import com.duosy.app.widgets.CountdownWidget
+import com.duosy.app.widgets.PartnerPhotoWidget
+import com.duosy.app.widgets.PlantWidget
 import es.antonborri.home_widget.HomeWidgetGlanceState
 import es.antonborri.home_widget.HomeWidgetGlanceStateDefinition
 import java.time.Duration

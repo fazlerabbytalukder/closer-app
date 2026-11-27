@@ -1,4 +1,4 @@
-package app.closer.widget.widgets
+package com.duosy.app.widgets
 
 import android.content.Context
 import android.net.Uri
@@ -34,16 +34,16 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
-import app.closer.widget.MainActivity
-import app.closer.widget.R
-import app.closer.widget.widgets.ui.Chip
-import app.closer.widget.widgets.ui.WidgetContainer
-import app.closer.widget.widgets.ui.WidgetMessage
-import app.closer.widget.widgets.ui.WidgetPalette
-import app.closer.widget.widgets.ui.WidgetSizes
-import app.closer.widget.widgets.ui.WidgetTheme
-import app.closer.widget.widgets.ui.roundedIfSupported
-import app.closer.widget.work.WidgetRefreshWorker
+import com.duosy.app.MainActivity
+import com.duosy.app.R
+import com.duosy.app.widgets.ui.Chip
+import com.duosy.app.widgets.ui.WidgetContainer
+import com.duosy.app.widgets.ui.WidgetMessage
+import com.duosy.app.widgets.ui.WidgetPalette
+import com.duosy.app.widgets.ui.WidgetSizes
+import com.duosy.app.widgets.ui.WidgetTheme
+import com.duosy.app.widgets.ui.roundedIfSupported
+import com.duosy.app.work.WidgetRefreshWorker
 import es.antonborri.home_widget.HomeWidgetGlanceState
 import es.antonborri.home_widget.HomeWidgetGlanceStateDefinition
 import es.antonborri.home_widget.HomeWidgetGlanceWidgetReceiver

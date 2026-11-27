@@ -314,7 +314,7 @@ class HelpScreen extends StatelessWidget {
             leading: const Icon(Icons.star_outline_rounded),
             title: const Text('Rate Duosy'),
             onTap: () => launchUrl(
-              Uri.parse('https://play.google.com/store/apps/details?id=app.closer.widget'),
+              Uri.parse('https://play.google.com/store/apps/details?id=com.duosy.app'),
               mode: LaunchMode.externalApplication,
             ),
           ),
