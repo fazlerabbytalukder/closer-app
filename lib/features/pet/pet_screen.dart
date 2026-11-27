@@ -6,11 +6,15 @@ import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:closer_app/core/ui/actions.dart';
 import 'package:closer_app/core/ui/components.dart';
 import 'package:closer_app/core/ui/plant_art.dart';
+import 'package:closer_app/core/ui/soft_ui.dart';
 import 'package:confetti/confetti.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
+
+/// Deep pink of the love-points pill.
+const _pointsPink = Color(0xFFD6246E);
 
 /// The pet that grows from your plant, and its shared home (F16).
 class PetScreen extends ConsumerStatefulWidget {
@@ -71,7 +75,12 @@ class _PetScreenState extends ConsumerState<PetScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Rename your pet'),
-        content: TextField(controller: ctrl, autofocus: true, maxLength: Pet.maxName, textCapitalization: TextCapitalization.words),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          maxLength: Pet.maxName,
+          textCapitalization: TextCapitalization.words,
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           TextButton(onPressed: () => Navigator.pop(ctx, ctrl.text.trim()), child: const Text('Save')),
@@ -91,145 +100,211 @@ class _PetScreenState extends ConsumerState<PetScreen> {
     final me = ref.watch(authUidProvider).value;
     final name = ref.watch(partnerNameProvider);
     final now = ref.watch(clockProvider).value ?? DateTime.now();
-    if (pair == null) return Scaffold(appBar: AppBar(), body: const Center(child: CircularProgressIndicator()));
+    if (pair == null) {
+      return Scaffold(
+        appBar: AppBar(),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
     final pet = pair.pet;
     final home = pair.home;
     final placed = _draft ?? home.placed;
     final partnerUid = me == null ? '' : pair.partnerOf(me);
     final mood = pet?.mood(now, plant: pair.plant.health, members: pair.memberIds);
 
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(pet == null ? 'Your plant’s secret' : '${pet.name}’s home'),
-        actions: [
-          if (pet != null) IconButton(tooltip: 'Rename', icon: const Icon(Icons.edit_rounded), onPressed: () => _rename(pet)),
-        ],
-      ),
       body: Stack(
         children: [
-          ListView(
-            padding: const EdgeInsets.all(Space.m),
+          Column(
             children: [
-              Row(
-                children: [
-                  CounterChip(label: '💗 ${pair.lovePoints} love points', color: context.cc.accent),
-                  const Spacer(),
+              PlainPageHeader(
+                title: pet == null ? 'Your plant’s secret' : '${pet.name}’s home',
+                actions: [
                   if (pet != null)
-                    TextButton.icon(
-                      onPressed: () => setState(() {
-                        _editing = !_editing;
-                        if (!_editing) _draft = null;
-                      }),
-                      icon: Icon(_editing ? Icons.check_rounded : Icons.open_with_rounded),
-                      label: Text(_editing ? 'Done' : 'Move things'),
-                    ),
+                    CircleIconButton(icon: Icons.edit_outlined, tooltip: 'Rename', onTap: () => _rename(pet)),
                 ],
               ),
-              const SizedBox(height: Space.s),
-              _Room(
-                pair: pair,
-                placed: placed,
-                editing: _editing,
-                hearts: _hearts,
-                onHeartDone: (id) => setState(() => _hearts.remove(id)),
-                onPetTap: pet == null ? null : _burst,
-                onMove: (i, x, y) => setState(() {
-                  final list = [...placed];
-                  list[i] = PlacedDecor(list[i].id, x.clamp(0.0, 1.0), y.clamp(0.0, 1.0));
-                  _draft = list;
-                }),
-                onMoveEnd: () {
-                  final d = _draft;
-                  if (d != null) unawaited(_saveHome(home.copyWith(placed: d)));
-                },
-                onRemove: (i) {
-                  final list = [...placed]..removeAt(i);
-                  setState(() => _draft = list);
-                  unawaited(_saveHome(home.copyWith(placed: list)));
-                },
-              ),
-              const SizedBox(height: Space.m),
-              if (pet == null)
-                _EggCard(stage: pair.plant.stage, onHatch: () => _hatch(pair))
-              else ...[
-                CloserCard(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(pet.info.emoji, style: const TextStyle(fontSize: 28)),
-                          const SizedBox(width: Space.s),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 28),
+                  children: [
+                    Row(
+                      children: [
+                        // Pink "♥ 77 love points" pill (Figma "plant secret").
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: SoftTone.pink.fill(context),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.favorite_rounded, size: 15, color: _pointsPink),
+                              const SizedBox(width: 6),
+                              Text(
+                                '${pair.lovePoints} love points',
+                                style: context.tt.labelMedium?.copyWith(
+                                  color: dark ? Colors.white : _pointsPink,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Spacer(),
+                        if (pet != null)
+                          Material(
+                            color: _editing ? Brand.royal : SoftTone.violet.fill(context),
+                            shape: const StadiumBorder(),
+                            clipBehavior: Clip.antiAlias,
+                            child: InkWell(
+                              onTap: () => setState(() {
+                                _editing = !_editing;
+                                if (!_editing) _draft = null;
+                              }),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      _editing ? Icons.check_rounded : Icons.open_with_rounded,
+                                      size: 16,
+                                      color: _editing ? Colors.white : Brand.royal,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      _editing ? 'Done' : 'Move things',
+                                      style: context.tt.labelMedium?.copyWith(
+                                        color: _editing ? Colors.white : Brand.royal,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    _Room(
+                      pair: pair,
+                      placed: placed,
+                      editing: _editing,
+                      hearts: _hearts,
+                      onHeartDone: (id) => setState(() => _hearts.remove(id)),
+                      onPetTap: pet == null ? null : _burst,
+                      onMove: (i, x, y) => setState(() {
+                        final list = [...placed];
+                        list[i] = PlacedDecor(list[i].id, x.clamp(0.0, 1.0), y.clamp(0.0, 1.0));
+                        _draft = list;
+                      }),
+                      onMoveEnd: () {
+                        final d = _draft;
+                        if (d != null) unawaited(_saveHome(home.copyWith(placed: d)));
+                      },
+                      onRemove: (i) {
+                        final list = [...placed]..removeAt(i);
+                        setState(() => _draft = list);
+                        unawaited(_saveHome(home.copyWith(placed: list)));
+                      },
+                    ),
+                    const SizedBox(height: 14),
+                    if (pet == null)
+                      _EggCard(stage: pair.plant.stage, onHatch: () => _hatch(pair))
+                    else ...[
+                      Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: context.cc.card,
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: dark ? null : softCardShadow,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
                               children: [
-                                Text(pet.name, style: context.tt.titleLarge),
-                                Text(
-                                  '${Pet.lifeStageNames[Pet.lifeStage(pair.plant.stage)]} ${pet.info.name.toLowerCase()} · grows with your plant',
-                                  style: context.tt.bodySmall?.copyWith(color: context.cc.muted),
+                                Text(pet.info.emoji, style: const TextStyle(fontSize: 28)),
+                                const SizedBox(width: Space.s),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(pet.name, style: context.tt.titleLarge),
+                                      Text(
+                                        '${Pet.lifeStageNames[Pet.lifeStage(pair.plant.stage)]} ${pet.info.name.toLowerCase()} · grows with your plant',
+                                        style: context.tt.bodySmall?.copyWith(color: context.cc.muted),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: Space.s),
-                      Text('${mood!.emoji} ${pet.name} ${mood.text}', style: context.tt.bodyMedium),
-                      const SizedBox(height: Space.m),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _CareButton(
-                              emoji: '🍎',
-                              label: 'Feed',
-                              done: me != null && pet.fedBy(me, now),
-                              partnerDone: pet.fedBy(partnerUid, now),
-                              partnerName: name,
-                              onTap: () => _care('feed', pet.name),
+                            const SizedBox(height: Space.s),
+                            Text('${mood!.emoji} ${pet.name} ${mood.text}', style: context.tt.bodyMedium),
+                            const SizedBox(height: Space.m),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _CareButton(
+                                    emoji: '🍎',
+                                    label: 'Feed',
+                                    done: me != null && pet.fedBy(me, now),
+                                    partnerDone: pet.fedBy(partnerUid, now),
+                                    partnerName: name,
+                                    onTap: () => _care('feed', pet.name),
+                                  ),
+                                ),
+                                const SizedBox(width: Space.s),
+                                Expanded(
+                                  child: _CareButton(
+                                    emoji: '🎾',
+                                    label: 'Play',
+                                    done: me != null && pet.playedBy(me, now),
+                                    partnerDone: pet.playedBy(partnerUid, now),
+                                    partnerName: name,
+                                    onTap: () => _care('play', pet.name),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                          const SizedBox(width: Space.s),
-                          Expanded(
-                            child: _CareButton(
-                              emoji: '🎾',
-                              label: 'Play',
-                              done: me != null && pet.playedBy(me, now),
-                              partnerDone: pet.playedBy(partnerUid, now),
-                              partnerName: name,
-                              onTap: () => _care('play', pet.name),
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (pair.plant.health == PlantHealth.wilted) ...[
-                        const SizedBox(height: Space.s),
-                        TextButton.icon(
-                          onPressed: () => context.push('/plant'),
-                          icon: const Text('🥀'),
-                          label: const Text('The plant needs you both today'),
+                            if (pair.plant.health == PlantHealth.wilted) ...[
+                              const SizedBox(height: Space.s),
+                              TextButton.icon(
+                                onPressed: () => context.push('/plant'),
+                                icon: const Text('🥀'),
+                                label: const Text('The plant needs you both today'),
+                              ),
+                            ],
+                          ],
                         ),
-                      ],
+                      ),
+                      const SizedBox(height: 18),
+                      PillButton(
+                        label: 'Decorate the home',
+                        icon: Icons.chair_outlined,
+                        onPressed: () => showModalBottomSheet<void>(
+                          context: context,
+                          isScrollControlled: true,
+                          builder: (_) => const _ShopSheet(),
+                        ),
+                      ),
                     ],
-                  ),
+                    const SizedBox(height: 18),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Text(
+                        'Love points come from everything you do together: photos, taps, daily questions, your best streak and your plant.',
+                        textAlign: TextAlign.center,
+                        style: context.tt.bodySmall?.copyWith(color: context.cc.muted, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: Space.m),
-                CloserButton(
-                  label: 'Decorate the home',
-                  icon: Icons.chair_rounded,
-                  kind: CloserButtonKind.accent,
-                  onPressed: () => showModalBottomSheet<void>(
-                    context: context,
-                    isScrollControlled: true,
-                    builder: (_) => const _ShopSheet(),
-                  ),
-                ),
-              ],
-              const SizedBox(height: Space.m),
-              Text(
-                'Love points come from everything you do together: photos, taps, daily questions, your best streak and your plant.',
-                textAlign: TextAlign.center,
-                style: context.tt.bodySmall?.copyWith(color: context.cc.muted),
               ),
             ],
           ),
@@ -277,9 +352,9 @@ class _Room extends StatelessWidget {
     final now = DateTime.now();
     final mood = pet?.mood(now, plant: pair.plant.health, members: pair.memberIds);
     return AspectRatio(
-      aspectRatio: 1,
+      aspectRatio: 1.03,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(Radii.card),
+        borderRadius: BorderRadius.circular(28),
         child: LayoutBuilder(
           builder: (context, c) {
             final w = c.maxWidth;
@@ -289,7 +364,11 @@ class _Room extends StatelessWidget {
                 Positioned.fill(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(wall.top), Color(wall.bottom)]),
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Color(wall.top), Color(wall.bottom)],
+                      ),
                     ),
                   ),
                 ),
@@ -305,7 +384,9 @@ class _Room extends StatelessWidget {
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: Colors.white, width: 4),
                     ),
-                    child: Center(child: Text(Goodnight.isEvening(now) ? '🌙' : '☀️', style: TextStyle(fontSize: w * 0.07))),
+                    child: Center(
+                      child: Text(Goodnight.isEvening(now) ? '🌙' : '☀️', style: TextStyle(fontSize: w * 0.07)),
+                    ),
                   ),
                 ),
                 // Floor
@@ -316,7 +397,11 @@ class _Room extends StatelessWidget {
                   height: h * 0.32,
                   child: const DecoratedBox(
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFFD9B48F), Color(0xFFC49A72)]),
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Color(0xFFD9B48F), Color(0xFFC49A72)],
+                      ),
                     ),
                   ),
                 ),
@@ -334,10 +419,10 @@ class _Room extends StatelessWidget {
                       child: GestureDetector(
                         onPanUpdate: editing
                             ? (u) => onMove(
-                                  i,
-                                  ((p.x * (w - w * 0.14)) + u.delta.dx) / (w - w * 0.14),
-                                  ((p.y * (h - w * 0.14)) + u.delta.dy) / (h - w * 0.14),
-                                )
+                                i,
+                                ((p.x * (w - w * 0.14)) + u.delta.dx) / (w - w * 0.14),
+                                ((p.y * (h - w * 0.14)) + u.delta.dy) / (h - w * 0.14),
+                              )
                             : null,
                         onPanEnd: editing ? (_) => onMoveEnd() : null,
                         child: Stack(
@@ -346,7 +431,10 @@ class _Room extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.all(2),
                               decoration: editing
-                                  ? BoxDecoration(border: Border.all(color: Colors.white, width: 1.5), borderRadius: BorderRadius.circular(8))
+                                  ? BoxDecoration(
+                                      border: Border.all(color: Colors.white, width: 1.5),
+                                      borderRadius: BorderRadius.circular(8),
+                                    )
                                   : null,
                               child: Text(d.emoji, style: TextStyle(fontSize: w * 0.1)),
                             ),
@@ -356,7 +444,11 @@ class _Room extends StatelessWidget {
                                 top: -8,
                                 child: GestureDetector(
                                   onTap: () => onRemove(i),
-                                  child: const CircleAvatar(radius: 10, backgroundColor: Colors.white, child: Icon(Icons.close_rounded, size: 14)),
+                                  child: const CircleAvatar(
+                                    radius: 10,
+                                    backgroundColor: Colors.white,
+                                    child: Icon(Icons.close_rounded, size: 14),
+                                  ),
                                 ),
                               ),
                           ],
@@ -379,7 +471,11 @@ class _Room extends StatelessWidget {
                               children: [
                                 PetArt(pet: pet, plantStage: pair.plant.stage, mood: mood!, size: w * 0.24),
                                 for (final id in hearts)
-                                  Text('💗', key: ValueKey(id), style: TextStyle(fontSize: w * 0.06))
+                                  Text(
+                                        '💗',
+                                        key: ValueKey(id),
+                                        style: TextStyle(fontSize: w * 0.06),
+                                      )
                                       .animate(onComplete: (_) => onHeartDone(id))
                                       .moveY(begin: 0, end: -w * 0.25, duration: 900.ms, curve: Curves.easeOut)
                                       .moveX(begin: 0, end: (id % 5 - 2) * 10.0, duration: 900.ms)
@@ -416,8 +512,13 @@ class PetArt extends StatelessWidget {
     body = sleepy
         ? body.animate(onPlay: (c) => c.repeat(reverse: true)).scaleXY(begin: 1, end: 1.04, duration: 1800.ms)
         : body
-            .animate(onPlay: (c) => c.repeat(reverse: true))
-            .moveY(begin: 0, end: -size * 0.06, duration: (mood == PetMood.overjoyed ? 400 : 900).ms, curve: Curves.easeInOut);
+              .animate(onPlay: (c) => c.repeat(reverse: true))
+              .moveY(
+                begin: 0,
+                end: -size * 0.06,
+                duration: (mood == PetMood.overjoyed ? 400 : 900).ms,
+                curve: Curves.easeInOut,
+              );
     return SizedBox(
       width: size * 1.4,
       height: size * 1.25,
@@ -431,14 +532,24 @@ class PetArt extends StatelessWidget {
             child: Container(
               width: size * scale * 0.8,
               height: size * 0.08,
-              decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(99)),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(99),
+              ),
             ),
           ),
           Positioned(bottom: size * 0.04, child: body),
           if (stage >= 3)
-            Positioned(top: 0, child: Text('👑', style: TextStyle(fontSize: size * 0.22)))
+            Positioned(
+              top: 0,
+              child: Text('👑', style: TextStyle(fontSize: size * 0.22)),
+            )
           else if (stage == 2)
-            Positioned(top: size * 0.1, right: size * 0.25, child: Text('🌸', style: TextStyle(fontSize: size * 0.18))),
+            Positioned(
+              top: size * 0.1,
+              right: size * 0.25,
+              child: Text('🌸', style: TextStyle(fontSize: size * 0.18)),
+            ),
           if (sleepy)
             Positioned(
               top: 0,
@@ -459,7 +570,11 @@ class PetArt extends StatelessWidget {
               ).animate(onPlay: (c) => c.repeat(reverse: true)).scaleXY(begin: 0.9, end: 1.1, duration: 700.ms),
             )
           else if (mood == PetMood.overjoyed)
-            Positioned(top: 0, left: 0, child: Text('✨', style: TextStyle(fontSize: size * 0.2))),
+            Positioned(
+              top: 0,
+              left: 0,
+              child: Text('✨', style: TextStyle(fontSize: size * 0.2)),
+            ),
         ],
       ),
     );
@@ -497,28 +612,41 @@ class _EggCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final ready = stage >= Pet.hatchStage;
     final days = Plant.milestones[Pet.hatchStage - 1];
-    return CloserCard(
-      gradient: const LinearGradient(colors: [Color(0xFFFFF3D6), Color(0xFFFFE6EF)]),
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final ink = dark ? Colors.white : Brand.ink;
+    // Mint card with a teal progress bar (Figma "plant secret screen").
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+      decoration: BoxDecoration(color: SoftTone.mint.fill(context), borderRadius: BorderRadius.circular(24)),
       child: Column(
         children: [
-          Text(ready ? 'Your plant grew an egg! 🥚' : 'Something is growing in your plant…', textAlign: TextAlign.center, style: context.tt.titleMedium?.copyWith(color: Brand.ink)),
-          const SizedBox(height: Space.xs),
+          Text(
+            ready ? 'Your plant grew an egg! 🥚' : 'Something is growing in your plant…',
+            textAlign: TextAlign.center,
+            style: context.tt.titleMedium?.copyWith(color: ink, fontWeight: FontWeight.w800, fontSize: 17),
+          ),
+          const SizedBox(height: 6),
           Text(
             ready
                 ? 'Hatch it together and pick who lives in it.'
                 : 'Keep your streak going. At $days days ($stage of ${Pet.hatchStage} plant stages), an egg appears.',
             textAlign: TextAlign.center,
-            style: context.tt.bodyMedium?.copyWith(color: Brand.grey700),
+            style: context.tt.bodySmall?.copyWith(color: ink, fontWeight: FontWeight.w600, height: 1.45),
           ),
           if (!ready) ...[
-            const SizedBox(height: Space.s),
+            const SizedBox(height: 14),
             ClipRRect(
               borderRadius: BorderRadius.circular(99),
-              child: LinearProgressIndicator(value: stage / Pet.hatchStage, minHeight: 8, backgroundColor: Colors.white, color: Brand.pink),
+              child: LinearProgressIndicator(
+                value: stage / Pet.hatchStage,
+                minHeight: 9,
+                backgroundColor: dark ? Colors.white.withValues(alpha: 0.15) : Colors.white,
+                color: SoftTone.mint.icon,
+              ),
             ),
           ] else ...[
-            const SizedBox(height: Space.m),
-            CloserButton(label: 'Hatch the egg', icon: Icons.egg_rounded, kind: CloserButtonKind.accent, onPressed: onHatch),
+            const SizedBox(height: 16),
+            PillButton(label: 'Hatch the egg', icon: Icons.egg_outlined, onPressed: onHatch),
           ],
         ],
       ),
@@ -701,7 +829,10 @@ class _ShopSheet extends ConsumerWidget {
         showToast(context, 'You need ${w.cost - points} more love points 💗');
         return;
       }
-      await save(home.copyWith(owned: [...home.owned, w.id], wallpaper: w.id, spent: home.spent + w.cost), '${w.name} it is 🎨');
+      await save(
+        home.copyWith(owned: [...home.owned, w.id], wallpaper: w.id, spent: home.spent + w.cost),
+        '${w.name} it is 🎨',
+      );
     }
 
     return SafeArea(
@@ -731,9 +862,16 @@ class _ShopSheet extends ConsumerWidget {
                         width: 76,
                         margin: const EdgeInsets.only(right: 8),
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(w.top), Color(w.bottom)]),
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Color(w.top), Color(w.bottom)],
+                          ),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: home.wallpaper == w.id ? context.cc.accent : Colors.transparent, width: 3),
+                          border: Border.all(
+                            color: home.wallpaper == w.id ? context.cc.accent : Colors.transparent,
+                            width: 3,
+                          ),
                         ),
                         alignment: Alignment.bottomCenter,
                         padding: const EdgeInsets.all(4),
@@ -763,7 +901,10 @@ class _ShopSheet extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(Radii.small + 4),
                     onTap: () => tapDecor(d),
                     child: Container(
-                      decoration: BoxDecoration(color: context.cc.card, borderRadius: BorderRadius.circular(Radii.small + 4)),
+                      decoration: BoxDecoration(
+                        color: context.cc.card,
+                        borderRadius: BorderRadius.circular(Radii.small + 4),
+                      ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -776,11 +917,14 @@ class _ShopSheet extends ConsumerWidget {
                             home.ownsDecor(d, stage)
                                 ? 'Place'
                                 : d.isReward
-                                    ? '🌱 ${Plant.stageNames[d.unlockStage]}'
-                                    : '💗 ${d.cost}',
+                                ? '🌱 ${Plant.stageNames[d.unlockStage]}'
+                                : '💗 ${d.cost}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: context.tt.labelSmall?.copyWith(color: context.cc.accent, fontWeight: FontWeight.w700),
+                            style: context.tt.labelSmall?.copyWith(
+                              color: context.cc.accent,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ],
                       ),

@@ -1,6 +1,6 @@
 import 'package:closer_app/core/models/models.dart';
 import 'package:closer_app/core/theme/gloss.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Brand tokens from the Duosy Figma file: violet primary, candy pink and
 /// mint accents, lavender page background, deep indigo night mode.
@@ -297,7 +297,7 @@ abstract final class AppTheme {
           disabledBackgroundColor: scheme.surfaceContainerHigh,
           textStyle: text.labelLarge,
           shadowColor: Brand.royal.withValues(alpha: 0.6),
-          backgroundBuilder: Gloss.builder(radius: Radii.control),
+          backgroundBuilder: Gloss.builder(),
         ).copyWith(elevation: _buttonElevation),
       ),
       // Secondary: light primary tint with a blue outline (Figma "Button CTA").

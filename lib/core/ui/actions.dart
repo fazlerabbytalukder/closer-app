@@ -1,7 +1,7 @@
 import 'package:closer_app/core/models/models.dart';
 import 'package:closer_app/core/ui/components.dart';
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Runs a user action: shows friendly errors as a toast and opens the paywall
 /// when a free limit is hit. Returns true on success.

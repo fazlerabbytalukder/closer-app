@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 class Stroke {
   Stroke({required this.color, required this.width, required this.eraser});

@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:closer_app/core/models/models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Note card styles (plan F3: "coloured card, a few bundled fonts and
 /// backgrounds").

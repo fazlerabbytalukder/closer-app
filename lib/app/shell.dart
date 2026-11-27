@@ -3,9 +3,9 @@ import 'dart:math' as math;
 
 import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:closer_app/core/ui/soft_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Soft gradient backdrop + a floating frosted-glass dock, with the raised
 /// Send button in the centre (plan 9.3).

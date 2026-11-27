@@ -549,7 +549,7 @@ class PartnerSimulator {
       // Guess right ~60% of the time.
       final guesses = [
         for (var i = 0; i < g.questions.length; i++)
-          _rand.nextDouble() < 0.6 ? g.subjectAnswers[i] : _rand.nextInt(g.questions[i].options.length),
+          if (_rand.nextDouble() < 0.6) g.subjectAnswers[i] else _rand.nextInt(g.questions[i].options.length),
       ];
       _b.applyGameAnswers(pairId, gameId, partnerUid, guesses);
     });

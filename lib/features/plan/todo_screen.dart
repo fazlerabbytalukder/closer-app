@@ -3,10 +3,10 @@ import 'package:closer_app/core/models/models.dart';
 import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:closer_app/core/ui/actions.dart';
 import 'package:closer_app/core/ui/components.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Shared to-do lists (F13): tasks for you, for them or for both, with
 /// due dates; tick them off together.

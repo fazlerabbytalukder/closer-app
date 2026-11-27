@@ -8,10 +8,10 @@ import 'package:closer_app/core/services/screen_guard.dart';
 import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:closer_app/core/ui/soft_ui.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gal/gal.dart';
 import 'package:http/http.dart' as http;
+import 'package:material_ui/material_ui.dart';
 
 /// Downloads a chat photo (storage ref or local path) into memory.
 Future<Uint8List> loadChatMedia(CloserBackend backend, String? path) async {

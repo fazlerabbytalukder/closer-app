@@ -4,10 +4,10 @@ import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:closer_app/core/ui/actions.dart';
 import 'package:closer_app/core/ui/components.dart';
 import 'package:closer_app/features/love/love_widgets.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// "100 reasons I love you": both write reasons for each other; one of
 /// your person's reasons opens for you every day.

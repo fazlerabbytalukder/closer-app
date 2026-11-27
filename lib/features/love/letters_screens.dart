@@ -7,11 +7,11 @@ import 'package:closer_app/core/ui/actions.dart';
 import 'package:closer_app/core/ui/components.dart';
 import 'package:closer_app/core/ui/soft_ui.dart';
 import 'package:closer_app/features/love/love_widgets.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Letters from the future: write now, they open on a date you choose.
 class LettersScreen extends ConsumerWidget {

@@ -6,9 +6,9 @@ import 'package:closer_app/core/data/backend_factory.dart';
 import 'package:closer_app/core/services/notifications.dart';
 import 'package:closer_app/features/chat/chat_heads.dart';
 import 'package:closer_app/features/onboarding/intro_screens.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Backend selection:

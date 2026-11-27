@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:closer_app/core/theme/app_theme.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 export 'package:closer_app/core/ui/buddy.dart';
 
@@ -552,10 +552,19 @@ class PeekingMascots extends StatelessWidget {
 /// large dark title and optional white round action buttons, on the page
 /// background. Pads for the status bar itself.
 class PlainPageHeader extends StatelessWidget {
-  const PlainPageHeader({required this.title, super.key, this.actions = const [], this.boxed = false});
+  const PlainPageHeader({
+    required this.title,
+    super.key,
+    this.actions = const [],
+    this.boxed = false,
+    this.titleSize = 26,
+  });
 
   final String title;
   final List<Widget> actions;
+
+  /// Title font size (long titles use a smaller one, as in the Figma).
+  final double titleSize;
 
   /// White pill bar holding a small lavender back button and the title
   /// (Figma "letters countdown screen").
@@ -624,7 +633,7 @@ class PlainPageHeader extends StatelessWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: context.tt.headlineSmall?.copyWith(fontSize: 26),
+              style: context.tt.headlineSmall?.copyWith(fontSize: titleSize),
             ),
           ),
           ...actions,

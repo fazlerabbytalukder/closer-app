@@ -18,10 +18,10 @@ import 'package:closer_app/core/models/models.dart';
 import 'package:closer_app/core/services/note_renderer.dart';
 import 'package:closer_app/core/services/notifications.dart';
 import 'package:closer_app/core/ui/reactions.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -234,8 +234,7 @@ void main() {
     await shot('surprise_unwrapped');
     // Held on screen so a host-side `adb screencap` can compare the real frame.
     await wait(6000);
-    final nav = tester.state<NavigatorState>(find.byType(Navigator).last);
-    nav.pop();
+    tester.state<NavigatorState>(find.byType(Navigator).last).pop();
     await wait(700);
     await back();
     await go('/surprises/new?type=compliment');
@@ -351,8 +350,7 @@ void main() {
     await tap(find.text('Decorate the home'));
     await tap(find.text('Cozy rug'), what: 'buy rug');
     await tap(find.text('Heart box'), what: 'reward decor');
-    final sheetNav = tester.state<NavigatorState>(find.byType(Navigator).last);
-    sheetNav.pop();
+    tester.state<NavigatorState>(find.byType(Navigator).last).pop();
     await wait(800);
     await shot('pet_decorated');
     await back();
@@ -381,6 +379,7 @@ void main() {
     debugPrint = originalPrint;
     backend.dispose();
     if (errors.isNotEmpty) {
+      // Printed so the problem list shows up in the test log.
       // ignore: avoid_print
       print('==== ${errors.length} problem(s) ====\n${errors.join('\n\n')}');
     }

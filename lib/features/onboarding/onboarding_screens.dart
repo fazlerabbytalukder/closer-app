@@ -10,11 +10,11 @@ import 'package:closer_app/core/ui/actions.dart';
 import 'package:closer_app/core/ui/components.dart';
 import 'package:closer_app/features/me/widget_previews.dart';
 import 'package:confetti/confetti.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Welcome + Google sign-in.
 class WelcomeScreen extends ConsumerStatefulWidget {
@@ -241,7 +241,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       });
                       if (!mounted) return;
                       setState(() => _busy = false);
-                      if (ok && widget.editing) context.pop();
+                      if (ok && widget.editing && context.mounted) context.pop();
                     },
             ),
           ],
@@ -453,6 +453,7 @@ class NotificationsPermissionScreen extends ConsumerWidget {
                 label: 'Turn on notifications',
                 onPressed: () async {
                   await NotificationService.instance.requestPermission();
+                  if (!context.mounted) return;
                   await runAction(context, () => ref.read(backendProvider).registerDevice());
                   await done();
                 },

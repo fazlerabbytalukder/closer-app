@@ -7,10 +7,10 @@ import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:closer_app/core/ui/components.dart';
 import 'package:closer_app/core/ui/plant_art.dart';
 import 'package:closer_app/core/ui/soft_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Streak + shared plant (F8). The rules live in [StreakRules]; this screen
 /// explains them and shows where the pair stands today.
@@ -42,11 +42,12 @@ class _PlantScreenState extends ConsumerState<PlantScreen> with SingleTickerProv
     final me = ref.watch(authUidProvider).value;
     final name = ref.watch(partnerNameProvider);
     final plus = ref.watch(isPlusProvider);
-    if (pair == null)
+    if (pair == null) {
       return Scaffold(
         appBar: AppBar(),
         body: const Center(child: CircularProgressIndicator()),
       );
+    }
     final s = pair.streak;
     final plant = pair.plant;
     final wilted = plant.health == PlantHealth.wilted;

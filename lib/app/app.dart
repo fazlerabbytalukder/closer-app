@@ -8,9 +8,8 @@ import 'package:closer_app/core/services/notifications.dart';
 import 'package:closer_app/core/services/widget_bridge.dart';
 import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 
 class CloserApp extends ConsumerStatefulWidget {
   const CloserApp({super.key});
@@ -116,11 +115,7 @@ class _CloserAppState extends ConsumerState<CloserApp> with WidgetsBindingObserv
       theme: AppTheme.build(Brightness.light, mode),
       darkTheme: AppTheme.build(Brightness.dark, mode),
       themeMode: themeMode,
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       supportedLocales: const [Locale('en'), Locale('de'), Locale('fr'), Locale('es')],
     );
   }

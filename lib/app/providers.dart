@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:closer_app/core/config.dart';
 import 'package:closer_app/core/data/closer_backend.dart';
 import 'package:closer_app/core/models/models.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Overridden in main() with the configured backend.

@@ -20,7 +20,7 @@ void main() {
   });
 
   test('old messages without the new fields still parse', () {
-    final m = ChatMessage.fromJson('m', {'senderId': 'u', 'type': 'photo', 'mediaPath': 'x'});
+    final m = ChatMessage.fromJson('m', const {'senderId': 'u', 'type': 'photo', 'mediaPath': 'x'});
     expect(m.viewLimit, 0);
     expect(m.event, isNull);
     expect(m.snapUsedUp, isFalse);

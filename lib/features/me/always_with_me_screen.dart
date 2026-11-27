@@ -9,9 +9,9 @@ import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:closer_app/core/ui/actions.dart';
 import 'package:closer_app/core/ui/components.dart';
 import 'package:closer_app/features/me/widget_previews.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Settings + preview for the "Always with me" home-screen widget: a memory
 /// photo of the day, a romantic line, and the time since you last met.

@@ -11,9 +11,9 @@ import 'package:closer_app/core/ui/actions.dart';
 import 'package:closer_app/core/ui/components.dart';
 import 'package:closer_app/features/chat/chat_heads.dart';
 import 'package:closer_bubbles/closer_bubbles.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -53,8 +53,10 @@ class SettingsScreen extends ConsumerWidget {
               [
                 if (ref.watch(myLabelForPartnerProvider) case final l?)
                   '${l.emoji} ${l.title}'
+                else if (ref.watch(pairModeProvider) == PairMode.couple)
+                  '💑 Couple'
                 else
-                  (ref.watch(pairModeProvider) == PairMode.couple ? '💑 Couple' : '👯 Best friends'),
+                  '👯 Best friends',
                 'Nickname, together since',
               ].join(' · '),
             ),
@@ -128,8 +130,9 @@ class SettingsScreen extends ConsumerWidget {
             trailing: const Icon(Icons.open_in_new_rounded, size: 18),
             onTap: () async {
               final granted = await NotificationService.instance.requestPermission();
-              if (context.mounted)
+              if (context.mounted) {
                 showToast(context, granted ? 'Notifications are on' : 'Enable notifications in Android settings');
+              }
             },
           ),
           const Divider(height: Space.xl),

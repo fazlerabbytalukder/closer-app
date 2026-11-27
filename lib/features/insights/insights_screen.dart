@@ -5,11 +5,11 @@ import 'package:closer_app/core/models/models.dart';
 import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:closer_app/core/ui/components.dart';
 import 'package:closer_app/features/love/love_widgets.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:material_ui/material_ui.dart';
 
 const _partnerColor = Color(0xFFFF6B8A);
 
@@ -121,11 +121,12 @@ class InsightsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final d = ref.watch(_insightsProvider);
     final name = ref.watch(partnerNameProvider);
-    if (d == null)
+    if (d == null) {
       return Scaffold(
         appBar: AppBar(),
         body: const Center(child: CircularProgressIndicator()),
       );
+    }
     final now = DateTime.now();
     final since = d.pair.anniversary ?? d.pair.pairedAt;
     final days = DateTime(now.year, now.month, now.day).difference(DateTime(since.year, since.month, since.day)).inDays;

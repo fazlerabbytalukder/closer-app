@@ -33,9 +33,9 @@ import 'package:closer_app/features/together/miss_meter_screen.dart';
 import 'package:closer_app/features/together/plant_screen.dart';
 import 'package:closer_app/features/together/question_screens.dart';
 import 'package:closer_app/features/together/together_screen.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Invite code received from a deep link before the user could accept it.
 class PendingInvite extends Notifier<String?> {

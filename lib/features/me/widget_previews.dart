@@ -3,9 +3,9 @@ import 'package:closer_app/core/models/models.dart';
 import 'package:closer_app/core/services/widget_contract.dart';
 import 'package:closer_app/core/ui/components.dart';
 import 'package:closer_app/core/ui/plant_art.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Widget theme palettes — must match WidgetTheme.kt and the
 /// `res/drawable/widget_bg_*.xml` gradients.

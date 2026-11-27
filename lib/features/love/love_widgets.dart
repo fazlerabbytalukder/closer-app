@@ -5,11 +5,11 @@ import 'package:closer_app/core/models/models.dart';
 import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:closer_app/core/ui/components.dart';
 import 'package:closer_app/core/ui/soft_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// "Opens in 3 days", "Opens tomorrow at 08:00", "Opens in 25 min".
 String opensIn(DateTime at, DateTime now) {
@@ -49,14 +49,65 @@ class GiftBox extends StatelessWidget {
   }
 }
 
+/// Outlined pill with light text for the night sky (Figma "goodnight").
+class NightPill extends StatelessWidget {
+  const NightPill({required this.icon, required this.label, required this.onTap, super.key});
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white.withValues(alpha: 0.04),
+      shape: StadiumBorder(side: BorderSide(color: Colors.white.withValues(alpha: 0.22), width: 1.2)),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          height: 46,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, size: 17, color: Colors.white),
+                const SizedBox(width: 7),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.tt.labelLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w800),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Picks a photo from the gallery and shows it, with a remove button.
 class PhotoField extends StatelessWidget {
-  const PhotoField({required this.path, required this.onChanged, super.key, this.label = 'Add a photo'});
+  const PhotoField({
+    required this.path,
+    required this.onChanged,
+    super.key,
+    this.label = 'Add a photo',
+    this.onDark = false,
+  });
 
   /// Local file path of the picked photo (before upload).
   final String? path;
   final ValueChanged<String?> onChanged;
   final String label;
+
+  /// Outlined light pill for night screens (Figma "goodnight screen").
+  final bool onDark;
 
   Future<void> _pick() async {
     final x = await ImagePicker().pickImage(
@@ -72,6 +123,7 @@ class PhotoField extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = path;
     final dark = Theme.of(context).brightness == Brightness.dark;
+    if (p == null && onDark) return NightPill(icon: Icons.image_outlined, label: label, onTap: _pick);
     if (p == null) {
       // Lavender pill with violet text (Duosy secondary button).
       return PillButton(

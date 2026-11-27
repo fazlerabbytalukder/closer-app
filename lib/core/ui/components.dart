@@ -4,8 +4,8 @@ import 'dart:ui' show ImageFilter;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:closer_app/core/theme/gloss.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 
 enum CloserButtonKind { primary, accent, secondary, ghost }
 

@@ -5,9 +5,8 @@ import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:closer_app/features/chat/chat_screen.dart';
 import 'package:closer_bubbles/closer_bubbles.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -82,11 +81,7 @@ class BubbleChatApp extends ConsumerWidget {
       theme: AppTheme.build(Brightness.light, mode),
       darkTheme: AppTheme.build(Brightness.dark, mode),
       themeMode: ref.watch(themeModeProvider),
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       supportedLocales: const [Locale('en'), Locale('de'), Locale('fr'), Locale('es')],
       home: paired
           ? const ChatScreen(inBubble: true)

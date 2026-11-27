@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:closer_app/app/providers.dart';
 import 'package:closer_app/core/models/models.dart';
 import 'package:closer_app/core/services/widget_bridge.dart';
@@ -5,9 +7,9 @@ import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:closer_app/core/ui/actions.dart';
 import 'package:closer_app/core/ui/components.dart';
 import 'package:closer_app/core/ui/soft_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Settings → Relationship: type (couple / best friends), what you call
 /// each other, a nickname, and the "together since" date.
@@ -171,7 +173,7 @@ class _RelationshipScreenState extends ConsumerState<RelationshipScreen> {
                       Flexible(
                         child: Text(
                           [
-                            if (myLabel != null) myLabel.title else (couple ? 'Couple' : 'Best friends'),
+                            if (myLabel != null) myLabel.title else if (couple) 'Couple' else 'Best friends',
                             if (days != null)
                               '${couple ? 'together' : 'friends'} for $days day${days == 1 ? '' : 's'}'
                             else
@@ -228,7 +230,7 @@ class _RelationshipScreenState extends ConsumerState<RelationshipScreen> {
                   mode: pair.mode,
                   selected: myLabel?.id,
                   onSelected: (id) {
-                    if (id != myLabel?.id) _update(label: id, done: 'Saved');
+                    if (id != myLabel?.id) unawaited(_update(label: id, done: 'Saved'));
                   },
                 ),
                 const SizedBox(height: Space.s),
@@ -256,7 +258,7 @@ class _RelationshipScreenState extends ConsumerState<RelationshipScreen> {
                             icon: const Icon(Icons.close_rounded),
                             onPressed: () {
                               _nick.clear();
-                              _update(nickname: '', done: 'Nickname removed');
+                              unawaited(_update(nickname: '', done: 'Nickname removed'));
                             },
                           ),
                   ),
@@ -271,7 +273,7 @@ class _RelationshipScreenState extends ConsumerState<RelationshipScreen> {
                       child: FilledButton(
                         onPressed: () {
                           FocusScope.of(context).unfocus();
-                          _update(nickname: _nick.text, done: 'Nickname saved');
+                          unawaited(_update(nickname: _nick.text, done: 'Nickname saved'));
                         },
                         child: const Text('Save nickname'),
                       ),

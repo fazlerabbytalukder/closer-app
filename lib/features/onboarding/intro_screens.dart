@@ -1,10 +1,10 @@
 import 'package:closer_app/app/providers.dart';
 import 'package:closer_app/core/theme/app_theme.dart';
 import 'package:closer_app/core/ui/soft_ui.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Colours used only by the dark splash/onboarding screens (Figma "Splash &
 /// Onboarding Screen" frame).

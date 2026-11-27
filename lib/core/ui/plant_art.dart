@@ -1,7 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:closer_app/core/models/models.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// The shared plant, drawn in code so it scales and animates smoothly.
 /// Stage 0 = seed in a pot … stage 8 = big plant in full bloom.
