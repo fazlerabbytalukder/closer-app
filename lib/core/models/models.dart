@@ -528,6 +528,7 @@ class Pair {
     required this.mode,
     required this.pairedAt,
     this.latestItemByUser = const {},
+    this.lastTapByUser = const {},
     this.streak = const Streak(),
     this.plant = const Plant(),
     this.premium = const Premium(),
@@ -550,6 +551,7 @@ class Pair {
     mode: PairMode.parse(j['mode']),
     pairedAt: _date(j['pairedAt']) ?? DateTime.now(),
     latestItemByUser: _map(j['latestItemByUser']).map((k, v) => MapEntry(k, LatestItem.fromJson(_map(v)))),
+    lastTapByUser: {for (final e in _map(j['lastTapByUser']).entries) e.key: ?_date(e.value)},
     streak: Streak.fromJson(_map(j['streak'])),
     plant: Plant.fromJson(_map(j['plant'])),
     premium: Premium.fromJson(_map(j['premium'])),
@@ -571,6 +573,9 @@ class Pair {
   final PairMode mode;
   final DateTime pairedAt;
   final Map<String, LatestItem> latestItemByUser;
+
+  /// uid → when that member last sent a heart tap (written by sendTap).
+  final Map<String, DateTime> lastTapByUser;
   final Streak streak;
   final Plant plant;
   final Premium premium;
@@ -629,6 +634,7 @@ class Pair {
     'mode': mode.name,
     'pairedAt': _ms(pairedAt),
     'latestItemByUser': latestItemByUser.map((k, v) => MapEntry(k, v.toJson())),
+    'lastTapByUser': lastTapByUser.map((k, v) => MapEntry(k, _ms(v))),
     'streak': streak.toJson(),
     'plant': plant.toJson(),
     'premium': premium.toJson(),

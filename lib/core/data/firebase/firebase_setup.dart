@@ -1,8 +1,8 @@
 // Firebase start-up shared by the app and the FCM background isolate,
 // including the local Emulator Suite mode.
 //
-// Emulator mode (no Firebase project or billing needed):
-//   firebase emulators:start --project demo-duosy
+// Emulator mode (no billing needed; nothing leaves your PC):
+//   firebase emulators:start --project duosy-f5bc2
 //   flutter run --dart-define=CLOSER_BACKEND=firebase \
 //               --dart-define=CLOSER_EMULATOR_HOST=<your PC's LAN IP>
 //
@@ -25,24 +25,16 @@ const useFirebaseEmulator = emulatorHost != '';
 /// Cloud Functions region; must match functions/src/common.ts REGION.
 const firebaseRegion = 'europe-west1';
 
-/// Project id used with the emulators. The `demo-` prefix tells the
-/// emulators that no real project exists, so nothing reaches Google servers.
-const emulatorProjectId = 'demo-duosy';
+/// Emulator mode keeps the real project's options: Android already starts
+/// that app from google-services.json, so different options would clash.
+/// Every service is then pointed at the local emulators, so nothing reaches
+/// the real project. Start the emulators with `--project duosy-f5bc2`.
 
 // Ports must match "emulators" in firebase.json.
 const _authPort = 9099;
 const _firestorePort = 8080;
 const _functionsPort = 5001;
 const _storagePort = 9199;
-
-/// Placeholder options for the demo project: the emulators don't check them.
-const _emulatorOptions = FirebaseOptions(
-  apiKey: 'demo-api-key',
-  appId: '1:000000000000:android:0000000000000000',
-  messagingSenderId: '000000000000',
-  projectId: emulatorProjectId,
-  storageBucket: '$emulatorProjectId.appspot.com',
-);
 
 /// Functions write thumbnail URLs for the real Storage host; in emulator mode
 /// point them at the Storage emulator, which serves the same paths.
@@ -58,10 +50,8 @@ bool _emulatorsConnected = false;
 /// service at [emulatorHost]. Safe to call more than once.
 Future<void> initCloserFirebase() async {
   if (Firebase.apps.isEmpty) {
-    // Real project: lib/firebase_options.dart from `flutterfire configure`.
-    await Firebase.initializeApp(
-      options: useFirebaseEmulator ? _emulatorOptions : DefaultFirebaseOptions.currentPlatform,
-    );
+    // lib/firebase_options.dart from `flutterfire configure`.
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   }
   if (!useFirebaseEmulator || _emulatorsConnected) return;
   _emulatorsConnected = true;

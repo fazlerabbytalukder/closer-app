@@ -57,7 +57,7 @@ Done so far (project `duosy-f5bc2`, still on the Spark plan): Google sign-in ena
 ## Local backend (Firebase Emulator Suite)
 
 Runs the real backend (Auth, Firestore, Functions, Storage, rules) on your PC.
-No Firebase project, billing or `flutterfire configure` needed.
+No billing needed: the app keeps the real project's id (`duosy-f5bc2`) but every service points at your PC.
 
 Needs Node, the Firebase CLI (`npm install -g firebase-tools`) and Java 21+
 (Android Studio's bundled JBR works).
@@ -69,7 +69,7 @@ Needs Node, the Firebase CLI (`npm install -g firebase-tools`) and Java 21+
 2. Start the emulators from the project root. PowerShell:
    ```
    $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
-   firebase emulators:start --project demo-duosy
+   firebase emulators:start --project duosy-f5bc2
    ```
    The Emulator UI (users, Firestore data, files, function logs) is at http://127.0.0.1:4000.
 3. Run the app against them:
@@ -87,7 +87,7 @@ How it differs from a real project:
   has no emulator). Open the app to see new items.
 - Scheduled functions (daily question, streaks, reminders, capsule unlocks,
   cleanup) don't run on their own. Call one by hand from
-  `firebase functions:shell --project demo-duosy`.
+  `firebase functions:shell --project duosy-f5bc2`.
 - Data is wiped when the emulators stop. Add
   `--import=.emulator-data --export-on-exit` to keep it.
 - Cleartext HTTP is allowed in debug builds only (`android/app/src/debug/AndroidManifest.xml`).

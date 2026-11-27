@@ -313,7 +313,8 @@ List<_Ritual> _ritualsFor(BuildContext context, WidgetRef ref, AppUser me, Pair 
       iconColor: Brand.purple,
       title: 'Send a heart tap',
       subtitle: 'A soft buzz that says “thinking of you”',
-      done: tap != null && tap.senderId == me.uid && _isToday(tap.createdAt),
+      // My own last tap, so a later tap from the partner doesn't untick it.
+      done: _isToday(pair.lastTapByUser[me.uid]) || (tap != null && tap.senderId == me.uid && _isToday(tap.createdAt)),
       tint: Brand.purpleTint,
       onTap: () async {
         hapticMedium();
