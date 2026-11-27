@@ -6,21 +6,24 @@
 // settings (widgetTheme[self], questionPack, timezone).
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:closer_app/core/config.dart';
 import 'package:closer_app/core/data/closer_backend.dart';
+import 'package:closer_app/core/data/firebase/firebase_setup.dart';
 import 'package:closer_app/core/models/models.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Limits the app maps to [LimitReachedException] (shows the paywall).
 const _paywallLimits = {'sends', 'countdowns', 'plus', 'packs'};
@@ -37,7 +40,7 @@ class FirebaseBackend implements CloserBackend {
        _storageOverride = storage,
        _functionsOverride = functions;
 
-  static const region = 'europe-west1';
+  static const region = firebaseRegion;
 
   final FirebaseAuth? _authOverride;
   final FirebaseFirestore? _dbOverride;
@@ -77,11 +80,7 @@ class FirebaseBackend implements CloserBackend {
 
   @override
   Future<void> init() async {
-    if (Firebase.apps.isEmpty) {
-      // TODO(setup): main() should call Firebase.initializeApp(options:
-      // DefaultFirebaseOptions.currentPlatform) from `flutterfire configure`.
-      await Firebase.initializeApp();
-    }
+    await initCloserFirebase();
     _authSub ??= _auth.authStateChanges().listen(_onAuthChanged);
   }
 
@@ -117,6 +116,10 @@ class FirebaseBackend implements CloserBackend {
 
   @override
   Future<void> signInWithGoogle() async {
+    if (useFirebaseEmulator) {
+      await _signInOnEmulator();
+      return;
+    }
     await _ensureGoogle();
     final GoogleSignInAccount account;
     try {
@@ -134,10 +137,36 @@ class FirebaseBackend implements CloserBackend {
     final cred = await _auth.signInWithCredential(GoogleAuthProvider.credential(idToken: idToken));
     final user = cred.user;
     if (user == null) throw const CloserException('Sign-in failed.');
-    await _ensureUserDoc(user, account);
+    await _ensureUserDoc(user, displayName: account.displayName, photoUrl: account.photoUrl);
   }
 
-  Future<void> _ensureUserDoc(User user, GoogleSignInAccount account) async {
+  /// Emulator only: real Google sign-in needs a real Firebase project, so
+  /// sign in with a fake Google account the Auth emulator accepts. Each
+  /// install keeps its own account, so two phones are two different people.
+  Future<void> _signInOnEmulator() async {
+    const key = 'emulator_tester_id';
+    final prefs = await SharedPreferences.getInstance();
+    var id = prefs.getString(key);
+    if (id == null) {
+      final rnd = Random.secure();
+      id = List.generate(6, (_) => rnd.nextInt(36).toRadixString(36)).join();
+      await prefs.setString(key, id);
+    }
+    final name = 'Tester ${id.substring(0, 4).toUpperCase()}';
+    // The Auth emulator accepts an unsigned JSON "ID token".
+    final fakeIdToken = jsonEncode({
+      'sub': 'tester-$id',
+      'email': 'tester-$id@example.com',
+      'email_verified': true,
+      'name': name,
+    });
+    final cred = await _auth.signInWithCredential(GoogleAuthProvider.credential(idToken: fakeIdToken));
+    final user = cred.user;
+    if (user == null) throw const CloserException('Sign-in failed.');
+    await _ensureUserDoc(user, displayName: name);
+  }
+
+  Future<void> _ensureUserDoc(User user, {String? displayName, String? photoUrl}) async {
     final ref = _db.doc('users/${user.uid}');
     final snap = await ref.get();
     if (snap.exists) {
@@ -145,8 +174,8 @@ class FirebaseBackend implements CloserBackend {
       return;
     }
     await ref.set({
-      'displayName': _clip(user.displayName ?? account.displayName ?? '', 40),
-      'photoUrl': user.photoURL ?? account.photoUrl,
+      'displayName': _clip(user.displayName ?? displayName ?? '', 40),
+      'photoUrl': user.photoURL ?? photoUrl,
       'pairId': null,
       'ageConfirmed18': false,
       'notificationPrefs': const NotificationPrefs().toJson(),
@@ -168,10 +197,12 @@ class FirebaseBackend implements CloserBackend {
     _tokenSub = null;
     _fcmToken = null;
     _urlCache.clear();
-    try {
-      await _ensureGoogle();
-      await GoogleSignIn.instance.signOut();
-    } on Object catch (_) {}
+    if (!useFirebaseEmulator) {
+      try {
+        await _ensureGoogle();
+        await GoogleSignIn.instance.signOut();
+      } on Object catch (_) {}
+    }
     await _auth.signOut();
   }
 
@@ -409,7 +440,7 @@ class FirebaseBackend implements CloserBackend {
   Future<String?> resolveImage(String? ref) {
     if (ref == null || ref.isEmpty) return Future.value();
     if (ref.startsWith('http://') || ref.startsWith('https://')) {
-      return Future.value(ref);
+      return Future.value(emulatorStorageUrl(ref));
     }
     if (File(ref).isAbsolute && File(ref).existsSync()) return Future.value(ref);
     return _urlCache.putIfAbsent(ref, () async {
@@ -1336,6 +1367,8 @@ class FirebaseBackend implements CloserBackend {
   @override
   Future<void> registerDevice() async {
     if (currentUid == null) return;
+    // FCM has no emulator: the demo project can't get a push token.
+    if (useFirebaseEmulator) return;
     final messaging = FirebaseMessaging.instance;
     await messaging.requestPermission();
     // Classic registration tokens: the functions send with sendEachForMulticast.

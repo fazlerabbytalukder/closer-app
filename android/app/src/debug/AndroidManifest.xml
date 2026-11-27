@@ -4,4 +4,8 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Debug builds only: the Firebase Emulator Suite is plain HTTP on the
+         local network (CLOSER_EMULATOR_HOST). Release builds stay HTTPS-only. -->
+    <application
+        android:usesCleartextTraffic="true"/>
 </manifest>

@@ -25,7 +25,7 @@ _চেক করা হয়েছে: ২৭ নভেম্বর ২০২�
 | ৪ | Google Services Gradle plugin যোগ করা নেই | `android/settings.gradle.kts`, `android/app/build.gradle.kts` | সাধারণত `flutterfire configure` নিজেই যোগ করে। না করলে হাতে `com.google.gms.google-services` যোগ করতে হবে |
 | ৫ | `Firebase.initializeApp()` কোনো option ছাড়া কল হয় | `lib/core/data/firebase/firebase_backend.dart:81`, `lib/core/data/firebase/fcm_background.dart:77,92` (`TODO(setup)`) | `DefaultFirebaseOptions.currentPlatform` পাস করা |
 | ৬ | ডিফল্ট ব্যাকএন্ড `local` (ডেমো) | `lib/core/data/backend_factory.dart` | `--dart-define=CLOSER_BACKEND=firebase` দিয়ে চালাতে হবে, অথবা রিলিজের জন্য ডিফল্ট বদলাতে হবে |
-| ৭ | Cloud Functions **কখনো install বা compile করা হয়নি** | `functions/` (কোনো `node_modules` বা `lib/` নেই) | `cd functions && npm install && npm run build`। README অনুযায়ী প্রথম build-এ কিছু type error আসতে পারে |
+| ৭ | ~~Cloud Functions install বা compile করা হয়নি~~ ✅ | `functions/` | `npm install` আর `npm run build` হয়ে গেছে, কোনো type error আসেনি (২৭ নভেম্বর ২০২৬)। Emulator-এ সব function লোড হয় |
 | ৮ | Functions-এ lint script নেই | `functions/package.json` | ঐচ্ছিক: eslint যোগ করা |
 | ৯ | Rules, indexes, functions আর hosting ডিপ্লয় হয়নি | `firestore.rules`, `storage.rules`, `firestore.indexes.json`, `web/` | `firebase deploy --only firestore:rules,firestore:indexes,storage,functions,hosting` |
 | ১০ | Google Sign-In-এর SHA-1/SHA-256 Firebase-এ যোগ করা নেই | Firebase console | `cd android && ./gradlew signingReport`। debug, upload আর Play signing — তিনটা key-ই লাগবে |

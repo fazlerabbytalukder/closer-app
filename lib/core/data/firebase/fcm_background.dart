@@ -21,10 +21,10 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:closer_app/core/data/firebase/firebase_setup.dart';
 import 'package:closer_app/core/models/models.dart';
 import 'package:closer_app/core/services/widget_contract.dart';
 import 'package:closer_app/features/chat/chat_heads.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -66,18 +66,11 @@ StreamSubscription<RemoteMessage>? _foregroundSub;
 
 /// Registers the FCM handlers. Call from `main()` before `runApp()`:
 ///
-/// ```dart
-/// WidgetsFlutterBinding.ensureInitialized();
-/// await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-/// await initFirebaseMessaging();
-/// runApp(...);
-/// ```
-///
-/// This does NOT initialise Firebase itself.
-// TODO(setup): run `flutterfire configure` to generate lib/firebase_options.dart
-// and pass `DefaultFirebaseOptions.currentPlatform` to Firebase.initializeApp
-// in main() and in [closerFirebaseBackgroundHandler] below.
+/// This does NOT initialise Firebase itself: FirebaseBackend.init() calls
+/// [initCloserFirebase] first (see backend_factory.dart).
 Future<void> initFirebaseMessaging() async {
+  // FCM has no emulator: the demo project can't receive pushes.
+  if (useFirebaseEmulator) return;
   FirebaseMessaging.onBackgroundMessage(closerFirebaseBackgroundHandler);
   // In the foreground the background handler doesn't run, so keep the widget
   // in sync here too (no system notification: the open app shows it).
@@ -88,12 +81,7 @@ Future<void> initFirebaseMessaging() async {
 @pragma('vm:entry-point')
 Future<void> closerFirebaseBackgroundHandler(RemoteMessage message) async {
   try {
-    if (Firebase.apps.isEmpty) {
-      // TODO(setup): use `Firebase.initializeApp(options:
-      // DefaultFirebaseOptions.currentPlatform)` once firebase_options.dart
-      // exists. Without options this relies on google-services.json.
-      await Firebase.initializeApp();
-    }
+    await initCloserFirebase();
   } on Object catch (e) {
     debugPrint('Duosy FCM: Firebase init failed: $e');
   }

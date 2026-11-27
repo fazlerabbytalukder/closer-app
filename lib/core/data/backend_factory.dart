@@ -3,15 +3,17 @@ import 'package:closer_app/core/data/firebase/fcm_background.dart';
 import 'package:closer_app/core/data/firebase/firebase_backend.dart';
 import 'package:closer_app/core/data/local/local_backend.dart';
 
-/// `--dart-define=CLOSER_BACKEND=firebase` switches to Firebase.
+/// `--dart-define=CLOSER_BACKEND=firebase` switches to Firebase. Add
+/// `--dart-define=CLOSER_EMULATOR_HOST=<host>` to use the local Emulator
+/// Suite instead of a real project (see firebase_setup.dart).
 const backendKind = String.fromEnvironment('CLOSER_BACKEND', defaultValue: 'local');
 
 /// Creates and initialises the configured backend. For Firebase this also
 /// registers the FCM background handler, which must happen before runApp
 /// (plan 5.3).
 ///
-/// Firebase setup still needed: `flutterfire configure`, then pass
-/// `DefaultFirebaseOptions.currentPlatform` in FirebaseBackend.init().
+/// Real-project setup still needed: `flutterfire configure`, then pass
+/// `DefaultFirebaseOptions.currentPlatform` in initCloserFirebase().
 Future<CloserBackend> createBackend() async {
   final CloserBackend backend;
   if (backendKind == 'firebase') {

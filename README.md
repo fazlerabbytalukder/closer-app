@@ -40,18 +40,55 @@ This lets you exercise the whole loop on one emulator, including widget updates 
 1. Create a Firebase project on the Blaze plan. Put Firestore in **eur3** (this cannot be changed later) and Storage in the EU. Put the project id in `.firebaserc`.
 2. Enable the Google sign-in provider.
 3. Add the Android app `app.closer.widget` with its SHA-1 and SHA-256 fingerprints (debug, upload and Play signing keys).
-4. Run `flutterfire configure`, then pass `DefaultFirebaseOptions.currentPlatform` to `Firebase.initializeApp` in `FirebaseBackend.init()` and in `fcm_background.dart` (both are marked with `TODO(setup)`).
+4. Run `flutterfire configure`, then pass `DefaultFirebaseOptions.currentPlatform` to `Firebase.initializeApp` in `initCloserFirebase()` (`lib/core/data/firebase/firebase_setup.dart`, marked `TODO(setup)`).
 5. Install Node 22 and the Firebase CLI, then:
    ```
    cd functions && npm install && npm run build
    ```
-   The TypeScript has not been compiled yet, so expect small type fixes on the first build.
 6. Set the RevenueCat secret: `firebase functions:secrets:set REVENUECAT_WEBHOOK_AUTH`.
 7. Deploy:
    ```
    firebase deploy --only firestore:rules,firestore:indexes,storage,functions,hosting
    ```
 8. Put the Play signing SHA-256 into `web/.well-known/assetlinks.json` and point `closer.app` at Firebase Hosting.
+
+## Local backend (Firebase Emulator Suite)
+
+Runs the real backend (Auth, Firestore, Functions, Storage, rules) on your PC.
+No Firebase project, billing or `flutterfire configure` needed.
+
+Needs Node, the Firebase CLI (`npm install -g firebase-tools`) and Java 21+
+(Android Studio's bundled JBR works).
+
+1. Build the functions once (again after each change in `functions/src`):
+   ```
+   cd functions && npm install && npm run build
+   ```
+2. Start the emulators from the project root. PowerShell:
+   ```
+   $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+   firebase emulators:start --project demo-duosy
+   ```
+   The Emulator UI (users, Firestore data, files, function logs) is at http://127.0.0.1:4000.
+3. Run the app against them:
+   ```
+   flutter run --dart-define=CLOSER_BACKEND=firebase --dart-define=CLOSER_EMULATOR_HOST=<host>
+   ```
+   `<host>` is `10.0.2.2` on the Android emulator, or your PC's Wi-Fi IPv4
+   address (`ipconfig`) on a real phone on the same network. Allow Node and
+   Java through Windows Firewall on private networks when asked.
+
+How it differs from a real project:
+- "Continue with Google" signs in a test account (`Tester XXXX`) without a
+  Google prompt. Each install is its own person, so two phones can pair.
+- No push notifications or home-screen widget updates from the partner (FCM
+  has no emulator). Open the app to see new items.
+- Scheduled functions (daily question, streaks, reminders, capsule unlocks,
+  cleanup) don't run on their own. Call one by hand from
+  `firebase functions:shell --project demo-duosy`.
+- Data is wiped when the emulators stop. Add
+  `--import=.emulator-data --export-on-exit` to keep it.
+- Cleartext HTTP is allowed in debug builds only (`android/app/src/debug/AndroidManifest.xml`).
 
 ## Pairing and relationship
 
