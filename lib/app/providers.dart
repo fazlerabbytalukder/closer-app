@@ -108,6 +108,9 @@ final latestTapProvider = StreamProvider<Tap?>((ref) {
   return ref.watch(backendProvider).watchLatestTap(id);
 });
 
+/// Sends saved offline, waiting for a connection.
+final queuedSendsProvider = StreamProvider<int>((ref) => ref.watch(backendProvider).watchQueuedSends());
+
 final missMetersProvider = StreamProvider<List<MissMeter>>((ref) {
   final id = ref.watch(pairIdProvider);
   if (id == null) return Stream.value(const []);

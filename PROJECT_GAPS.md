@@ -63,7 +63,7 @@ _চেক করা হয়েছে: ২৭ নভেম্বর ২০২�
 | ২২ | **Rewarded ad-এর সার্ভার যাচাই** | ইউজার সত্যিই বিজ্ঞাপন দেখেছে কিনা সার্ভার যাচাই করে না, তাই যে কেউ বোনাস পেতে পারে (`TODO(prod)` SSV) | `functions/src/items.ts:379` |
 | ২৩ | Monetization **বন্ধ** | দুইটা flag আর তিন জায়গায় বদলাতে হবে | `lib/core/config.dart` (`monetizationEnabled`), `functions/src/common.ts` (`MONETIZATION_ENABLED`), `firestore.rules` (`monetizationEnabled()`) |
 | ২৪ | ~~**টাইমজোন** অনুমান করা হত~~ ✅ | এখন `flutter_timezone` দিয়ে ফোনের আসল IANA zone (যেমন `Europe/Berlin`) পাঠানো হয়, লগইনে আর FCM token রেজিস্ট্রেশনে আপডেট হয় | `lib/core/services/device_timezone.dart` |
-| ২৫ | **অফলাইনে পাঠানো** | মডেলে "pending" অবস্থা আছে, কিন্তু queue বা আবার চেষ্টা করার ব্যবস্থা নেই। নেট না থাকলে পাঠানো ফেল করে | README-র "Not wired yet" অংশ |
+| ২৫ | ~~**অফলাইনে পাঠানো**~~ ✅ | নেট না থাকলে ছবি/note/doodle/location ফোনে জমা থাকে, Home-এ "N waiting to send" দেখায়, নেট ফিরলে, অ্যাপ খুললে বা প্রতি মিনিটে নিজে থেকে পাঠায়। সার্ভার একই itemId-এ duplicate বানায় না। Chat-এর ছবি/ভয়েস আর heart tap এখনো queue-এ যায় না | `lib/core/data/firebase/send_queue.dart` |
 
 ---
 

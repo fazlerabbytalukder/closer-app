@@ -42,6 +42,7 @@ class _ReplyScreenState extends ConsumerState<ReplyScreen> {
   Future<void> _quickNote(String text) async {
     setState(() => _sending = text);
     final name = ref.read(partnerNameProvider);
+    var queued = false;
     final ok = await runAction(context, () async {
       final dir = await getTemporaryDirectory();
       final style = NoteStyle(bg: noteBackgrounds[_quick.indexOf(text) % noteBackgrounds.length].id, font: 'rounded');
@@ -50,15 +51,19 @@ class _ReplyScreenState extends ConsumerState<ReplyScreen> {
         style: style,
         path: '${dir.path}/reply_${DateTime.now().millisecondsSinceEpoch}.png',
       );
-      await ref
-          .read(backendProvider)
-          .sendItem(SendRequest(type: ItemType.note, imagePath: file.path, text: text, noteStyle: style));
+      try {
+        await ref
+            .read(backendProvider)
+            .sendItem(SendRequest(type: ItemType.note, imagePath: file.path, text: text, noteStyle: style));
+      } on SendQueuedException {
+        queued = true; // saved; it goes out once back online
+      }
     });
     if (!mounted) return;
     setState(() => _sending = null);
     if (ok) {
       hapticMedium();
-      showToast(context, 'Sent to $name 💌');
+      showToast(context, queued ? const SendQueuedException().message : 'Sent to $name 💌');
       context.pop();
     }
   }

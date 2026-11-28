@@ -52,6 +52,7 @@ class HomeScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const _QueuedBanner(),
                   _ProgressCard(me: me, pair: pair, name: name),
                   _Rituals(me: me, pair: pair, name: name),
                   const _LoveInbox(),
@@ -71,6 +72,38 @@ class HomeScreen extends ConsumerWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "2 waiting to send": sends made offline that go out once back online.
+class _QueuedBanner extends ConsumerWidget {
+  const _QueuedBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final n = ref.watch(queuedSendsProvider).value ?? 0;
+    if (n == 0) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: DecoratedBox(
+        decoration: BoxDecoration(color: Brand.purpleTint, borderRadius: BorderRadius.circular(18)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              const Icon(Icons.schedule_send_rounded, color: Brand.purple),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  '$n waiting to send · they’ll go out when you’re back online',
+                  style: context.tt.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

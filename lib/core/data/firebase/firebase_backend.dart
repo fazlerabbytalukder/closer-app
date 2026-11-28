@@ -13,14 +13,17 @@ import 'dart:math';
 import 'package:closer_app/core/config.dart';
 import 'package:closer_app/core/data/closer_backend.dart';
 import 'package:closer_app/core/data/firebase/firebase_setup.dart';
+import 'package:closer_app/core/data/firebase/send_queue.dart';
 import 'package:closer_app/core/models/models.dart';
 import 'package:closer_app/core/services/device_timezone.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart' show AppLifecycleListener;
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:path_provider/path_provider.dart';
@@ -71,6 +74,15 @@ class FirebaseBackend implements CloserBackend {
   /// Capsule content never changes once written.
   final Map<String, CapsuleContent> _capsuleCache = {};
 
+  /// Sends made offline, delivered by [_flushQueue].
+  final SendQueue _queue = SendQueue();
+  Future<void>? _flushing;
+  Timer? _retryTimer;
+  // Live as long as the backend (app lifetime).
+  // ignore: cancel_subscriptions
+  StreamSubscription<List<ConnectivityResult>>? _netSub;
+  AppLifecycleListener? _lifecycle;
+
   @override
   String get name => 'firebase';
 
@@ -82,7 +94,14 @@ class FirebaseBackend implements CloserBackend {
   @override
   Future<void> init() async {
     await initCloserFirebase();
+    // Fail a stalled upload in 30 s (default 10 min) so it can be queued.
+    _storage.setMaxUploadRetryTime(const Duration(seconds: 30));
     _authSub ??= _auth.authStateChanges().listen(_onAuthChanged);
+    // Offline queue: retry when the network comes back or the app returns.
+    _netSub ??= Connectivity().onConnectivityChanged.listen((r) {
+      if (_isOnline(r)) unawaited(_flushQueue());
+    });
+    _lifecycle ??= AppLifecycleListener(onResume: () => unawaited(_flushQueue()));
   }
 
   void _onAuthChanged(User? user) {
@@ -94,7 +113,12 @@ class FirebaseBackend implements CloserBackend {
         .doc('users/${user.uid}')
         .snapshots()
         .listen(
-          (snap) => _pairId = snap.data()?['pairId'] as String?,
+          (snap) {
+            final first = _pairId == null;
+            _pairId = snap.data()?['pairId'] as String?;
+            // Sends queued in an earlier session go out once we know the pair.
+            if (first && _pairId != null) unawaited(_flushQueue());
+          },
           onError: (Object e) => debugPrint('FirebaseBackend user stream: $e'),
         );
   }
@@ -379,14 +403,32 @@ class FirebaseBackend implements CloserBackend {
 
   @override
   Future<Item> sendItem(SendRequest request) async {
+    final uid = _uid;
     final pairId = await _requirePairId();
     final itemId = _db.collection('pairs/$pairId/items').doc().id;
-    final ref = _storage.ref('pairs/$pairId/raw/$itemId.jpg');
-    try {
-      await ref.putFile(File(request.imagePath), SettableMetadata(contentType: _contentType(request.imagePath)));
-    } on FirebaseException catch (e) {
-      throw CloserException('Upload failed (${e.code}). Check your connection.');
+    Future<Never> queue() async {
+      await _queue.add(itemId: itemId, pairId: pairId, uid: uid, request: request);
+      _scheduleRetry();
+      throw const SendQueuedException();
     }
+
+    if (!await _online()) await queue();
+    try {
+      return await _deliver(pairId, itemId, request);
+    } on Object catch (e) {
+      if (await _isNetworkError(e)) await queue();
+      if (e is FirebaseException && e.plugin == 'firebase_storage') {
+        throw CloserException('Upload failed (${e.code}). Please try again.');
+      }
+      rethrow;
+    }
+  }
+
+  /// Uploads the image and creates the item. Safe to repeat with the same
+  /// [itemId]: the server returns the existing item.
+  Future<Item> _deliver(String pairId, String itemId, SendRequest request) async {
+    final ref = _storage.ref('pairs/$pairId/raw/$itemId.jpg');
+    await ref.putFile(File(request.imagePath), SettableMetadata(contentType: _contentType(request.imagePath)));
     final data = await _call('sendItem', {
       'pairId': pairId,
       'itemId': itemId,
@@ -399,6 +441,73 @@ class FirebaseBackend implements CloserBackend {
       'secret': request.secret,
     });
     return Item.fromJson(data['id'] as String? ?? itemId, data);
+  }
+
+  @override
+  Stream<int> watchQueuedSends() => _auth.authStateChanges().asyncExpand((u) => _queue.watchCount(u?.uid));
+
+  /// Sends the queued items in order. Stops at the first network failure (and
+  /// tries again later); drops items that fail for good (limit, unpaired).
+  Future<void> _flushQueue() {
+    // One flush at a time. Cleared after completion (not in a `finally`
+    // inside the body: a body that returns before its first await would
+    // clear it before it was set, leaving a finished future stuck here).
+    final running = _flushing;
+    if (running != null) return running;
+    final flush = _flushOnce();
+    _flushing = flush;
+    unawaited(
+      flush.whenComplete(() {
+        if (identical(_flushing, flush)) _flushing = null;
+      }),
+    );
+    return flush;
+  }
+
+  Future<void> _flushOnce() async {
+    final uid = currentUid;
+    if (uid == null || !await _online()) return;
+    for (final e in await _queue.items()) {
+      if (e.uid != uid) continue;
+      try {
+        await _deliver(e.pairId, e.itemId, e.request);
+        await _queue.remove(e.itemId);
+        debugPrint('Offline queue: sent ${e.itemId}');
+      } on Object catch (err) {
+        if (await _isNetworkError(err)) {
+          debugPrint('Offline queue: still offline ($err), retrying in a minute');
+          _scheduleRetry();
+          return;
+        }
+        // Limit reached, unpaired, image rejected: it can't ever go out.
+        debugPrint('Offline queue: dropping ${e.itemId}: $err');
+        await _queue.remove(e.itemId);
+      }
+    }
+  }
+
+  void _scheduleRetry() {
+    _retryTimer?.cancel();
+    _retryTimer = Timer(const Duration(minutes: 1), () => unawaited(_flushQueue()));
+  }
+
+  static bool _isOnline(List<ConnectivityResult> r) => r.any((c) => c != ConnectivityResult.none);
+
+  Future<bool> _online() async {
+    try {
+      return _isOnline(await Connectivity().checkConnectivity());
+    } on Object catch (_) {
+      return true; // can't tell: try the network
+    }
+  }
+
+  Future<bool> _isNetworkError(Object e) async {
+    if (e is NetworkException || e is SocketException || e is TimeoutException) return true;
+    if (e is FirebaseException) {
+      if (e.code == 'retry-limit-exceeded' || e.code == 'unavailable') return true;
+      return !await _online();
+    }
+    return false;
   }
 
   @override
@@ -1429,7 +1538,7 @@ class FirebaseBackend implements CloserBackend {
     switch (e.code) {
       case 'unavailable':
       case 'deadline-exceeded':
-        return const CloserException('No connection. Please try again.');
+        return const NetworkException();
       case 'unauthenticated':
         return const CloserException('Please sign in again.');
       case 'internal':

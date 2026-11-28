@@ -498,6 +498,9 @@ class LocalBackend implements CloserBackend {
       (_col('usage')[_usageKey(uid)] ??= <String, dynamic>{'sends': 0, 'bonus': 0}) as Map<String, dynamic>;
 
   @override
+  Stream<int> watchQueuedSends() => Stream.value(0); // everything is on-device
+
+  @override
   Stream<int> watchSendsToday() => _watch(() {
     final uid = currentUid;
     if (uid == null) return 0;

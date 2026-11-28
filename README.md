@@ -118,7 +118,7 @@ Then wire RevenueCat and AdMob.
 - **RevenueCat** (`purchases_flutter`) and **AdMob** (`google_mobile_ads` + UMP consent). Both need real API keys and ad unit ids. The paywall and ad slots exist behind `lib/core/services/ads.dart` and `paywall_screen.dart`.
 - **German, French and Spanish translations.** Strings are currently English and inline. The Material localization delegates are already set up.
 - **Crashlytics, Analytics, Remote Config and App Check.** Add these after `flutterfire configure`.
-- **An offline send queue.**
+- **Offline queue for chat media and heart taps.** Photos, notes, doodles and locations already queue offline (`send_queue.dart`).
 
 ## Tests
 

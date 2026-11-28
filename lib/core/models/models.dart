@@ -1326,6 +1326,17 @@ class CloserException implements Exception {
   String toString() => message;
 }
 
+/// The server couldn't be reached (offline, timeout).
+class NetworkException extends CloserException {
+  const NetworkException([super.message = 'No connection. Please try again.']);
+}
+
+/// A send was saved on the phone because there was no connection; it goes
+/// out by itself once the phone is back online.
+class SendQueuedException extends CloserException {
+  const SendQueuedException([super.message = 'No connection. It’ll send by itself when you’re back online 📶']);
+}
+
 // ------------------------------------------------------------ love capsules
 
 /// What a [Capsule] is: one of the "100 reasons", a letter from the future,

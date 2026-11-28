@@ -78,8 +78,12 @@ abstract class CloserBackend {
   Future<void> setLastMet(DateTime when);
 
   // --------------------------------------------------------------- items
-  /// Throws [LimitReachedException] ('sends') when the free limit is hit.
+  /// Throws [LimitReachedException] ('sends') when the free limit is hit, and
+  /// [SendQueuedException] when it was saved to send once back online.
   Future<Item> sendItem(SendRequest request);
+
+  /// Sends waiting for a connection (see [SendQueuedException]).
+  Stream<int> watchQueuedSends();
   Stream<List<Item>> watchItems(String pairId, {int limit = 200});
   Stream<int> watchSendsToday();
 

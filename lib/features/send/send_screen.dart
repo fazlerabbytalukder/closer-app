@@ -270,22 +270,27 @@ class _SendScreenState extends ConsumerState<SendScreen> with SingleTickerProvid
       ItemType.location => _locationKey,
     };
     final name = ref.read(partnerNameProvider);
+    var queued = false;
     final ok = await runAction(context, () async {
       final path = await captureToFile(key);
-      await ref
-          .read(backendProvider)
-          .sendItem(
-            SendRequest(
-              type: _type,
-              imagePath: path,
-              caption: _type == ItemType.note ? '' : _caption.text.trim(),
-              text: _type == ItemType.note ? _note.text.trim() : null,
-              noteStyle: _type == ItemType.note ? NoteStyle(bg: _noteBg, font: _noteFont) : null,
-              geo: _type == ItemType.location ? _geo : null,
-              saveToMemories: _saveToMemories,
-              secret: _secret && _type != ItemType.location,
-            ),
-          );
+      try {
+        await ref
+            .read(backendProvider)
+            .sendItem(
+              SendRequest(
+                type: _type,
+                imagePath: path,
+                caption: _type == ItemType.note ? '' : _caption.text.trim(),
+                text: _type == ItemType.note ? _note.text.trim() : null,
+                noteStyle: _type == ItemType.note ? NoteStyle(bg: _noteBg, font: _noteFont) : null,
+                geo: _type == ItemType.location ? _geo : null,
+                saveToMemories: _saveToMemories,
+                secret: _secret && _type != ItemType.location,
+              ),
+            );
+      } on SendQueuedException {
+        queued = true; // saved; it goes out once back online
+      }
     });
     if (!mounted) return;
     setState(() => _sending = false);
@@ -293,10 +298,12 @@ class _SendScreenState extends ConsumerState<SendScreen> with SingleTickerProvid
       hapticMedium();
       showToast(
         context,
-        _secret && _type != ItemType.location
+        queued
+            ? const SendQueuedException().message
+            : _secret && _type != ItemType.location
             ? 'Sent anonymously 🕵️ Reveal it from Memories when you’re ready'
             : 'Sent to $name’s widget 💌',
-        icon: Icons.check_circle_rounded,
+        icon: queued ? Icons.schedule_send_rounded : Icons.check_circle_rounded,
       );
       context.pop();
     }
