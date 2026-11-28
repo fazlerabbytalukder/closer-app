@@ -49,12 +49,12 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="closer" />
             </intent-filter>
-            <!-- App Links for invite links: https://closer.app/i/<code> -->
+            <!-- App Links for invite links: https://duosy-f5bc2.web.app/i/<code> -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="https" android:host="closer.app" android:pathPrefix="/i/" />
+                <data android:scheme="https" android:host="duosy-f5bc2.web.app" android:pathPrefix="/i/" />
             </intent-filter>
         </activity>
         <!-- Chat head: the chat inside an Android bubble (closer_bubbles plugin). -->

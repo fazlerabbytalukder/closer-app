@@ -52,7 +52,7 @@ Done so far (project `duosy-f5bc2`, still on the Spark plan): Google sign-in ena
    ```
    firebase deploy --only firestore:rules,firestore:indexes,storage,functions,hosting
    ```
-8. Put the Play signing SHA-256 into `web/.well-known/assetlinks.json` and point `closer.app` at Firebase Hosting.
+8. Put the Play signing SHA-256 into `web/.well-known/assetlinks.json` (invite links and the web pages use `https://duosy-f5bc2.web.app`).
 
 ## Local backend (Firebase Emulator Suite)
 

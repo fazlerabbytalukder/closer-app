@@ -244,7 +244,7 @@ class PrivacyScreen extends ConsumerWidget {
           ListTile(
             leading: Icon(Icons.delete_forever_rounded, color: context.cs.error),
             title: Text('Delete my account', style: TextStyle(color: context.cs.error)),
-            subtitle: const Text('Also available at closer.app/delete-account'),
+            subtitle: const Text('Also available at duosy-f5bc2.web.app/delete-account'),
             onTap: () async {
               final yes = await confirm(
                 context,
@@ -263,12 +263,12 @@ class PrivacyScreen extends ConsumerWidget {
           ListTile(
             leading: const Icon(Icons.policy_outlined),
             title: const Text('Privacy policy'),
-            onTap: () => launchUrl(Uri.parse('https://closer.app/privacy.html')),
+            onTap: () => launchUrl(Uri.parse('https://duosy-f5bc2.web.app/privacy')),
           ),
           ListTile(
             leading: const Icon(Icons.description_outlined),
             title: const Text('Terms of use'),
-            onTap: () => launchUrl(Uri.parse('https://closer.app/terms.html')),
+            onTap: () => launchUrl(Uri.parse('https://duosy-f5bc2.web.app/terms')),
           ),
         ],
       ),
@@ -308,7 +308,7 @@ class HelpScreen extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.flag_outlined),
             title: const Text('Report a problem'),
-            onTap: () => launchUrl(Uri.parse('https://closer.app/#contact')),
+            onTap: () => launchUrl(Uri.parse('https://duosy-f5bc2.web.app/#contact')),
           ),
           ListTile(
             leading: const Icon(Icons.star_outline_rounded),

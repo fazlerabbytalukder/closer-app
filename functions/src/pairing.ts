@@ -36,7 +36,7 @@ const ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 const CODE_LEN = 6;
 const INVITE_TTL_MS = 48 * 3600 * 1000;
 export const UNPAIR_GRACE_MS = 7 * 86_400_000;
-export const INVITE_BASE_URL = "https://closer.app/i/";
+export const INVITE_BASE_URL = "https://duosy-f5bc2.web.app/i/";
 
 function makeCode(): string {
   let s = "";
@@ -46,7 +46,7 @@ function makeCode(): string {
 
 export function normaliseCode(raw: unknown): string {
   if (typeof raw !== "string") return "";
-  // Accept full links too: https://closer.app/i/ABC123
+  // Accept full links too: https://duosy-f5bc2.web.app/i/ABC123
   const tail = raw.trim().split("/").filter(Boolean).pop() ?? "";
   return tail.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, CODE_LEN);
 }

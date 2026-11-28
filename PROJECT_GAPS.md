@@ -46,8 +46,8 @@ _চেক করা হয়েছে: ২৭ নভেম্বর ২০২�
 | ১২ | রিলিজ build এখনো **debug key** দিয়ে sign হয় | `android/app/build.gradle.kts:38-40` (`TODO`)। upload keystore আর `android/key.properties` লাগবে |
 | ১৩ | Privacy policy-তে placeholder | `web/privacy.html:15,18` → `REPLACE_WITH_DATE`, `REPLACE_WITH_LEGAL_ENTITY`, `REPLACE_WITH_ADDRESS` |
 | ১৪ | Terms-এ placeholder | `web/terms.html:15` → `REPLACE_WITH_DATE` |
-| ১৫ | App Links-এর SHA-256 নেই | `web/.well-known/assetlinks.json` → `REPLACE_WITH_SHA256` |
-| ১৬ | ইনভাইট ডোমেইন `closer.app` কোডে লেখা, অথচ অ্যাপের নাম এখন "Duosy" | `functions/src/pairing.ts:39` (`INVITE_BASE_URL`), `android/app/src/main/AndroidManifest.xml:57`। নিজের ডোমেইন বা `<project>.web.app` ব্যবহার করতে হবে |
+| ১৫ | App Links-এ শুধু debug key-এর SHA-256 আছে | `web/.well-known/assetlinks.json` | রিলিজ keystore আর Play App Signing-এর SHA-256-ও এই তালিকায় যোগ করতে হবে |
+| ১৬ | ~~ইনভাইট ডোমেইন `closer.app`~~ ✅ | `functions/src/pairing.ts`, `AndroidManifest.xml`, `lib/core/models/models.dart`, `settings_screens.dart` | এখন `duosy-f5bc2.web.app`। Hosting আর Functions deploy হলে তবেই লিঙ্ক কাজ করবে। `privacy@`/`support@closer.app` ইমেইল এখনো বদলানো বাকি (#১৩) |
 | ১৭ | ~~প্যাকেজ নাম `app.closer.widget`~~ ✅ | `android/app/build.gradle.kts` | এখন `com.duosy.app`, Firebase-এ এই নামেই রেজিস্টার করা |
 | ১৮ | Play Console অ্যাকাউন্ট, store listing, Data safety form | কোডের বাইরের কাজ |
 

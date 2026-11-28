@@ -272,7 +272,7 @@ class Invite {
   final String? usedBy;
 
   /// Public invite link (Android App Link on our own domain).
-  String get link => 'https://closer.app/i/$code';
+  String get link => 'https://duosy-f5bc2.web.app/i/$code';
 
   Map<String, dynamic> toJson() => {
     'inviterUid': inviterUid,
