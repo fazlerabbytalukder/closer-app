@@ -444,7 +444,26 @@ class FirebaseBackend implements CloserBackend {
   }
 
   @override
-  Stream<int> watchQueuedSends() => _auth.authStateChanges().asyncExpand((u) => _queue.watchCount(u?.uid));
+  Stream<int> watchQueuedSends() {
+    // Follows the latest signed-in user (asyncExpand would wait forever for
+    // the previous user's never-ending count stream).
+    StreamSubscription<User?>? auth;
+    StreamSubscription<int>? count;
+    late final StreamController<int> out;
+    out = StreamController<int>(
+      onListen: () {
+        auth = _auth.authStateChanges().listen((u) {
+          unawaited(count?.cancel());
+          count = _queue.watchCount(u?.uid).listen(out.add, onError: out.addError);
+        }, onError: out.addError);
+      },
+      onCancel: () async {
+        await count?.cancel();
+        await auth?.cancel();
+      },
+    );
+    return out.stream;
+  }
 
   /// Sends the queued items in order. Stops at the first network failure (and
   /// tries again later); drops items that fail for good (limit, unpaired).
