@@ -16,7 +16,7 @@ abstract final class FreeLimits {
 /// * `LocalBackend` — everything on device (plus a simulated partner) so the
 ///   app runs without any cloud setup.
 /// * `FirebaseBackend` — Firestore/Storage/Functions/FCM as described in the
-///   plan. Enabled with `--dart-define=CLOSER_BACKEND=firebase`.
+///   plan. The default; `--dart-define=CLOSER_BACKEND=local` picks the demo.
 ///
 /// Every stream emits the current value on listen and then each change.
 abstract class CloserBackend {

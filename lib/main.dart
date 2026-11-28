@@ -12,8 +12,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Backend selection:
-///   flutter run                                         → on-device backend
-///   flutter run --dart-define=CLOSER_BACKEND=firebase   → Firebase backend
+///   flutter run                                      → real Firebase (default)
+///   flutter run --dart-define=CLOSER_BACKEND=local   → on-device demo
 ///
 /// `main(['bubble'])` is the chat head (Android bubble, see
 /// ChatBubbleActivity): it shows only the chat.
