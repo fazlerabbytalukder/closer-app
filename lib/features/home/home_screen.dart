@@ -187,11 +187,16 @@ class _Hero extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        '$greeting, $first',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: context.tt.headlineLarge?.copyWith(color: Colors.white, fontSize: 38, height: 1.1),
+                      // Shrinks to fit beside the mascots instead of cutting
+                      // the greeting off ("Good mornin…").
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          '$greeting, $first',
+                          maxLines: 1,
+                          style: context.tt.headlineLarge?.copyWith(color: Colors.white, fontSize: 38, height: 1.1),
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(

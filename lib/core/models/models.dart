@@ -226,7 +226,9 @@ class AppUser {
   final String? pendingLabel;
   final DateTime createdAt;
 
-  bool get hasProfile => displayName.trim().isNotEmpty;
+  /// Google sign-in already fills the name, so the 18+ confirmation is what
+  /// keeps the profile step (and its checkbox) from being skipped.
+  bool get hasProfile => displayName.trim().isNotEmpty && ageConfirmed18;
   bool get isPaired => pairId != null;
 
   Map<String, dynamic> toJson() => {
