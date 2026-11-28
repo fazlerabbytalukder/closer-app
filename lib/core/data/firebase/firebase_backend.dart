@@ -14,6 +14,7 @@ import 'package:closer_app/core/config.dart';
 import 'package:closer_app/core/data/closer_backend.dart';
 import 'package:closer_app/core/data/firebase/firebase_setup.dart';
 import 'package:closer_app/core/models/models.dart';
+import 'package:closer_app/core/services/device_timezone.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -169,8 +170,9 @@ class FirebaseBackend implements CloserBackend {
   Future<void> _ensureUserDoc(User user, {String? displayName, String? photoUrl}) async {
     final ref = _db.doc('users/${user.uid}');
     final snap = await ref.get();
+    final timezone = await deviceTimezone();
     if (snap.exists) {
-      await ref.update({'timezone': _timezoneGuess()});
+      await ref.update({'timezone': timezone});
       return;
     }
     await ref.set({
@@ -180,7 +182,7 @@ class FirebaseBackend implements CloserBackend {
       'ageConfirmed18': false,
       'notificationPrefs': const NotificationPrefs().toJson(),
       'locale': PlatformDispatcher.instance.locale.languageCode,
-      'timezone': _timezoneGuess(),
+      'timezone': timezone,
       'createdAt': FieldValue.serverTimestamp(),
     });
   }
@@ -1389,7 +1391,8 @@ class FirebaseBackend implements CloserBackend {
   Future<void> _registerToken(String token) async {
     if (currentUid == null) return;
     _fcmToken = token;
-    await _call('registerFcmToken', {'token': token});
+    // Also refreshes the zone (travel, daylight-saving rule changes).
+    await _call('registerFcmToken', {'token': token, 'timezone': await deviceTimezone()});
   }
 
   // --------------------------------------------------------------- helpers
@@ -1477,16 +1480,5 @@ class FirebaseBackend implements CloserBackend {
     if (p.endsWith('.png')) return 'image/png';
     if (p.endsWith('.webp')) return 'image/webp';
     return 'image/jpeg';
-  }
-
-  /// Best-effort IANA zone from the UTC offset (Dart has no IANA name API).
-  /// Whole-hour offsets map to Etc/GMT±N (note the inverted sign); DST is
-  /// not tracked. TODO: use the flutter_timezone package for real zones.
-  static String _timezoneGuess() {
-    final offset = DateTime.now().timeZoneOffset;
-    if (offset.inMinutes % 60 != 0) return 'UTC';
-    final h = offset.inHours;
-    if (h == 0) return 'UTC';
-    return h > 0 ? 'Etc/GMT-$h' : 'Etc/GMT+${-h}';
   }
 }
